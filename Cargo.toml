@@ -3,12 +3,12 @@ name = "bvh"
 description = "A fast BVH using SAH"
 version = "0.0.0"
 authors = ["Sven-Hendrik Haase <svenstaro@gmail.com>", "Alexander Dmitriev <alexander.dmitriev2580@gmail.com>"]
-readme = README.md
+readme = "README.md"
 homepage = "https://github.com/svenstaro/bvh"
 repository = "https://github.com/svenstaro/bvh"
 documentation = "https://docs.rs/crate/bvh"
 keywords = ["bvh", "bounding volume hierarchy", "sah", "aabb"]
-license = "MIT"]
+license = "MIT"
 
 [dependencies]
 clippy = "*"
