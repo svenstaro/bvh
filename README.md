@@ -1,2 +1,2 @@
 # bvh
-A fast BVH in rust using SAH
+A fast BVH using SAH in rust
