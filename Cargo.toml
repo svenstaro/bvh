@@ -7,7 +7,7 @@ readme = "README.md"
 homepage = "https://github.com/svenstaro/bvh"
 repository = "https://github.com/svenstaro/bvh"
 documentation = "https://docs.rs/crate/bvh"
-keywords = ["bvh", "bounding volume hierarchy", "sah", "aabb"]
+keywords = ["bvh", "bounding", "volume", "hierarchy", "sah", "aabb"]
 license = "MIT"
 
 [dependencies]
