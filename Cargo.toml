@@ -4,3 +4,4 @@ version = "0.1.0"
 authors = ["Sven-Hendrik Haase <svenstaro@gmail.com>", "Alexander Dmitriev <alexander.dmitriev2580@gmail.com>"]
 
 [dependencies]
+clippy = "*"

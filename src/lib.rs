@@ -1,3 +1,8 @@
+#![feature(plugin)]
+
+#![plugin(clippy)]
+
+
 #[cfg(test)]
 mod tests {
     #[test]
