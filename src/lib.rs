@@ -5,7 +5,8 @@
 
 #[cfg(test)]
 extern crate test;
-
+#[cfg(test)]
+extern crate rand;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
@@ -13,9 +14,4 @@ extern crate quickcheck;
 extern crate nalgebra;
 
 pub mod aabb;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {}
-}
+pub mod ray;

@@ -18,3 +18,4 @@ nalgebra = "*"
 
 [dev-dependencies]
 quickcheck = "*"
+rand = "*"
