@@ -13,4 +13,8 @@ keywords = ["bvh", "bounding", "volume", "sah", "aabb"]
 license = "MIT"
 
 [dependencies]
-clippy = "0.0.90"
+clippy = "*"
+nalgebra = "*"
+
+[dev-dependencies]
+quickcheck = "*"
