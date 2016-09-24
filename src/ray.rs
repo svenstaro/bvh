@@ -61,7 +61,7 @@ impl Ray {
     }
 
     /// Naive implementation of a `Ray`/`AABB` intersection algorithm.
-    pub fn intersects_aabb_2(&self, aabb: &AABB) -> bool {
+    pub fn intersects_aabb_naive(&self, aabb: &AABB) -> bool {
         let hit_min_x = (aabb.min.x - self.origin.x) * self.inv_direction.x;
         let hit_max_x = (aabb.max.x - self.origin.x) * self.inv_direction.x;
 
@@ -83,6 +83,30 @@ impl Ray {
 
         latest_entry < earliest_exit && earliest_exit > 0.0
     }
+
+    /// Implementation of the algorithm described here:
+    /// https://tavianator.com/fast-branchless-raybounding-box-intersections/
+    pub fn intersects_aabb_branchless(&self, aabb: &AABB) -> bool {
+        let tx1 = (aabb.min.x - self.origin.x) * self.inv_direction.x;
+        let tx2 = (aabb.max.x - self.origin.x) * self.inv_direction.x;
+
+        let mut tmin = tx1.min(tx2);
+        let mut tmax = tx1.max(tx2);
+
+        let ty1 = (aabb.min.y - self.origin.y) * self.inv_direction.y;
+        let ty2 = (aabb.max.y - self.origin.y) * self.inv_direction.y;
+
+        tmin = tmin.max(ty1.min(ty2));
+        tmax = tmax.min(ty1.max(ty2));
+
+        let tz1 = (aabb.min.z - self.origin.z) * self.inv_direction.z;
+        let tz2 = (aabb.max.z - self.origin.z) * self.inv_direction.z;
+
+        tmin = tmin.max(tz1.min(tz2));
+        tmax = tmax.min(tz1.max(tz2));
+
+        tmax >= tmin && tmax >= 0.0
+    }
 }
 
 #[cfg(test)]
@@ -91,8 +115,6 @@ mod tests {
     use aabb::AABB;
     use nalgebra::{Point3, Vector3};
     use rand::{Rng, StdRng, SeedableRng};
-
-    const EPSILON: f32 = 0.00001;
 
     type TupleVec = (f32, f32, f32);
 
@@ -104,25 +126,26 @@ mod tests {
         Vector3::new(tpl.0, tpl.1, tpl.2)
     }
 
+    fn gen_ray_to_aabb(data: (TupleVec, TupleVec, TupleVec)) -> (Ray, AABB) {
+        // Generate a random AABB
+        let aabb = AABB::empty()
+            .union_point(&tuple_to_point(&data.0))
+            .union_point(&tuple_to_point(&data.1));
+
+        // Get its center
+        let center = aabb.center();
+
+        // Generate random ray pointing at the center
+        let pos = tuple_to_point(&data.2);
+        let ray = Ray::new(pos, center - pos);
+        (ray, aabb)
+    }
+
     /// Test whether a `Ray` which points at the center of an `AABB` intersects it.
+    /// Uses the optimized algorithm.
     quickcheck!{
-        fn test_ray_points_at_aabb_center(pos: TupleVec,
-                                          point_a: TupleVec,
-                                          point_b: TupleVec)
-                                          -> bool {
-            // Generate a random AABB
-            let aabb = AABB::empty()
-                .union_point(&tuple_to_point(&point_a))
-                .union_point(&tuple_to_point(&point_b));
-
-            // Get its center
-            let center = aabb.center();
-
-            // Generate random ray pointing at the center
-            let pos = tuple_to_point(&pos);
-            let ray = Ray::new(pos, center - pos);
-
-            // It must always intersect the AABB
+        fn test_ray_points_at_aabb_center(data: (TupleVec, TupleVec, TupleVec)) -> bool {
+            let (ray, aabb) = gen_ray_to_aabb(data);
             ray.intersects_aabb(&aabb)
         }
     }
@@ -130,40 +153,29 @@ mod tests {
     /// Test whether a `Ray` which points at the center of an `AABB` intersects it.
     /// Uses the naive algorithm.
     quickcheck!{
-        fn test_ray_points_at_aabb_center_2(pos: TupleVec,
-                                            point_a: TupleVec,
-                                            point_b: TupleVec)
-                                            -> bool {
-            // Generate a random AABB
-            let aabb = AABB::empty()
-                .union_point(&tuple_to_point(&point_a))
-                .union_point(&tuple_to_point(&point_b));
+        fn test_ray_points_at_aabb_center_naive(data: (TupleVec, TupleVec, TupleVec)) -> bool {
+            let (ray, aabb) = gen_ray_to_aabb(data);
+            ray.intersects_aabb_naive(&aabb)
+        }
+    }
 
-            // Get its center
-            let center = aabb.center();
-
-            // Generate random ray pointing at the center
-            let pos = tuple_to_point(&pos);
-            let ray = Ray::new(pos, center - pos);
-
-            // It must always intersect the AABB
-            ray.intersects_aabb_2(&aabb)
+    /// Test whether a `Ray` which points at the center of an `AABB` intersects it.
+    /// Uses the branchless algorithm.
+    quickcheck!{
+        fn test_ray_points_at_aabb_center_branchless(data: (TupleVec, TupleVec, TupleVec)) -> bool {
+            let (ray, aabb) = gen_ray_to_aabb(data);
+            ray.intersects_aabb_branchless(&aabb)
         }
     }
 
     /// Test whether a `Ray` which points away from the center of an `AABB`
     /// does not intersect it, unless its origin is inside the `AABB`.
+    /// Uses the optimized algorithm.
     quickcheck!{
-        fn test_ray_points_from_aabb_center(pos: TupleVec,
-                                            point_a: TupleVec,
-                                            point_b: TupleVec)
-                                            -> bool {
-            let aabb = AABB::empty()
-                .union_point(&tuple_to_point(&point_a))
-                .union_point(&tuple_to_point(&point_b));
-            let center = aabb.center();
-            let pos = tuple_to_point(&pos);
-            let ray = Ray::new(pos, -(center - pos));
+        fn test_ray_points_from_aabb_center(data: (TupleVec, TupleVec, TupleVec)) -> bool {
+            let (mut ray, aabb) = gen_ray_to_aabb(data);
+            ray.direction = -ray.direction;
+            ray.inv_direction = -ray.inv_direction;
             !ray.intersects_aabb(&aabb) || aabb.contains(&ray.origin)
         }
     }
@@ -172,18 +184,35 @@ mod tests {
     /// does not intersect it, unless its origin is inside the `AABB`.
     /// Uses the naive algorithm.
     quickcheck!{
-        fn test_ray_points_from_aabb_center_2(pos: TupleVec,
-                                              point_a: TupleVec,
-                                              point_b: TupleVec)
-                                              -> bool {
-            let aabb = AABB::empty()
-                .union_point(&tuple_to_point(&point_a))
-                .union_point(&tuple_to_point(&point_b));
-            let center = aabb.center();
-            let pos = tuple_to_point(&pos);
-            let ray = Ray::new(pos, -(center - pos));
-            !ray.intersects_aabb_2(&aabb) || aabb.contains(&ray.origin)
+        fn test_ray_points_from_aabb_center_naive(data: (TupleVec, TupleVec, TupleVec)) -> bool {
+            let (mut ray, aabb) = gen_ray_to_aabb(data);
+            ray.direction = -ray.direction;
+            ray.inv_direction = -ray.inv_direction;
+            !ray.intersects_aabb_naive(&aabb) || aabb.contains(&ray.origin)
         }
+    }
+
+    /// Test whether a `Ray` which points away from the center of an `AABB`
+    /// does not intersect it, unless its origin is inside the `AABB`.
+    /// Uses the branchless algorithm.
+    quickcheck!{
+        fn test_ray_points_from_aabb_center_branchless(data: (TupleVec, TupleVec, TupleVec)) -> bool {
+            let (mut ray, aabb) = gen_ray_to_aabb(data);
+            ray.direction = -ray.direction;
+            ray.inv_direction = -ray.inv_direction;
+            !ray.intersects_aabb_branchless(&aabb) || aabb.contains(&ray.origin)
+        }
+    }
+
+    fn gen_random_ray_aabb(rng: &mut StdRng) -> (Ray, AABB) {
+        let a = tuple_to_point(&rng.gen::<TupleVec>());
+        let b = tuple_to_point(&rng.gen::<TupleVec>());
+        let c = tuple_to_point(&rng.gen::<TupleVec>());
+        let d = tuple_to_vector(&rng.gen::<TupleVec>());
+
+        let aabb = AABB::empty().union_point(&a).union_point(&b);
+        let ray = Ray::new(c, d);
+        (ray, aabb)
     }
 
     #[bench]
@@ -193,15 +222,9 @@ mod tests {
         let mut rng = StdRng::from_seed(&seed);
 
         b.iter(|| {
-            let one_million = ::test::black_box(1000);
-            for _ in 0..one_million {
-                let a = tuple_to_point(&rng.gen::<TupleVec>());
-                let b = tuple_to_point(&rng.gen::<TupleVec>());
-                let c = tuple_to_point(&rng.gen::<TupleVec>());
-                let d = tuple_to_vector(&rng.gen::<TupleVec>());
-
-                let aabb = AABB::empty().union_point(&a).union_point(&b);
-                let ray = Ray::new(c, d);
+            let one_thousand = ::test::black_box(1000);
+            for _ in 0..one_thousand {
+                let (ray, aabb) = gen_random_ray_aabb(&mut rng);
                 ray.intersects_aabb(&aabb);
             }
         });
@@ -209,21 +232,30 @@ mod tests {
 
     #[bench]
     /// Benchmark for the naive intersection algorithm.
-    fn bench_intersects_aabb_2(b: &mut ::test::Bencher) {
+    fn bench_intersects_aabb_naive(b: &mut ::test::Bencher) {
         let seed = [0];
         let mut rng = StdRng::from_seed(&seed);
 
         b.iter(|| {
-            let one_million = ::test::black_box(1000);
-            for _ in 0..one_million {
-                let a = tuple_to_point(&rng.gen::<TupleVec>());
-                let b = tuple_to_point(&rng.gen::<TupleVec>());
-                let c = tuple_to_point(&rng.gen::<TupleVec>());
-                let d = tuple_to_vector(&rng.gen::<TupleVec>());
+            let one_thousand = ::test::black_box(1000);
+            for _ in 0..one_thousand {
+                let (ray, aabb) = gen_random_ray_aabb(&mut rng);
+                ray.intersects_aabb_naive(&aabb);
+            }
+        });
+    }
 
-                let aabb = AABB::empty().union_point(&a).union_point(&b);
-                let ray = Ray::new(c, d);
-                ray.intersects_aabb_2(&aabb);
+    #[bench]
+    /// Benchmark for the branchless intersection algorithm.
+    fn bench_intersects_aabb_branchless(b: &mut ::test::Bencher) {
+        let seed = [0];
+        let mut rng = StdRng::from_seed(&seed);
+
+        b.iter(|| {
+            let one_thousand = ::test::black_box(1000);
+            for _ in 0..one_thousand {
+                let (ray, aabb) = gen_random_ray_aabb(&mut rng);
+                ray.intersects_aabb_branchless(&aabb);
             }
         });
     }
