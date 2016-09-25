@@ -10,7 +10,7 @@ extern crate test;
 #[macro_use]
 extern crate quickcheck;
 
-extern crate nalgebra;
+pub extern crate nalgebra;
 
 pub mod aabb;
 
