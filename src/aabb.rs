@@ -88,7 +88,7 @@ impl AABB {
     /// let y = rand::random();
     /// let z = rand::random();
     ///
-    /// // An empty [`AABB`] should not contain it
+    /// // An empty AABB should not contain it
     /// assert!(x < min.x && y < min.y && z < min.z);
     /// assert!(max.x < x && max.y < y && max.z < z);
     /// # }
@@ -339,6 +339,17 @@ impl AABB {
     pub fn volume(&self) -> f32 {
         let size = self.size();
         size.x * size.y * size.z
+    }
+}
+
+/// Default instance for [`AABB`]s. Returns an [`AABB`] which is [`empty()`].
+///
+/// [`AABB`]: struct.AABB.html
+/// [`empty()`]: #method.empty
+///
+impl Default for AABB {
+    fn default() -> AABB {
+        AABB::empty()
     }
 }
 
