@@ -1,11 +1,15 @@
 #![feature(plugin)]
+#![feature(test)]
 
 #![plugin(clippy)]
 
+#[cfg(test)]
+extern crate test;
 
 #[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-    }
-}
+#[macro_use]
+extern crate quickcheck;
+
+pub extern crate nalgebra;
+
+pub mod aabb;
