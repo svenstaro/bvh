@@ -21,7 +21,7 @@ pub trait Bounded {
 
 impl AABB {
     /// Creates a new `AABB` with the given bounds.
-    pub fn new(min: Point3<f32>, max: Point3<f32>) -> AABB {
+    pub fn with_bounds(min: Point3<f32>, max: Point3<f32>) -> AABB {
         AABB {
             min: min,
             max: max,
@@ -51,28 +51,28 @@ impl AABB {
     }
 
     /// Returns a new minimal `AABB` which contains both this `AABB` and `other`.
-    pub fn union_aabb(&self, other: &AABB) -> AABB {
-        AABB::new(Point3::new(self.min.x.min(other.min.x),
-                              self.min.y.min(other.min.y),
-                              self.min.z.min(other.min.z)),
-                  Point3::new(self.max.x.max(other.max.x),
-                              self.max.y.max(other.max.y),
-                              self.max.z.max(other.max.z)))
+    pub fn union(&self, other: &AABB) -> AABB {
+        AABB::with_bounds(Point3::new(self.min.x.min(other.min.x),
+                                      self.min.y.min(other.min.y),
+                                      self.min.z.min(other.min.z)),
+                          Point3::new(self.max.x.max(other.max.x),
+                                      self.max.y.max(other.max.y),
+                                      self.max.z.max(other.max.z)))
     }
 
     /// Returns a new minimal `AABB` which contains both this `AABB` and `other`.
-    pub fn union_point(&self, other: &Point3<f32>) -> AABB {
-        AABB::new(Point3::new(self.min.x.min(other.x),
-                              self.min.y.min(other.y),
-                              self.min.z.min(other.z)),
-                  Point3::new(self.max.x.max(other.x),
-                              self.max.y.max(other.y),
-                              self.max.z.max(other.z)))
+    pub fn grow(&self, other: &Point3<f32>) -> AABB {
+        AABB::with_bounds(Point3::new(self.min.x.min(other.x),
+                                      self.min.y.min(other.y),
+                                      self.min.z.min(other.z)),
+                          Point3::new(self.max.x.max(other.x),
+                                      self.max.y.max(other.y),
+                                      self.max.z.max(other.z)))
     }
 
     /// Returns a new minimal `AABB` which contains both this `AABB` and `other`.
     pub fn union_bounded<T: Bounded>(&self, other: &T) -> AABB {
-        self.union_aabb(&other.aabb())
+        self.union(&other.aabb())
     }
 
     /// Returns the size of this `AABB` in all three dimensions.
@@ -111,7 +111,7 @@ impl Index<usize> for AABB {
 /// Implementation of `Bounded` for single points.
 impl Bounded for Point3<f32> {
     fn aabb(&self) -> AABB {
-        AABB::new(*self, *self)
+        AABB::with_bounds(*self, *self)
     }
 }
 
@@ -148,7 +148,7 @@ mod tests {
             let p2 = tuple_to_point(&b);
 
             // Span the `AABB`
-            let aabb = AABB::empty().union_point(&p1).union_bounded(&p2);
+            let aabb = AABB::empty().grow(&p1).union_bounded(&p2);
 
             // Its center should be inside the `AABB`
             aabb.contains(&aabb.center())
@@ -168,10 +168,8 @@ mod tests {
 
             // Create two `AABB`s. One spanned the first five points,
             // the other by the last five points
-            let aabb1 =
-                points.iter().take(5).fold(AABB::empty(), |aabb, point| aabb.union_point(&point));
-            let aabb2 =
-                points.iter().skip(5).fold(AABB::empty(), |aabb, point| aabb.union_point(&point));
+            let aabb1 = points.iter().take(5).fold(AABB::empty(), |aabb, point| aabb.grow(&point));
+            let aabb2 = points.iter().skip(5).fold(AABB::empty(), |aabb, point| aabb.grow(&point));
 
             // The `AABB`s should contain the points by which they are spanned
             let aabb1_contains_init_five = points.iter()
@@ -182,7 +180,7 @@ mod tests {
                 .fold(true, |b, point| b && aabb2.contains(&point));
 
             // Build the union of the two `AABB`s
-            let aabbu = aabb1.union_aabb(&aabb2);
+            let aabbu = aabb1.union(&aabb2);
 
             // The union should contain all points
             let aabbu_contains_all = points.iter()
