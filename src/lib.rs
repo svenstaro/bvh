@@ -14,4 +14,5 @@ extern crate quickcheck;
 extern crate nalgebra;
 
 pub mod aabb;
+pub mod bvh;
 pub mod ray;

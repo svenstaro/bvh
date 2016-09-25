@@ -4,6 +4,15 @@ use nalgebra::{Point3, Vector3};
 use std::f32;
 use std::ops::Index;
 
+/// Index of the X axis. Used access `Vector3`/`Point3` structs via index.
+const X_AXIS: usize = 0;
+
+/// Index of the Y axis. Used access `Vector3`/`Point3` structs via index.
+const Y_AXIS: usize = 1;
+
+/// Index of the Z axis. Used access `Vector3`/`Point3` structs via index.
+const Z_AXIS: usize = 2;
+
 /// AABB struct.
 #[derive(Debug, Copy, Clone)]
 pub struct AABB {
@@ -90,6 +99,18 @@ impl AABB {
         let size = self.size();
         2.0 * size.x * size.y + size.x * size.z + size.y * size.z
     }
+
+    /// Returns the axis along which the `AABB` is stretched the most.
+    pub fn largest_axis(&self) -> usize {
+        let size = self.size();
+        if size.x > size.y && size.x > size.z {
+            X_AXIS
+        } else if size.y > size.z {
+            Y_AXIS
+        } else {
+            Z_AXIS
+        }
+    }
 }
 
 /// Make `AABB`s indexable. `aabb[0]` gives a reference to the minimum bound.
@@ -165,11 +186,54 @@ mod tests {
             aabb1_contains_init_five && aabb2_contains_last_five && aabbu_contains_all
         }
     }
+}
 
-    // Rotates the camera to point in the direction [-1, 1, -1] and moves it dist*sqrt3 to the front.
-    // The camera should now be at position [-dist, dist, -dist].
-    // quickcheck!{
-    // fn look_and_move_front_top_left(dist: f32) -> bool {
-    // let mut camera = Camera::new(Point3::origin());
-    //
+fn intersects_triangle(ray: &Ray, triangle: &(Vector3<f32>, Vector3<f32>, Vector3<f32>)) -> bool {
+    const EPSILON: f32 = 0.00001;
+
+    let a_to_b = b - a;
+    let a_to_c = c - a;
+
+    // Begin calculating determinant - also used to calculate u parameter
+    // u_vec lies in view plane
+    // |u_vec| = |a_to_c|*sin(a_to_c, dir) := length of a_to_c in view_plane
+    let u_vec = ray.direction.cross(a_to_c);
+
+    // If determinant is near zero, ray lies in plane of triangle
+    // The determinant corresponds to the parallelepiped volume:
+    // det = 0 => [dir, a_to_b, a_to_c] not linearly independant
+    let det = a_to_b.dot(u_vec);
+
+    // Only testing positive bound, thus enabling backface culling
+    // If backface culling is not desired write:
+    // det < 0.00001 && det > -0.00001
+    if det < EPSILON {
+        return false;
+    }
+
+    let inv_det = 1.0 / det;
+
+    // Vector from point a to ray origin
+    let a_to_origin = ray.origin - a;
+
+    // Calculate u parameter
+    let u = a_to_origin.dot(u_vec) * inv_det;
+
+    // Test bounds: u < 0 || u > 1 => outside of triangle
+    if u < 0.0 || u > 1.0 {
+        return false;
+    }
+
+    // Prepare to test v parameter
+    let v_vec = a_to_origin.cross(a_to_b);
+
+    // Calculate v parameter and test bound
+    let v = ray.direction.dot(v_vec) * inv_det;
+    // The intersection lies outside of the triangle
+    if v < 0.0 || u + v > 1.0 {
+        return false;
+    }
+
+    let dist = a_to_c.dot(v_vec) * inv_det;
+    dist > EPSILON
 }
