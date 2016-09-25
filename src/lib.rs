@@ -13,9 +13,3 @@ extern crate quickcheck;
 pub extern crate nalgebra;
 
 pub mod aabb;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {}
-}
