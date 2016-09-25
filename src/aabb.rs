@@ -88,7 +88,13 @@ impl AABB {
     /// Returns the total surface area of this `AABB`.
     pub fn surface_area(&self) -> f32 {
         let size = self.size();
-        2.0 * size.x * size.y + size.x * size.z + size.y * size.z
+        2.0 * (size.x * size.y + size.x * size.z + size.y * size.z)
+    }
+
+    /// Returns the volume of this `AABB`.
+    pub fn volume(&self) -> f32 {
+        let size = self.size();
+        size.x * size.y * size.z
     }
 }
 
@@ -123,8 +129,13 @@ mod tests {
     /// Test whether an empty `AABB` does not contains anything.
     quickcheck!{
         fn test_empty_contains_nothing(tpl: TupleVec) -> bool {
+            // Define a random Point
             let p = tuple_to_point(&tpl);
+
+            // Create an empty AABB
             let aabb = AABB::empty();
+
+            // It should not contain anything
             !aabb.contains(&p)
         }
     }
@@ -132,9 +143,14 @@ mod tests {
     /// Test whether an AABB always contains its center.
     quickcheck!{
         fn test_aabb_contains_center(a: TupleVec, b: TupleVec) -> bool {
+            // Define two points which will be the corners of the `AABB`
             let p1 = tuple_to_point(&a);
             let p2 = tuple_to_point(&b);
+
+            // Span the `AABB`
             let aabb = AABB::empty().union_point(&p1).union_bounded(&p2);
+
+            // Its center should be inside the `AABB`
             aabb.contains(&aabb.center())
         }
     }
@@ -144,13 +160,20 @@ mod tests {
         fn test_join_two_aabbs(a: (TupleVec, TupleVec, TupleVec, TupleVec, TupleVec),
                                b: (TupleVec, TupleVec, TupleVec, TupleVec, TupleVec))
                                -> bool {
+            // Define an array of ten points
             let points = [a.0, a.1, a.2, a.3, a.4, b.0, b.1, b.2, b.3, b.4];
+
+            // Convert these points to `Point3`
             let points = points.iter().map(tuple_to_point).collect::<Vec<Point3<f32>>>();
+
+            // Create two `AABB`s. One spanned the first five points,
+            // the other by the last five points
             let aabb1 =
                 points.iter().take(5).fold(AABB::empty(), |aabb, point| aabb.union_point(&point));
             let aabb2 =
                 points.iter().skip(5).fold(AABB::empty(), |aabb, point| aabb.union_point(&point));
 
+            // The `AABB`s should contain the points by which they are spanned
             let aabb1_contains_init_five = points.iter()
                 .take(5)
                 .fold(true, |b, point| b && aabb1.contains(&point));
@@ -158,10 +181,14 @@ mod tests {
                 .skip(5)
                 .fold(true, |b, point| b && aabb2.contains(&point));
 
+            // Build the union of the two `AABB`s
             let aabbu = aabb1.union_aabb(&aabb2);
+
+            // The union should contain all points
             let aabbu_contains_all = points.iter()
                 .fold(true, |b, point| b && aabbu.contains(&point));
 
+            // Return the three properties
             aabb1_contains_init_five && aabb2_contains_last_five && aabbu_contains_all
         }
     }
