@@ -165,11 +165,4 @@ mod tests {
             aabb1_contains_init_five && aabb2_contains_last_five && aabbu_contains_all
         }
     }
-
-    // Rotates the camera to point in the direction [-1, 1, -1] and moves it dist*sqrt3 to the front.
-    // The camera should now be at position [-dist, dist, -dist].
-    // quickcheck!{
-    // fn look_and_move_front_top_left(dist: f32) -> bool {
-    // let mut camera = Camera::new(Point3::origin());
-    //
 }
