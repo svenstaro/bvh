@@ -403,23 +403,43 @@ impl Bounded for Point3<f32> {
 
 #[cfg(test)]
 mod tests {
-    use aabb::AABB;
-    use nalgebra::Point3;
+    use aabb::{AABB, Bounded};
+    use nalgebra::{Point3, Vector3};
+
+    const EPSILON: f32 = 0.00001;
 
     type TupleVec = (f32, f32, f32);
 
-    fn tuple_to_point(tpl: &TupleVec) -> Point3<f32> {
+    fn to_point(tpl: &TupleVec) -> Point3<f32> {
         Point3::new(tpl.0, tpl.1, tpl.2)
+    }
+
+    fn to_vector(tpl: &TupleVec) -> Vector3<f32> {
+        Vector3::new(tpl.0, tpl.1, tpl.2)
     }
 
     /// Test whether an empty `AABB` does not contains anything.
     quickcheck!{
         fn test_empty_contains_nothing(tpl: TupleVec) -> bool {
             // Define a random Point
-            let p = tuple_to_point(&tpl);
+            let p = to_point(&tpl);
 
             // Create an empty AABB
             let aabb = AABB::empty();
+
+            // It should not contain anything
+            !aabb.contains(&p)
+        }
+    }
+
+    /// Test whether a default `AABB` is empty.
+    quickcheck!{
+        fn test_default_is_empty(tpl: TupleVec) -> bool {
+            // Define a random Point
+            let p = to_point(&tpl);
+
+            // Create a default AABB
+            let aabb: AABB = Default::default();
 
             // It should not contain anything
             !aabb.contains(&p)
@@ -430,8 +450,8 @@ mod tests {
     quickcheck!{
         fn test_aabb_contains_center(a: TupleVec, b: TupleVec) -> bool {
             // Define two points which will be the corners of the `AABB`
-            let p1 = tuple_to_point(&a);
-            let p2 = tuple_to_point(&b);
+            let p1 = to_point(&a);
+            let p2 = to_point(&b);
 
             // Span the `AABB`
             let aabb = AABB::empty().grow(&p1).union_bounded(&p2);
@@ -450,7 +470,7 @@ mod tests {
             let points = [a.0, a.1, a.2, a.3, a.4, b.0, b.1, b.2, b.3, b.4];
 
             // Convert these points to `Point3`
-            let points = points.iter().map(tuple_to_point).collect::<Vec<Point3<f32>>>();
+            let points = points.iter().map(to_point).collect::<Vec<Point3<f32>>>();
 
             // Create two `AABB`s. One spanned the first five points,
             // the other by the last five points
@@ -474,6 +494,105 @@ mod tests {
 
             // Return the three properties
             aabb1_contains_init_five && aabb2_contains_last_five && aabbu_contains_all
+        }
+    }
+
+    /// Test whether some points relative to the center of an AABB are classified correctly.
+    quickcheck!{
+        fn test_points_relative_to_center_and_size(a: TupleVec, b: TupleVec) -> bool {
+            // Generate some nonempty AABB
+            let aabb = AABB::empty()
+                .grow(&to_point(&a))
+                .grow(&to_point(&b));
+
+            // Get its size and center
+            let size = aabb.size();
+            let size_half = size / 2.0;
+            let center = aabb.center();
+
+            // Compute the min and the max corners of the AABB by hand
+            let inside_ppp = center + size_half;
+            let inside_mmm = center - size_half;
+
+            // Generate two points which are outside the AABB
+            let outside_ppp = inside_ppp + Vector3::new(0.1, 0.1, 0.1);
+            let outside_mmm = inside_mmm - Vector3::new(0.1, 0.1, 0.1);
+
+            assert!(aabb.approx_contains_eps(&inside_ppp, EPSILON));
+            assert!(aabb.approx_contains_eps(&inside_mmm, EPSILON));
+            assert!(!aabb.contains(&outside_ppp));
+            assert!(!aabb.contains(&outside_mmm));
+
+            true
+        }
+    }
+
+    /// Test whether the surface of a nonempty AABB is always positive.
+    quickcheck!{
+        fn test_surface_always_positive(a: TupleVec, b: TupleVec) -> bool {
+            let aabb = AABB::empty()
+                .grow(&to_point(&a))
+                .grow(&to_point(&b));
+            aabb.surface_area() >= 0.0
+        }
+    }
+
+    /// Compute and compare the surface area of an AABB by hand.
+    quickcheck!{
+        fn test_surface_area_cube(pos: TupleVec, size: f32) -> bool {
+            // Generate some non-empty AABB
+            let pos = to_point(&pos);
+            let size_vec = Vector3::new(size, size, size);
+            let aabb = AABB::with_bounds(pos, pos + size_vec);
+
+            // Check its surface area
+            let area_a = aabb.surface_area();
+            let area_b = 6.0 * size * size;
+            (1.0 - (area_a / area_b)).abs() < EPSILON
+        }
+    }
+
+    /// Test whether the volume of a nonempty AABB is always positive.
+    quickcheck!{
+        fn test_volume_always_positive(a: TupleVec, b: TupleVec) -> bool {
+            let aabb = AABB::empty()
+                .grow(&to_point(&a))
+                .grow(&to_point(&b));
+            aabb.volume() >= 0.0
+        }
+    }
+
+    /// Compute and compare the volume of an AABB by hand.
+    quickcheck!{
+        fn test_volume_by_hand(pos: TupleVec, size: TupleVec) -> bool {
+            // Generate some non-empty AABB
+            let pos = to_point(&pos);
+            let size = to_vector(&size);
+            let aabb = pos.aabb().grow(&(pos + size));
+
+            // Check its volume
+            let volume_a = aabb.volume();
+            let volume_b = (size.x * size.y * size.z).abs();
+            (1.0 - (volume_a / volume_b)).abs() < EPSILON
+        }
+    }
+
+    /// Test whether generating an `AABB` from the min and max bounds yields the same `AABB`.
+    quickcheck!{
+        fn test_create_aabb_from_indexable(a: TupleVec, b: TupleVec, p: TupleVec) -> bool {
+            // Create a random point
+            let point = to_point(&p);
+
+            // Create a random AABB
+            let aabb = AABB::empty()
+                .grow(&to_point(&a))
+                .grow(&to_point(&b));
+
+            // Create an AABB by using the index-access method
+            let aabb_by_index = AABB::with_bounds(aabb[0], aabb[1]);
+
+            // The AABBs should be the same
+            aabb.contains(&point) == aabb_by_index.contains(&point)
         }
     }
 }
