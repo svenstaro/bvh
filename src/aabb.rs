@@ -404,7 +404,9 @@ impl Bounded for Point3<f32> {
 #[cfg(test)]
 mod tests {
     use aabb::AABB;
-    use nalgebra::Point3;
+    use nalgebra::{Point3, Vector3};
+
+    const EPSILON: f32 = 0.00001;
 
     type TupleVec = (f32, f32, f32);
 
@@ -420,6 +422,20 @@ mod tests {
 
             // Create an empty AABB
             let aabb = AABB::empty();
+
+            // It should not contain anything
+            !aabb.contains(&p)
+        }
+    }
+
+    /// Test whether a default `AABB` is empty.
+    quickcheck!{
+        fn test_default_is_empty(tpl: TupleVec) -> bool {
+            // Define a random Point
+            let p = tuple_to_point(&tpl);
+
+            // Create a default AABB
+            let aabb: AABB = Default::default();
 
             // It should not contain anything
             !aabb.contains(&p)
@@ -474,6 +490,75 @@ mod tests {
 
             // Return the three properties
             aabb1_contains_init_five && aabb2_contains_last_five && aabbu_contains_all
+        }
+    }
+
+    /// Test whether some points relative to the center of an AABB are classified correctly.
+    quickcheck!{
+        fn test_points_relative_to_center_and_size(a: TupleVec, b: TupleVec) -> bool {
+            // Generate some nonempty AABB
+            let aabb = AABB::empty()
+                .grow(&tuple_to_point(&a))
+                .grow(&tuple_to_point(&b));
+
+            // Get its size and center
+            let size = aabb.size();
+            let size_half = size / 2.0;
+            let center = aabb.center();
+
+            // Compute the min and the max corners of the AABB by hand
+            let inside_ppp = center + size_half;
+            let inside_mmm = center - size_half;
+
+            // Generate two points which are outside the AABB
+            let outside_ppp = inside_ppp + Vector3::new(0.1, 0.1, 0.1);
+            let outside_mmm = inside_mmm - Vector3::new(0.1, 0.1, 0.1);
+
+            assert!(aabb.approx_contains_eps(&inside_ppp, EPSILON));
+            assert!(aabb.approx_contains_eps(&inside_mmm, EPSILON));
+            assert!(!aabb.contains(&outside_ppp));
+            assert!(!aabb.contains(&outside_mmm));
+
+            true
+        }
+    }
+
+    /// Test whether the surface of a nonempty AABB is always positive.
+    quickcheck!{
+        fn test_surface_always_positive(a: TupleVec, b: TupleVec) -> bool {
+            let aabb = AABB::empty()
+                .grow(&tuple_to_point(&a))
+                .grow(&tuple_to_point(&b));
+            aabb.surface_area() >= 0.0
+        }
+    }
+
+    /// Test whether the volume of a nonempty AABB is always positive.
+    quickcheck!{
+        fn test_volume_always_positive(a: TupleVec, b: TupleVec) -> bool {
+            let aabb = AABB::empty()
+                .grow(&tuple_to_point(&a))
+                .grow(&tuple_to_point(&b));
+            aabb.volume() >= 0.0
+        }
+    }
+
+    /// Test whether generating an `AABB` from the min and max bounds yields the same `AABB`.
+    quickcheck!{
+        fn test_create_aabb_from_indexable(a: TupleVec, b: TupleVec, p: TupleVec) -> bool {
+            // Create a random point
+            let point = tuple_to_point(&p);
+
+            // Create a random AABB
+            let aabb = AABB::empty()
+                .grow(&tuple_to_point(&a))
+                .grow(&tuple_to_point(&b));
+
+            // Create an AABB by using the index-access method
+            let aabb_by_index = AABB::with_bounds(aabb[0], aabb[1]);
+
+            // The AABBs should be the same
+            aabb.contains(&point) == aabb_by_index.contains(&point)
         }
     }
 }
