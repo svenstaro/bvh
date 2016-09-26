@@ -92,9 +92,14 @@ impl Ray {
         if y_min > ray_min {
             ray_min = y_min;
         }
+        // Using the following solution significantly decreases the performance
+        // ray_min = ray_min.max(y_min);
+
         if y_max < ray_max {
             ray_max = y_max;
         }
+        // Using the following solution significantly decreases the performance
+        // ray_max = ray_max.min(y_max);
 
         let z_min = (aabb[self.sign.z].z - self.origin.z) * self.inv_direction.z;
         let z_max = (aabb[1 - self.sign.z].z - self.origin.z) * self.inv_direction.z;
@@ -111,6 +116,8 @@ impl Ray {
         if z_max < ray_max {
             ray_max = z_max;
         }
+        // Using the following solution significantly decreases the performance
+        // ray_max = ray_max.min(y_max);
 
         ray_max > 0.0
     }
@@ -298,16 +305,17 @@ mod tests {
     /// does not intersect it, unless its origin is inside the `AABB`.
     /// Uses the branchless algorithm.
     quickcheck!{
-        fn test_ray_points_from_aabb_center_branchless(data: (TupleVec, TupleVec, TupleVec)) -> bool {
+        fn test_ray_points_from_aabb_center_branchless(data: (TupleVec, TupleVec, TupleVec))
+                                                       -> bool {
             let (mut ray, aabb) = gen_ray_to_aabb(data);
-    // Invert the ray direction
+            // Invert the ray direction
             ray.direction = -ray.direction;
             ray.inv_direction = -ray.inv_direction;
             !ray.intersects_aabb_branchless(&aabb) || aabb.contains(&ray.origin)
         }
     }
 
-    /// Generates some random `Ray`/`AABB` pairs.
+    /// Generates some random deterministic `Ray`/`AABB` pairs.
     fn gen_random_ray_aabb(rng: &mut StdRng) -> (Ray, AABB) {
         let a = tuple_to_point(&rng.gen::<TupleVec>());
         let b = tuple_to_point(&rng.gen::<TupleVec>());
