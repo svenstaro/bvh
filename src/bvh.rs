@@ -1,32 +1,47 @@
 use aabb::{AABB, Bounded};
+use ray::Ray;
 use std::boxed::Box;
 use std::f32;
 use std::iter::repeat;
 
+/// Enum which describes the union type of `BVHNode`s.
 enum BVHNode {
-    Leaf { aabb: AABB, shapes: Vec<usize> },
+    /// Leaf node.
+    Leaf {
+        /// The shapes contained in this leaf.
+        shapes: Vec<usize>,
+    },
+    /// Inner node.
     Node {
-        aabb: AABB,
+        /// The union `AABB` of the shapes in init.
+        init_aabb: AABB,
         init: Box<BVHNode>,
+        /// The union `AABB` of the shapes in tail.
+        tail_aabb: AABB,
         tail: Box<BVHNode>,
     },
 }
 
 impl BVHNode {
     pub fn new<T: Bounded>(shapes: &[T], indices: Vec<usize>) -> BVHNode {
-        let (aabb_bounds, centroid_bounds) =
-            indices.iter().fold((AABB::empty(), AABB::empty()),
-                                |(aabb_bounds, centroid_bounds), idx| {
-                                    let aabb = &shapes[*idx].aabb();
-                                    (aabb_bounds.union_aabb(aabb),
-                                     centroid_bounds.union_point(&aabb.center()))
-                                });
 
-        if indices.len() < 5 {
-            return BVHNode::Leaf {
-                aabb: aabb_bounds,
-                shapes: indices,
-            };
+        // Helper function to accumulate the AABB union and the centroids AABB.
+        fn grow_union_bounds(union_bounds: (AABB, AABB), shape_aabb: &AABB) -> (AABB, AABB) {
+            let center = &shape_aabb.center();
+            let union_aabbs = &union_bounds.0;
+            let union_centroids = &union_bounds.1;
+            (union_aabbs.union(shape_aabb), union_centroids.grow(center))
+        }
+
+        let mut union_bounds = Default::default();
+        for index in &indices {
+            union_bounds = grow_union_bounds(union_bounds, &shapes[*index].aabb());
+        }
+        let (aabb_bounds, centroid_bounds) = union_bounds;
+
+        // If there are less than five elements, don't split anymore
+        if indices.len() <= 5 {
+            return BVHNode::Leaf { shapes: indices };
         }
 
         // Find the axis along which the shapes are spread the most
@@ -52,7 +67,7 @@ impl BVHNode {
             /// Extends this `Bucket` by the given `AABB`.
             fn add_aabb(&mut self, aabb: &AABB) {
                 self.size += 1;
-                self.aabb = self.aabb.union_aabb(aabb);
+                self.aabb = self.aabb.union(aabb);
             }
         }
 
@@ -60,7 +75,7 @@ impl BVHNode {
         fn bucket_union(a: Bucket, b: &Bucket) -> Bucket {
             Bucket {
                 size: a.size + b.size,
-                aabb: a.aabb.union_aabb(&b.aabb),
+                aabb: a.aabb.union(&b.aabb),
             }
         }
 
@@ -86,25 +101,27 @@ impl BVHNode {
             bucket_assignments[bucket_num].push(*idx);
         }
 
-        // Compute the costs for each configuration
-        let costs = (0..11).map(|i| {
+        // Compute the costs for each configuration and
+        // select the configuration with the minimal costs
+        let mut min_bucket = 0;
+        let mut min_cost = f32::INFINITY;
+        let mut init_aabb = AABB::empty();
+        let mut tail_aabb = AABB::empty();
+        for i in 0..11 {
             let init = buckets.iter().take(i + 1).fold(Bucket::empty(), bucket_union);
             let tail = buckets.iter().skip(i + 1).fold(Bucket::empty(), bucket_union);
 
-            0.125 +
-            (init.size as f32 * init.aabb.surface_area() +
-             tail.size as f32 * tail.aabb.surface_area()) / aabb_bounds.surface_area()
-        });
+            let cost = (init.size as f32 * init.aabb.surface_area() +
+                        tail.size as f32 * tail.aabb.surface_area()) /
+                       aabb_bounds.surface_area();
 
-        // Select the configuration with the minimal costs
-        let (min_bucket, _) = costs.enumerate().fold((0, f32::INFINITY), |(min_bucket, min_cost),
-                                                      (bucket_num, bucket_cost)| {
-            if bucket_cost < min_cost {
-                (bucket_num, bucket_cost)
-            } else {
-                (min_bucket, min_cost)
+            if cost < min_cost {
+                min_bucket = i;
+                min_cost = cost;
+                init_aabb = init.aabb;
+                tail_aabb = tail.aabb;
             }
-        });
+        }
 
         // Join together all index buckets, and proceed recursively
         let mut init_indices = Vec::new();
@@ -118,8 +135,9 @@ impl BVHNode {
 
         // Construct the actual data structure
         BVHNode::Node {
-            aabb: aabb_bounds,
+            init_aabb: init_aabb,
             init: Box::new(BVHNode::new(shapes, init_indices)),
+            tail_aabb: tail_aabb,
             tail: Box::new(BVHNode::new(shapes, tail_indices)),
         }
     }
@@ -127,37 +145,71 @@ impl BVHNode {
     fn print(&self, depth: usize) {
         let padding: String = repeat(" ").take(depth).collect();
         match *self {
-            BVHNode::Node { ref aabb, ref init, ref tail } => {
-                println!("{}AABB\t{:?}", padding, aabb);
+            BVHNode::Node { ref init_aabb, ref init, ref tail_aabb, ref tail } => {
                 println!("{}init", padding);
                 init.print(depth + 1);
                 println!("{}tail", padding);
                 tail.print(depth + 1);
             }
-            BVHNode::Leaf { ref aabb, ref shapes } => {
-                println!("{}AABB\t{:?}", padding, aabb);
+            BVHNode::Leaf { ref shapes } => {
                 println!("{}shapes\t{:?}", padding, shapes);
+            }
+        }
+    }
+
+    pub fn traverse_recursive(&self, ray: &Ray, indices: &mut Vec<usize>) {
+        match *self {
+            BVHNode::Node { ref init_aabb, ref init, ref tail_aabb, ref tail } => {
+                if ray.intersects_aabb(init_aabb) {
+                    init.traverse_recursive(ray, indices);
+                }
+                if ray.intersects_aabb(tail_aabb) {
+                    tail.traverse_recursive(ray, indices);
+                }
+            }
+            BVHNode::Leaf { ref shapes } => {
+                for index in shapes {
+                    indices.push(*index);
+                }
             }
         }
     }
 }
 
-pub struct BVH<T: Bounded> {
-    shapes: Vec<T>,
+pub struct BVH {
     root: BVHNode,
 }
 
-impl<T: Bounded> BVH<T> {
-    pub fn new(shapes: Vec<T>) -> BVH<T> {
+impl BVH {
+    pub fn new<T: Bounded>(shapes: Vec<T>) -> BVH {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
         let root = BVHNode::new(&shapes, indices);
-        BVH {
-            shapes: shapes,
-            root: root,
-        }
+        BVH { root: root }
     }
 
     pub fn print(&self) {
         self.root.print(0);
     }
+
+    pub fn traverse_recursive<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
+        let mut indices = Vec::new();
+        self.root.traverse_recursive(ray, &mut indices);
+        let mut hit_shapes = Vec::new();
+        for index in &indices {
+            let shape = &shapes[*index];
+            if ray.intersects_aabb(&shape.aabb()) {
+                hit_shapes.push(shape);
+            }
+        }
+        hit_shapes
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use aabb::AABB;
+    use bvh::BVH;
+
+    #[test]
+    fn test_primitive_bvh() {}
 }
