@@ -32,14 +32,12 @@ pub struct FlatNode {
 const MAX_UINT32: u32 = 0xFFFFFFFF;
 
 pub fn print_flat_tree(flat_nodes: &[FlatNode]) {
-    let mut i = 0;
-    for node in flat_nodes {
+    for (i, node) in flat_nodes.iter().enumerate() {
         println!("{}\tentry {}\texit {}\tshape {}",
                  i,
                  node.entry_index,
                  node.exit_index,
                  node.shape_index);
-        i += 1;
     }
 }
 
@@ -192,7 +190,7 @@ impl BVHNode {
     fn print(&self, depth: usize) {
         let padding: String = repeat(" ").take(depth).collect();
         match *self {
-            BVHNode::Node { ref init_aabb, ref init, ref tail_aabb, ref tail } => {
+            BVHNode::Node { ref init, ref tail, .. } => {
                 println!("{}init", padding);
                 init.print(depth + 1);
                 println!("{}tail", padding);
@@ -278,7 +276,7 @@ pub struct BVH {
 
 impl BVH {
     /// Creates a new BVH from the slice of shapes.
-    pub fn new<T: Bounded>(shapes: &Vec<T>) -> BVH {
+    pub fn new<T: Bounded>(shapes: &[T]) -> BVH {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
         let root = BVHNode::new(shapes, indices);
         BVH { root: root }
@@ -455,5 +453,99 @@ mod tests {
         assert!(xs_3.contains(&6));
         assert!(xs_3.contains(&5));
         assert!(xs_3.contains(&4));
+    }
+
+    struct Triangle {
+        a: Point3<f32>,
+        b: Point3<f32>,
+        c: Point3<f32>,
+    }
+
+    impl Triangle {
+        fn new(a: Point3<f32>, b: Point3<f32>, c: Point3<f32>) -> Triangle {
+            Triangle { a: a, b: b, c: c }
+        }
+    }
+
+    impl Bounded for Triangle {
+        fn aabb(&self) -> AABB {
+            let mut min = self.a;
+            let mut max = self.a;
+            min.x = min.x.min(self.b.x).min(self.c.x);
+            min.y = min.y.min(self.b.y).min(self.c.y);
+            min.z = min.z.min(self.b.z).min(self.c.z);
+            max.x = max.x.max(self.b.x).max(self.c.x);
+            max.y = max.y.max(self.b.y).max(self.c.y);
+            max.z = max.z.max(self.b.z).max(self.c.z);
+            AABB::with_bounds(min, max)
+        }
+    }
+
+    /// Creates a unit size cube centered at `pos` and pushes the triangles to `shapes`
+    fn push_cube(pos: Point3<f32>, shapes: &mut Vec<Triangle>) {
+        let top_front_right = pos + Vector3::new(0.5, 0.5, -0.5);
+        let top_back_right = pos + Vector3::new(0.5, 0.5, 0.5);
+        let top_back_left = pos + Vector3::new(-0.5, 0.5, 0.5);
+        let top_front_left = pos + Vector3::new(-0.5, 0.5, -0.5);
+        let bottom_front_right = pos + Vector3::new(0.5, -0.5, -0.5);
+        let bottom_back_right = pos + Vector3::new(0.5, -0.5, 0.5);
+        let bottom_back_left = pos + Vector3::new(-0.5, -0.5, 0.5);
+        let bottom_front_left = pos + Vector3::new(-0.5, -0.5, -0.5);
+
+        shapes.push(Triangle::new(top_back_right, top_front_right, top_front_left));
+        shapes.push(Triangle::new(top_front_left, top_back_left, top_back_right));
+        shapes.push(Triangle::new(bottom_front_left, bottom_front_right, bottom_back_right));
+        shapes.push(Triangle::new(bottom_back_right, bottom_back_left, bottom_front_left));
+        shapes.push(Triangle::new(top_back_left, top_front_left, bottom_front_left));
+        shapes.push(Triangle::new(bottom_front_left, bottom_back_left, top_back_left));
+        shapes.push(Triangle::new(bottom_front_right, top_front_right, top_back_right));
+        shapes.push(Triangle::new(top_back_right, bottom_back_right, bottom_front_right));
+        shapes.push(Triangle::new(top_front_left, top_front_right, bottom_front_right));
+        shapes.push(Triangle::new(bottom_front_right, bottom_front_left, top_front_left));
+        shapes.push(Triangle::new(bottom_back_right, top_back_right, top_back_left));
+        shapes.push(Triangle::new(top_back_left, bottom_back_left, bottom_back_right));
+    }
+
+    /// Implementation of splitmix64.
+    /// For reference see: http://xoroshiro.di.unimi.it/splitmix64.c
+    unsafe fn splitmix64(x: &mut u64) -> u64 {
+        *x += 0x9E3779B97F4A7C15u64;
+        let mut z = *x;
+        z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9u64;
+        z = (z ^ (z >> 27)) * 0x94D049BB133111EBu64;
+        z ^ (z >> 31)
+    }
+
+    unsafe fn u64_to_f32(a: u64) -> (f32, f32) {
+        let adr_u64 = (&a as *const u64) as usize;
+        (*(adr_u64 as *const f32), *((adr_u64 + 1) as *const f32))
+    }
+
+    fn next_point3(seed: &mut u64) -> Point3<f32> {
+        unsafe {
+            let (a, b) = u64_to_f32(splitmix64(seed));
+            let (c, _) = u64_to_f32(splitmix64(seed));
+            Point3::new(a, b, c)
+        }
+    }
+
+    fn create_100k_cubes() -> Vec<Triangle> {
+        let mut vec = Vec::new();
+        let mut seed = 0;
+
+        for _ in 0..100_000 {
+            push_cube(next_point3(&mut seed), &mut vec);
+        }
+        vec
+    }
+
+    #[bench]
+    /// Benchmark for the branchless intersection algorithm.
+    fn bench_build_1200k_triangles_bvh(b: &mut ::test::Bencher) {
+        let cubes = create_100k_cubes();
+
+        b.iter(|| {
+            BVH::new(&cubes);
+        });
     }
 }
