@@ -5,13 +5,13 @@ use std::f32;
 use std::ops::Index;
 
 /// Index of the X axis. Used access `Vector3`/`Point3` structs via index.
-const X_AXIS: usize = 0;
+pub const X_AXIS: usize = 0;
 
 /// Index of the Y axis. Used access `Vector3`/`Point3` structs via index.
-const Y_AXIS: usize = 1;
+pub const Y_AXIS: usize = 1;
 
 /// Index of the Z axis. Used access `Vector3`/`Point3` structs via index.
-const Z_AXIS: usize = 2;
+pub const Z_AXIS: usize = 2;
 
 /// AABB struct.
 #[derive(Debug, Copy, Clone)]
@@ -350,7 +350,23 @@ impl AABB {
         size.x * size.y * size.z
     }
 
-    /// Returns the axis along which the `AABB` is stretched the most.
+    /// Returns the axis along which the [`AABB`] is stretched the most.
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::aabb::{AABB, X_AXIS};
+    /// use bvh::nalgebra::Point3;
+    ///
+    /// let min = Point3::new(-100.0,0.0,0.0);
+    /// let max = Point3::new(100.0,0.0,0.0);
+    ///
+    /// let aabb = AABB::with_bounds(min, max);
+    /// let axis = aabb.largest_axis();
+    /// assert!(axis == X_AXIS);
+    /// ```
+    ///
+    /// [`AABB`]: struct.AABB.html
+    ///
     pub fn largest_axis(&self) -> usize {
         let size = self.size();
         if size.x > size.y && size.x > size.z {
