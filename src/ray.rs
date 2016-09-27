@@ -1,5 +1,10 @@
+//! This module defines a Ray structure and intersection algorithms
+//! for axis aligned bounding boxes and triangles.
+
 use aabb::AABB;
-use nalgebra::{Vector3, Point3, Norm};
+use nalgebra::{Vector3, Point3, Norm, Cross, Dot};
+use std::f32::INFINITY;
+use EPSILON;
 
 /// A struct which defines a ray and some of its cached values.
 #[derive(Debug)]
@@ -22,6 +27,28 @@ pub struct Ray {
     /// [`AABB`]: struct.AABB.html
     ///
     sign: Vector3<usize>,
+}
+
+/// A struct which is returned by the `intersects_triangle` method.
+pub struct Intersection {
+    /// Distance from the ray origin to the intersection point.
+    pub distance: f32,
+
+    /// U coordinate of the intersection.
+    pub u: f32,
+
+    /// V coordinate of the intersection.
+    pub v: f32,
+}
+
+impl Intersection {
+    pub fn new(distance: f32, u: f32, v: f32) -> Intersection {
+        Intersection {
+            distance: distance,
+            u: u,
+            v: v,
+        }
+    }
 }
 
 impl Ray {
@@ -211,14 +238,80 @@ impl Ray {
 
         tmax >= tmin && tmax >= 0.0
     }
+
+    /// Implementation of the [Möller-Trumbore triangle/ray intersection algorithm]
+    /// (https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm).
+    /// Returns the distance to the intersection, as well as
+    /// the u and v coordinates of the intersection.
+    /// The distance is set to +INFINITY if the ray does not intersect the triangle, or hits
+    /// it from behind.
+    pub fn intersects_triangle(&self,
+                               a: &Point3<f32>,
+                               b: &Point3<f32>,
+                               c: &Point3<f32>)
+                               -> Intersection {
+        let a_to_b = *b - *a;
+        let a_to_c = *c - *a;
+
+        // Begin calculating determinant - also used to calculate u parameter
+        // u_vec lies in view plane
+        // length of a_to_c in view_plane = |u_vec| = |a_to_c|*sin(a_to_c, dir)
+        let u_vec = self.direction.cross(&a_to_c);
+
+        // If determinant is near zero, ray lies in plane of triangle
+        // The determinant corresponds to the parallelepiped volume:
+        // det = 0 => [dir, a_to_b, a_to_c] not linearly independant
+        let det = a_to_b.dot(&u_vec);
+
+        // Only testing positive bound, thus enabling backface culling
+        // If backface culling is not desired write:
+        // det < EPSILON && det > -EPSILON
+        if det < EPSILON {
+            return Intersection::new(INFINITY, 0.0, 0.0);
+        }
+
+        let inv_det = 1.0 / det;
+
+        // Vector from point a to ray origin
+        let a_to_origin = self.origin - *a;
+
+        // Calculate u parameter
+        let u = a_to_origin.dot(&u_vec) * inv_det;
+
+        // Test bounds: u < 0 || u > 1 => outside of triangle
+        if u < 0.0 || u > 1.0 {
+            return Intersection::new(INFINITY, u, 0.0);
+        }
+
+        // Prepare to test v parameter
+        let v_vec = a_to_origin.cross(&a_to_b);
+
+        // Calculate v parameter and test bound
+        let v = self.direction.dot(&v_vec) * inv_det;
+        // The intersection lies outside of the triangle
+        if v < 0.0 || u + v > 1.0 {
+            return Intersection::new(INFINITY, u, v);
+        }
+
+        let dist = a_to_c.dot(&v_vec) * inv_det;
+
+        if dist > EPSILON {
+            Intersection::new(dist, u, v)
+        } else {
+            Intersection::new(INFINITY, u, v)
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use EPSILON;
     use ray::Ray;
     use aabb::AABB;
-    use nalgebra::{Point3, Vector3};
+    use nalgebra::{Point3, Vector3, Cross, Dot};
     use rand::{Rng, StdRng, SeedableRng};
+    use std::f32::INFINITY;
+    use std::cmp;
 
     type TupleVec = (f32, f32, f32);
 
@@ -294,7 +387,7 @@ mod tests {
         fn test_ray_points_from_aabb_center_naive(data: (TupleVec, TupleVec, TupleVec)) -> bool {
             let (mut ray, aabb) = gen_ray_to_aabb(data);
 
-             // Invert the ray direction
+            // Invert the ray direction
             ray.direction = -ray.direction;
             ray.inv_direction = -ray.inv_direction;
             !ray.intersects_aabb_naive(&aabb) || aabb.contains(&ray.origin)
@@ -312,6 +405,70 @@ mod tests {
             ray.direction = -ray.direction;
             ray.inv_direction = -ray.inv_direction;
             !ray.intersects_aabb_branchless(&aabb) || aabb.contains(&ray.origin)
+        }
+    }
+
+    /// Test whether a `Ray` which points at the center of a triangle
+    /// intersects it, unless it sees the back face, which is culled.
+    quickcheck!{
+        fn test_ray_hits_triangle(a: TupleVec,
+                                  b: TupleVec,
+                                  c: TupleVec,
+                                  origin: TupleVec,
+                                  u: u16,
+                                  v: u16)
+                                  -> bool {
+            // Define a triangle, u/v vectors and its normal
+            let triangle = (tuple_to_point(&a), tuple_to_point(&b), tuple_to_point(&c));
+            let u_vec = triangle.1 - triangle.0;
+            let v_vec = triangle.2 - triangle.0;
+            let normal = u_vec.cross(&v_vec);
+
+            // Get some u and v coordinates such that u+v <= 1
+            let u = u % 101;
+            let v = cmp::min(100 - u, v % 101);
+            let u = u as f32 / 100.0;
+            let v = v as f32 / 100.0;
+
+            // Define some point on the triangle
+            let point_on_triangle = triangle.0 + u * u_vec + v * v_vec;
+
+            // Define a ray which points at the triangle
+            let origin = tuple_to_point(&origin);
+            let ray = Ray::new(origin, point_on_triangle - origin);
+            let on_back_side = normal.dot(&(ray.origin - triangle.0)) <= 0.0;
+
+            // Perform the intersection test
+            let intersects = ray.intersects_triangle(&triangle.0, &triangle.1, &triangle.2);
+            let uv_sum = intersects.u + intersects.v;
+
+            // Either the intersection is in the back side (including the triangle-plane)
+            if on_back_side {
+                // Intersection must be INFINITY, u and v are undefined
+                intersects.distance == INFINITY
+            } else {
+                // Or it is on the front side
+                // Either the intersection is inside the triangle, which it should be
+                // for all u, v such that u+v <= 1.0
+                let intersection_inside = uv_sum >= 0.0 && uv_sum <= 1.0 &&
+                                          intersects.distance < INFINITY;
+
+                // Or the input data was close to the border
+                let close_to_border =
+                    u.abs() < EPSILON || (u - 1.0).abs() < EPSILON || v.abs() < EPSILON ||
+                    (v - 1.0).abs() < EPSILON || (u + v - 1.0).abs() < EPSILON;
+
+                if !(intersection_inside || close_to_border) {
+                    println!("uvsum {}", uv_sum);
+                    println!("intersects.0 {}", intersects.distance);
+                    println!("intersects.1 (u) {}", intersects.u);
+                    println!("intersects.2 (v) {}", intersects.v);
+                    println!("u {}", u);
+                    println!("v {}", v);
+                }
+
+                intersection_inside || close_to_border
+            }
         }
     }
 
