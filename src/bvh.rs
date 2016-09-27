@@ -13,12 +13,12 @@ enum BVHNode {
     },
     /// Inner node.
     Node {
-        /// The union `AABB` of the shapes in init.
-        init_aabb: AABB,
-        init: Box<BVHNode>,
-        /// The union `AABB` of the shapes in tail.
-        tail_aabb: AABB,
-        tail: Box<BVHNode>,
+        /// The union `AABB` of the shapes in child_l.
+        child_l_aabb: AABB,
+        child_l: Box<BVHNode>,
+        /// The union `AABB` of the shapes in child_r.
+        child_r_aabb: AABB,
+        child_r: Box<BVHNode>,
     },
 }
 
@@ -156,51 +156,51 @@ impl BVHNode {
         // select the configuration with the minimal costs
         let mut min_bucket = 0;
         let mut min_cost = f32::INFINITY;
-        let mut init_aabb = AABB::empty();
-        let mut tail_aabb = AABB::empty();
+        let mut child_l_aabb = AABB::empty();
+        let mut child_r_aabb = AABB::empty();
         for i in 0..(NUM_BUCKETS - 1) {
-            let init = buckets.iter().take(i + 1).fold(Bucket::empty(), bucket_union);
-            let tail = buckets.iter().skip(i + 1).fold(Bucket::empty(), bucket_union);
+            let child_l = buckets.iter().take(i + 1).fold(Bucket::empty(), bucket_union);
+            let child_r = buckets.iter().skip(i + 1).fold(Bucket::empty(), bucket_union);
 
-            let cost = (init.size as f32 * init.aabb.surface_area() +
-                        tail.size as f32 * tail.aabb.surface_area()) /
+            let cost = (child_l.size as f32 * child_l.aabb.surface_area() +
+                        child_r.size as f32 * child_r.aabb.surface_area()) /
                        aabb_bounds.surface_area();
 
             if cost < min_cost {
                 min_bucket = i;
                 min_cost = cost;
-                init_aabb = init.aabb;
-                tail_aabb = tail.aabb;
+                child_l_aabb = child_l.aabb;
+                child_r_aabb = child_r.aabb;
             }
         }
 
         // Join together all index buckets, and proceed recursively
-        let mut init_indices = Vec::new();
+        let mut child_l_indices = Vec::new();
         for mut indices in bucket_assignments.iter_mut().take(min_bucket + 1) {
-            init_indices.append(&mut indices);
+            child_l_indices.append(&mut indices);
         }
-        let mut tail_indices = Vec::new();
+        let mut child_r_indices = Vec::new();
         for mut indices in bucket_assignments.iter_mut().skip(min_bucket + 1) {
-            tail_indices.append(&mut indices);
+            child_r_indices.append(&mut indices);
         }
 
         // Construct the actual data structure
         BVHNode::Node {
-            init_aabb: init_aabb,
-            init: Box::new(BVHNode::new(shapes, init_indices)),
-            tail_aabb: tail_aabb,
-            tail: Box::new(BVHNode::new(shapes, tail_indices)),
+            child_l_aabb: child_l_aabb,
+            child_l: Box::new(BVHNode::new(shapes, child_l_indices)),
+            child_r_aabb: child_r_aabb,
+            child_r: Box::new(BVHNode::new(shapes, child_r_indices)),
         }
     }
 
     fn print(&self, depth: usize) {
         let padding: String = repeat(" ").take(depth).collect();
         match *self {
-            BVHNode::Node { ref init, ref tail, .. } => {
-                println!("{}init", padding);
-                init.print(depth + 1);
-                println!("{}tail", padding);
-                tail.print(depth + 1);
+            BVHNode::Node { ref child_l, ref child_r, .. } => {
+                println!("{}child_l", padding);
+                child_l.print(depth + 1);
+                println!("{}child_r", padding);
+                child_r.print(depth + 1);
             }
             BVHNode::Leaf { ref shapes } => {
                 println!("{}shapes\t{:?}", padding, shapes);
@@ -210,12 +210,12 @@ impl BVHNode {
 
     pub fn traverse_recursive(&self, ray: &Ray, indices: &mut Vec<usize>) {
         match *self {
-            BVHNode::Node { ref init_aabb, ref init, ref tail_aabb, ref tail } => {
-                if ray.intersects_aabb(init_aabb) {
-                    init.traverse_recursive(ray, indices);
+            BVHNode::Node { ref child_l_aabb, ref child_l, ref child_r_aabb, ref child_r } => {
+                if ray.intersects_aabb(child_l_aabb) {
+                    child_l.traverse_recursive(ray, indices);
                 }
-                if ray.intersects_aabb(tail_aabb) {
-                    tail.traverse_recursive(ray, indices);
+                if ray.intersects_aabb(child_r_aabb) {
+                    child_r.traverse_recursive(ray, indices);
                 }
             }
             BVHNode::Leaf { ref shapes } => {
@@ -228,31 +228,31 @@ impl BVHNode {
 
     pub fn flatten_tree(&self, vec: &mut Vec<FlatNode>, next_free: usize) -> usize {
         match *self {
-            BVHNode::Node { ref init_aabb, ref init, ref tail_aabb, ref tail } => {
+            BVHNode::Node { ref child_l_aabb, ref child_l, ref child_r_aabb, ref child_r } => {
 
-                let init_node = FlatNode {
-                    aabb: *init_aabb,
+                let child_l_node = FlatNode {
+                    aabb: *child_l_aabb,
                     entry_index: (next_free + 1) as u32,
                     exit_index: 0,
                     shape_index: MAX_UINT32,
                 };
-                vec.push(init_node);
+                vec.push(child_l_node);
 
-                let index_after_init = init.flatten_tree(vec, next_free + 1);
-                vec[next_free as usize].exit_index = index_after_init as u32;
+                let index_after_child_l = child_l.flatten_tree(vec, next_free + 1);
+                vec[next_free as usize].exit_index = index_after_child_l as u32;
 
                 let exit_node = FlatNode {
-                    aabb: *tail_aabb,
-                    entry_index: (index_after_init + 1) as u32,
+                    aabb: *child_r_aabb,
+                    entry_index: (index_after_child_l + 1) as u32,
                     exit_index: 0,
                     shape_index: MAX_UINT32,
                 };
                 vec.push(exit_node);
 
-                let index_after_tail = tail.flatten_tree(vec, index_after_init + 1);
-                vec[index_after_init as usize].exit_index = index_after_tail as u32;
+                let index_after_child_r = child_r.flatten_tree(vec, index_after_child_l + 1);
+                vec[index_after_child_l as usize].exit_index = index_after_child_r as u32;
 
-                index_after_tail
+                index_after_child_r
             }
             BVHNode::Leaf { ref shapes } => {
                 let mut next_shape = next_free;
@@ -547,12 +547,23 @@ mod tests {
     }
 
     #[bench]
-    /// Benchmark for the branchless intersection algorithm.
+    /// Benchmark the construction of a BVH with 120,000 triangles.
     fn bench_build_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        let cubes = create_n_cubes(10_000);
+        let triangles = create_n_cubes(10_000);
 
         b.iter(|| {
-            BVH::new(&cubes);
+            BVH::new(&triangles);
+        });
+    }
+
+    #[bench]
+    /// Benchmark the flattening of a BVH with 120,000 triangles.
+    fn bench_flatten_120k_triangles_bvh(b: &mut ::test::Bencher) {
+        let triangles = create_n_cubes(10_000);
+        let bvh = BVH::new(&triangles);
+
+        b.iter(|| {
+            bvh.flatten_tree();
         });
     }
 }
