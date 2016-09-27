@@ -4,13 +4,13 @@ use nalgebra::{Point3, Vector3};
 use std::f32;
 use std::ops::Index;
 
-/// Index of the X axis. Used access `Vector3`/`Point3` structs via index.
+/// Index of the X axis. Used to access `Vector3`/`Point3` structs via index.
 pub const X_AXIS: usize = 0;
 
-/// Index of the Y axis. Used access `Vector3`/`Point3` structs via index.
+/// Index of the Y axis. Used to access `Vector3`/`Point3` structs via index.
 pub const Y_AXIS: usize = 1;
 
-/// Index of the Z axis. Used access `Vector3`/`Point3` structs via index.
+/// Index of the Z axis. Used to access `Vector3`/`Point3` structs via index.
 pub const Z_AXIS: usize = 2;
 
 /// AABB struct.
@@ -140,13 +140,13 @@ impl AABB {
     ///
     /// # Examples
     /// ```
+    /// use bvh::EPSILON;
     /// use bvh::aabb::AABB;
     /// use bvh::nalgebra::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0,-1.0,-1.0), Point3::new(1.0,1.0,1.0));
     /// let point_barely_inside = Point3::new(1.0000001,-1.0000001,1.000000001);
     /// let point_outside = Point3::new(1.0,-2.0,4.0);
-    /// const EPSILON: f32 = 0.000001;
     ///
     /// assert!(aabb.approx_contains_eps(&point_barely_inside, EPSILON));
     /// assert!(!aabb.approx_contains_eps(&point_outside, EPSILON));
@@ -440,10 +440,9 @@ impl Bounded for Point3<f32> {
 
 #[cfg(test)]
 mod tests {
+    use EPSILON;
     use aabb::{AABB, Bounded};
     use nalgebra::{Point3, Vector3};
-
-    const EPSILON: f32 = 0.00001;
 
     type TupleVec = (f32, f32, f32);
 

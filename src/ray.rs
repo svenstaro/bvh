@@ -4,6 +4,7 @@
 use aabb::AABB;
 use nalgebra::{Vector3, Point3, Norm, Cross, Dot};
 use std::f32::INFINITY;
+use EPSILON;
 
 /// A struct which defines a ray and some of its cached values.
 #[derive(Debug)]
@@ -26,6 +27,28 @@ pub struct Ray {
     /// [`AABB`]: struct.AABB.html
     ///
     sign: Vector3<usize>,
+}
+
+/// A struct which is returned by the `intersects_triangle` method.
+pub struct Intersection {
+    /// Distance from the ray origin to the intersection point.
+    pub distance: f32,
+
+    /// U coordinate of the intersection.
+    pub u: f32,
+
+    /// V coordinate of the intersection.
+    pub v: f32,
+}
+
+impl Intersection {
+    pub fn new(distance: f32, u: f32, v: f32) -> Intersection {
+        Intersection {
+            distance: distance,
+            u: u,
+            v: v,
+        }
+    }
 }
 
 impl Ray {
@@ -226,15 +249,13 @@ impl Ray {
                                a: &Point3<f32>,
                                b: &Point3<f32>,
                                c: &Point3<f32>)
-                               -> (f32, f32, f32) {
-        const EPSILON: f32 = 0.00001;
-
+                               -> Intersection {
         let a_to_b = *b - *a;
         let a_to_c = *c - *a;
 
         // Begin calculating determinant - also used to calculate u parameter
         // u_vec lies in view plane
-        // |u_vec| = |a_to_c|*sin(a_to_c, dir) := length of a_to_c in view_plane
+        // length of a_to_c in view_plane = |u_vec| = |a_to_c|*sin(a_to_c, dir)
         let u_vec = self.direction.cross(&a_to_c);
 
         // If determinant is near zero, ray lies in plane of triangle
@@ -244,9 +265,9 @@ impl Ray {
 
         // Only testing positive bound, thus enabling backface culling
         // If backface culling is not desired write:
-        // det < 0.00001 && det > -0.00001
+        // det < EPSILON && det > -EPSILON
         if det < EPSILON {
-            return (INFINITY, 0.0, 0.0);
+            return Intersection::new(INFINITY, 0.0, 0.0);
         }
 
         let inv_det = 1.0 / det;
@@ -259,7 +280,7 @@ impl Ray {
 
         // Test bounds: u < 0 || u > 1 => outside of triangle
         if u < 0.0 || u > 1.0 {
-            return (INFINITY, u, 0.0);
+            return Intersection::new(INFINITY, u, 0.0);
         }
 
         // Prepare to test v parameter
@@ -269,29 +290,28 @@ impl Ray {
         let v = self.direction.dot(&v_vec) * inv_det;
         // The intersection lies outside of the triangle
         if v < 0.0 || u + v > 1.0 {
-            return (INFINITY, u, v);
+            return Intersection::new(INFINITY, u, v);
         }
 
         let dist = a_to_c.dot(&v_vec) * inv_det;
 
         if dist > EPSILON {
-            (dist, u, v)
+            Intersection::new(dist, u, v)
         } else {
-            (INFINITY, u, v)
+            Intersection::new(INFINITY, u, v)
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use EPSILON;
     use ray::Ray;
     use aabb::AABB;
     use nalgebra::{Point3, Vector3, Cross, Dot};
     use rand::{Rng, StdRng, SeedableRng};
     use std::f32::INFINITY;
     use std::cmp;
-
-    const EPSILON: f32 = 0.00001;
 
     type TupleVec = (f32, f32, f32);
 
@@ -418,19 +438,20 @@ mod tests {
             let ray = Ray::new(origin, point_on_triangle - origin);
             let on_back_side = normal.dot(&(ray.origin - triangle.0)) <= 0.0;
 
-            // Compute
+            // Perform the intersection test
             let intersects = ray.intersects_triangle(&triangle.0, &triangle.1, &triangle.2);
-            let uv_sum = intersects.1 + intersects.2;
+            let uv_sum = intersects.u + intersects.v;
 
             // Either the intersection is in the back side (including the triangle-plane)
             if on_back_side {
                 // Intersection must be INFINITY, u and v are undefined
-                intersects.0 == INFINITY
+                intersects.distance == INFINITY
             } else {
                 // Or it is on the front side
                 // Either the intersection is inside the triangle, which it should be
                 // for all u, v such that u+v <= 1.0
-                let intersection_inside = uv_sum >= 0.0 && uv_sum <= 1.0 && intersects.0 < INFINITY;
+                let intersection_inside = uv_sum >= 0.0 && uv_sum <= 1.0 &&
+                                          intersects.distance < INFINITY;
 
                 // Or the input data was close to the border
                 let close_to_border =
@@ -439,9 +460,9 @@ mod tests {
 
                 if !(intersection_inside || close_to_border) {
                     println!("uvsum {}", uv_sum);
-                    println!("intersects.0 {}", intersects.0);
-                    println!("intersects.1 (u) {}", intersects.1);
-                    println!("intersects.2 (v) {}", intersects.2);
+                    println!("intersects.0 {}", intersects.distance);
+                    println!("intersects.1 (u) {}", intersects.u);
+                    println!("intersects.2 (v) {}", intersects.v);
                     println!("u {}", u);
                     println!("v {}", v);
                 }
