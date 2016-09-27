@@ -3,7 +3,7 @@ use ray::Ray;
 use std::boxed::Box;
 use std::f32;
 use std::iter::repeat;
-
+// TODO kommentar zu wieso keine root aabb
 /// Enum which describes the union type of `BVHNode`s.
 enum BVHNode {
     /// Leaf node.
@@ -20,6 +20,53 @@ enum BVHNode {
         tail_aabb: AABB,
         tail: Box<BVHNode>,
     },
+}
+
+pub struct FlatNode {
+    aabb: AABB,
+    entry_index: u32,
+    exit_index: u32,
+    shape_index: u32,
+}
+
+const MAX_UINT32: u32 = 0xFFFFFFFF;
+
+pub fn print_flat_tree(flat_nodes: &[FlatNode]) {
+    let mut i = 0;
+    for node in flat_nodes {
+        println!("{}\tentry {}\texit {}\tshape {}",
+                 i,
+                 node.entry_index,
+                 node.exit_index,
+                 node.shape_index);
+        i += 1;
+    }
+}
+
+pub fn traverse_flat_bvh<'a, T: Bounded>(ray: &Ray,
+                                         flat_nodes: &[FlatNode],
+                                         shapes: &'a [T])
+                                         -> Vec<&'a T> {
+    let mut hit_shapes = Vec::new();
+    let mut index = 0;
+    let max_length = flat_nodes.len();
+    while index < max_length {
+        let node = &flat_nodes[index];
+        if node.entry_index == MAX_UINT32 {
+            let shape_index = node.shape_index;
+            let actual_shape = &shapes[shape_index as usize];
+            let actual_aabb = actual_shape.aabb();
+            if ray.intersects_aabb(&actual_aabb) {
+                hit_shapes.push(actual_shape);
+            }
+            index = node.exit_index as usize;
+        } else if ray.intersects_aabb(&node.aabb) {
+            index = node.entry_index as usize;
+        } else {
+            index = node.exit_index as usize;
+        }
+    }
+    hit_shapes
 }
 
 impl BVHNode {
@@ -174,23 +221,75 @@ impl BVHNode {
             }
         }
     }
+
+    pub fn flatten_tree(&self, vec: &mut Vec<FlatNode>, next_free: usize) -> usize {
+        match *self {
+            BVHNode::Node { ref init_aabb, ref init, ref tail_aabb, ref tail } => {
+
+                let init_node = FlatNode {
+                    aabb: *init_aabb,
+                    entry_index: (next_free + 1) as u32,
+                    exit_index: 0,
+                    shape_index: MAX_UINT32,
+                };
+                vec.push(init_node);
+
+                let index_after_init = init.flatten_tree(vec, next_free + 1);
+                vec[next_free as usize].exit_index = index_after_init as u32;
+
+                let exit_node = FlatNode {
+                    aabb: *tail_aabb,
+                    entry_index: (index_after_init + 1) as u32,
+                    exit_index: 0,
+                    shape_index: MAX_UINT32,
+                };
+                vec.push(exit_node);
+
+                let index_after_tail = tail.flatten_tree(vec, index_after_init + 1);
+                vec[index_after_init as usize].exit_index = index_after_tail as u32;
+
+                index_after_tail
+            }
+            BVHNode::Leaf { ref shapes } => {
+                let mut next_shape = next_free;
+                for shape_index in shapes {
+                    next_shape += 1;
+                    let leaf_node = FlatNode {
+                        aabb: AABB::empty(),
+                        entry_index: MAX_UINT32,
+                        exit_index: next_shape as u32,
+                        shape_index: *shape_index as u32,
+                    };
+                    vec.push(leaf_node);
+                }
+
+                next_shape
+            }
+        }
+    }
 }
 
+/// The BVH data structure. Only contains the BVH structure and indices to
+/// the slice of shapes given in the `new` function.
 pub struct BVH {
+    /// The root node of the BVH
     root: BVHNode,
 }
 
 impl BVH {
-    pub fn new<T: Bounded>(shapes: Vec<T>) -> BVH {
+    /// Creates a new BVH from the slice of shapes.
+    pub fn new<T: Bounded>(shapes: &Vec<T>) -> BVH {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
-        let root = BVHNode::new(&shapes, indices);
+        let root = BVHNode::new(shapes, indices);
         BVH { root: root }
     }
 
+    /// Prints the BVH in a tree-like visualization.
     pub fn print(&self) {
         self.root.print(0);
     }
 
+    /// Traverses the tree recursively. Returns an array of all shapes which were hit.
     pub fn traverse_recursive<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
         let mut indices = Vec::new();
         self.root.traverse_recursive(ray, &mut indices);
@@ -203,13 +302,158 @@ impl BVH {
         }
         hit_shapes
     }
+
+    /// Flattens the BVH so that it can be traversed iteratively.
+    pub fn flatten_tree(&self) -> Vec<FlatNode> {
+        let mut vec = Vec::new();
+        self.root.flatten_tree(&mut vec, 0);
+        vec
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use aabb::AABB;
-    use bvh::BVH;
+    use aabb::{AABB, Bounded};
+    use bvh::{BVH, traverse_flat_bvh, print_flat_tree};
+    use nalgebra::{Point3, Vector3};
+    use std::collections::HashSet;
+    use ray::Ray;
+
+    /// Define some Bounded structure.
+    struct XBox {
+        x: i32,
+    }
+
+    /// `XBox`'s `AABB`s are unit `AABB`s centered on the given x-position.
+    impl Bounded for XBox {
+        fn aabb(&self) -> AABB {
+            let min = Point3::new(self.x as f32 - 0.5, -0.5, -0.5);
+            let max = Point3::new(self.x as f32 + 0.5, 0.5, 0.5);
+            AABB::with_bounds(min, max)
+        }
+    }
+
+    /// Creates a `BVH` for a fixed scene structure.
+    fn build_some_bvh() -> (Vec<XBox>, BVH) {
+        // Create 21 boxes along the x-axis
+        let mut shapes = Vec::new();
+        for x in -10..11 {
+            shapes.push(XBox { x: x });
+        }
+
+        let bvh = BVH::new(&shapes);
+        (shapes, bvh)
+    }
 
     #[test]
-    fn test_primitive_bvh() {}
+    /// Tests whether the building procedure succeeds in not failing.
+    fn test_build_bvh() {
+        build_some_bvh();
+    }
+
+    #[test]
+    /// Runs some primitive tests for intersections of a ray with a fixed scene given as a BVH.
+    fn test_traverse_recursive_bvh() {
+        let (shapes, bvh) = build_some_bvh();
+
+        // Define a ray which traverses the x-axis from afar
+        let position_1 = Point3::new(-1000.0, 0.0, 0.0);
+        let direction_1 = Vector3::new(1.0, 0.0, 0.0);
+        let ray_1 = Ray::new(position_1, direction_1);
+
+        // It shuold hit all shapes
+        let hit_shapes_1 = bvh.traverse_recursive(&ray_1, &shapes);
+        assert!(hit_shapes_1.len() == 21);
+        let mut xs_1 = HashSet::new();
+        for shape in &hit_shapes_1 {
+            xs_1.insert(shape.x);
+        }
+        for x in -10..11 {
+            assert!(xs_1.contains(&x));
+        }
+
+        // Define a ray which traverses the y-axis from afar
+        let position_2 = Point3::new(0.0, -1000.0, 0.0);
+        let direction_2 = Vector3::new(0.0, 1.0, 0.0);
+        let ray_2 = Ray::new(position_2, direction_2);
+
+        // It should hit only one box
+        let hit_shapes_2 = bvh.traverse_recursive(&ray_2, &shapes);
+        assert!(hit_shapes_2.len() == 1);
+        assert!(hit_shapes_2[0].x == 0);
+
+        // Define a ray which intersects the x-axis diagonally
+        let position_3 = Point3::new(6.0, 0.5, 0.0);
+        let direction_3 = Vector3::new(-2.0, -1.0, 0.0);
+        let ray_3 = Ray::new(position_3, direction_3);
+
+        // It should hit exactly three boxes
+        let hit_shapes_3 = bvh.traverse_recursive(&ray_3, &shapes);
+        assert!(hit_shapes_3.len() == 3);
+        let mut xs_3 = HashSet::new();
+        for shape in &hit_shapes_3 {
+            xs_3.insert(shape.x);
+        }
+        assert!(xs_3.contains(&6));
+        assert!(xs_3.contains(&5));
+        assert!(xs_3.contains(&4));
+    }
+
+    #[test]
+    /// Tests whether the `flatten_tree` procedure succeeds in not failing.
+    fn test_flatten_bvh() {
+        let (_, bvh) = build_some_bvh();
+        bvh.flatten_tree();
+    }
+
+    #[test]
+    /// Runs some primitive tests for intersections of a ray with
+    /// a fixed scene given as a flat BVH.
+    fn test_traverse_flat_bvh() {
+        let (shapes, bvh) = build_some_bvh();
+        let flat_bvh = bvh.flatten_tree();
+        print_flat_tree(&flat_bvh);
+
+        // Define a ray which traverses the x-axis from afar
+        let position_1 = Point3::new(-1000.0, 0.0, 0.0);
+        let direction_1 = Vector3::new(1.0, 0.0, 0.0);
+        let ray_1 = Ray::new(position_1, direction_1);
+
+        // It shuold hit all shapes
+        let hit_shapes_1 = traverse_flat_bvh(&ray_1, &flat_bvh, &shapes);
+        assert!(hit_shapes_1.len() == 21);
+        let mut xs_1 = HashSet::new();
+        for shape in &hit_shapes_1 {
+            xs_1.insert(shape.x);
+        }
+        for x in -10..11 {
+            assert!(xs_1.contains(&x));
+        }
+
+        // Define a ray which traverses the y-axis from afar
+        let position_2 = Point3::new(1.0, -1000.0, 0.0);
+        let direction_2 = Vector3::new(0.0, 1.0, 0.0);
+        let ray_2 = Ray::new(position_2, direction_2);
+
+        // It should hit only one box
+        let hit_shapes_2 = traverse_flat_bvh(&ray_2, &flat_bvh, &shapes);
+        assert!(hit_shapes_2.len() == 1);
+        assert!(hit_shapes_2[0].x == 1);
+
+        // Define a ray which intersects the x-axis diagonally
+        let position_3 = Point3::new(6.0, 0.5, 0.0);
+        let direction_3 = Vector3::new(-2.0, -1.0, 0.0);
+        let ray_3 = Ray::new(position_3, direction_3);
+
+        // It should hit exactly three boxes
+        let hit_shapes_3 = traverse_flat_bvh(&ray_3, &flat_bvh, &shapes);
+        assert!(hit_shapes_3.len() == 3);
+        let mut xs_3 = HashSet::new();
+        for shape in &hit_shapes_3 {
+            xs_3.insert(shape.x);
+        }
+        assert!(xs_3.contains(&6));
+        assert!(xs_3.contains(&5));
+        assert!(xs_3.contains(&4));
+    }
 }
