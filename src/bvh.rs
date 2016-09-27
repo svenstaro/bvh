@@ -93,6 +93,11 @@ impl BVHNode {
         let split_axis = centroid_bounds.largest_axis();
         let split_axis_size = centroid_bounds.max[split_axis] - centroid_bounds.min[split_axis];
 
+        const EPSILON: f32 = 0.0000001;
+        if split_axis_size < EPSILON {
+            return BVHNode::Leaf { shapes: indices };
+        }
+
         /// Defines a Bucket utility object
         #[derive(Copy, Clone)]
         struct Bucket {
@@ -125,8 +130,9 @@ impl BVHNode {
         }
 
         // Create twelve buckets, and twelve index assignment vectors
-        let mut buckets = [Bucket::empty(); 12];
-        let mut bucket_assignments: [Vec<usize>; 12] = Default::default();
+        const NUM_BUCKETS: usize = 6;
+        let mut buckets = [Bucket::empty(); NUM_BUCKETS];
+        let mut bucket_assignments: [Vec<usize>; NUM_BUCKETS] = Default::default();
 
         // Iterate through all shapes
         for idx in &indices {
@@ -139,7 +145,7 @@ impl BVHNode {
                                       split_axis_size;
 
             // Convert that to the actual `Bucket` number
-            let bucket_num = (bucket_num_relative * 11.99) as usize;
+            let bucket_num = (bucket_num_relative * (NUM_BUCKETS as f32 - 0.01)) as usize;
 
             // Extend the selected `Bucket` and add the index to the actual bucket
             buckets[bucket_num].add_aabb(&shape_aabb);
@@ -152,7 +158,7 @@ impl BVHNode {
         let mut min_cost = f32::INFINITY;
         let mut init_aabb = AABB::empty();
         let mut tail_aabb = AABB::empty();
-        for i in 0..11 {
+        for i in 0..(NUM_BUCKETS - 1) {
             let init = buckets.iter().take(i + 1).fold(Bucket::empty(), bucket_union);
             let tail = buckets.iter().skip(i + 1).fold(Bucket::empty(), bucket_union);
 
@@ -459,25 +465,31 @@ mod tests {
         a: Point3<f32>,
         b: Point3<f32>,
         c: Point3<f32>,
+        aabb: AABB,
     }
 
     impl Triangle {
         fn new(a: Point3<f32>, b: Point3<f32>, c: Point3<f32>) -> Triangle {
-            Triangle { a: a, b: b, c: c }
+            let mut min = a;
+            let mut max = a;
+            min.x = min.x.min(b.x).min(c.x);
+            min.y = min.y.min(b.y).min(c.y);
+            min.z = min.z.min(b.z).min(c.z);
+            max.x = max.x.max(b.x).max(c.x);
+            max.y = max.y.max(b.y).max(c.y);
+            max.z = max.z.max(b.z).max(c.z);
+            Triangle {
+                a: a,
+                b: b,
+                c: c,
+                aabb: AABB::with_bounds(min, max),
+            }
         }
     }
 
     impl Bounded for Triangle {
         fn aabb(&self) -> AABB {
-            let mut min = self.a;
-            let mut max = self.a;
-            min.x = min.x.min(self.b.x).min(self.c.x);
-            min.y = min.y.min(self.b.y).min(self.c.y);
-            min.z = min.z.min(self.b.z).min(self.c.z);
-            max.x = max.x.max(self.b.x).max(self.c.x);
-            max.y = max.y.max(self.b.y).max(self.c.y);
-            max.z = max.z.max(self.b.z).max(self.c.z);
-            AABB::with_bounds(min, max)
+            self.aabb
         }
     }
 
@@ -508,32 +520,27 @@ mod tests {
 
     /// Implementation of splitmix64.
     /// For reference see: http://xoroshiro.di.unimi.it/splitmix64.c
-    unsafe fn splitmix64(x: &mut u64) -> u64 {
-        *x += 0x9E3779B97F4A7C15u64;
+    fn splitmix64(x: &mut u64) -> u64 {
+        *x = x.wrapping_add(0x9E3779B97F4A7C15u64);
         let mut z = *x;
-        z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9u64;
-        z = (z ^ (z >> 27)) * 0x94D049BB133111EBu64;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9u64);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EBu64);
         z ^ (z >> 31)
     }
 
-    unsafe fn u64_to_f32(a: u64) -> (f32, f32) {
-        let adr_u64 = (&a as *const u64) as usize;
-        (*(adr_u64 as *const f32), *((adr_u64 + 1) as *const f32))
-    }
-
     fn next_point3(seed: &mut u64) -> Point3<f32> {
-        unsafe {
-            let (a, b) = u64_to_f32(splitmix64(seed));
-            let (c, _) = u64_to_f32(splitmix64(seed));
-            Point3::new(a, b, c)
-        }
+        let u = splitmix64(seed);
+        let a = (u >> 48 & 0xFFFFFFFF) as i32 - 0xFFFF;
+        let b = (u >> 48 & 0xFFFFFFFF) as i32 - 0xFFFF;
+        let c = a ^ b.rotate_left(6);
+        Point3::new(a as f32, b as f32, c as f32)
     }
 
-    fn create_100k_cubes() -> Vec<Triangle> {
+    fn create_n_cubes(n: u64) -> Vec<Triangle> {
         let mut vec = Vec::new();
         let mut seed = 0;
 
-        for _ in 0..100_000 {
+        for _ in 0..n {
             push_cube(next_point3(&mut seed), &mut vec);
         }
         vec
@@ -541,8 +548,8 @@ mod tests {
 
     #[bench]
     /// Benchmark for the branchless intersection algorithm.
-    fn bench_build_1200k_triangles_bvh(b: &mut ::test::Bencher) {
-        let cubes = create_100k_cubes();
+    fn bench_build_120k_triangles_bvh(b: &mut ::test::Bencher) {
+        let cubes = create_n_cubes(10_000);
 
         b.iter(|| {
             BVH::new(&cubes);
