@@ -352,6 +352,7 @@ impl BVHNode {
             BVHNode::Node { ref child_l_aabb, ref child_l, ref child_r_aabb, ref child_r } => {
                 let dummy = constructor(&AABB::empty(), 0, 0, 0);
                 vec.push(dummy);
+                assert!(vec.len() == next_free as usize);
                 let index_after_child_l =
                     child_l.custom_flatten_tree(vec, next_free + 1, constructor);
                 let child_l_node = constructor(child_l_aabb,
@@ -363,6 +364,7 @@ impl BVHNode {
 
                 let dummy = constructor(&AABB::empty(), 0, 0, 0);
                 vec.push(dummy);
+                assert!(vec.len() == index_after_child_l as usize);
                 let index_after_child_r =
                     child_r.custom_flatten_tree(vec, index_after_child_l + 1, constructor);
                 let child_r_node = constructor(child_r_aabb,
