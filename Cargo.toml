@@ -13,7 +13,7 @@ keywords = ["bvh", "bounding", "volume", "sah", "aabb"]
 license = "MIT"
 
 [dependencies]
-clippy = "0.0.90"
+clippy = "0.0.91"
 nalgebra = "0.10.1"
 
 [dev-dependencies]
