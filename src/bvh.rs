@@ -346,26 +346,26 @@ impl BVHNode {
                                              next_free: usize,
                                              constructor: &F)
                                              -> usize
-        where F: Fn(AABB, u32, u32, u32) -> FNodeType
+        where F: Fn(&AABB, u32, u32, u32) -> FNodeType
     {
         match *self {
             BVHNode::Node { ref child_l_aabb, ref child_l, ref child_r_aabb, ref child_r } => {
-                let dummy = constructor(AABB::empty(), 0, 0, 0);
+                let dummy = constructor(&AABB::empty(), 0, 0, 0);
                 vec.push(dummy);
                 let index_after_child_l =
                     child_l.custom_flatten_tree(vec, next_free + 1, constructor);
-                let child_l_node = constructor(*child_l_aabb,
+                let child_l_node = constructor(child_l_aabb,
                                                (next_free + 1) as u32,
                                                index_after_child_l as u32,
                                                u32::max_value());
 
                 vec[next_free as usize] = child_l_node;
 
-                let dummy = constructor(AABB::empty(), 0, 0, 0);
+                let dummy = constructor(&AABB::empty(), 0, 0, 0);
                 vec.push(dummy);
                 let index_after_child_r =
                     child_r.custom_flatten_tree(vec, index_after_child_l + 1, constructor);
-                let child_r_node = constructor(*child_r_aabb,
+                let child_r_node = constructor(child_r_aabb,
                                                (index_after_child_l + 1) as u32,
                                                index_after_child_r as u32,
                                                u32::max_value());
@@ -378,7 +378,7 @@ impl BVHNode {
                 let mut next_shape = next_free;
                 for shape_index in shapes {
                     next_shape += 1;
-                    let leaf_node = constructor(AABB::empty(),
+                    let leaf_node = constructor(&AABB::empty(),
                                                 u32::max_value(),
                                                 next_shape as u32,
                                                 *shape_index as u32);
@@ -458,7 +458,7 @@ impl BVH {
     /// [`BVH`]: struct.BVH.html
     ///
     pub fn custom_flatten_tree<F, FNodeType>(&self, constructor: &F) -> Vec<FNodeType>
-        where F: Fn(AABB, u32, u32, u32) -> FNodeType
+        where F: Fn(&AABB, u32, u32, u32) -> FNodeType
     {
         let mut vec = Vec::new();
         self.root.custom_flatten_tree(&mut vec, 0, constructor);
