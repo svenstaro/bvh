@@ -292,24 +292,22 @@ impl BVHNode {
         match *self {
             BVHNode::Node { ref child_l_aabb, ref child_l, ref child_r_aabb, ref child_r } => {
 
-                let child_l_node = FlatNode {
+                vec.push(FlatNode {
                     aabb: *child_l_aabb,
                     entry_index: (next_free + 1) as u32,
                     exit_index: 0,
                     shape_index: u32::max_value(),
-                };
-                vec.push(child_l_node);
+                });
 
                 let index_after_child_l = child_l.flatten_tree(vec, next_free + 1);
                 vec[next_free as usize].exit_index = index_after_child_l as u32;
 
-                let exit_node = FlatNode {
+                vec.push(FlatNode {
                     aabb: *child_r_aabb,
                     entry_index: (index_after_child_l + 1) as u32,
                     exit_index: 0,
                     shape_index: u32::max_value(),
-                };
-                vec.push(exit_node);
+                });
 
                 let index_after_child_r = child_r.flatten_tree(vec, index_after_child_l + 1);
                 vec[index_after_child_l as usize].exit_index = index_after_child_r as u32;
@@ -352,7 +350,7 @@ impl BVHNode {
             BVHNode::Node { ref child_l_aabb, ref child_l, ref child_r_aabb, ref child_r } => {
                 let dummy = constructor(&AABB::empty(), 0, 0, 0);
                 vec.push(dummy);
-                assert!(vec.len() == next_free as usize);
+                assert!(vec.len() -1 == next_free as usize);
                 let index_after_child_l =
                     child_l.custom_flatten_tree(vec, next_free + 1, constructor);
                 let child_l_node = constructor(child_l_aabb,
@@ -364,7 +362,7 @@ impl BVHNode {
 
                 let dummy = constructor(&AABB::empty(), 0, 0, 0);
                 vec.push(dummy);
-                assert!(vec.len() == index_after_child_l as usize);
+                assert!(vec.len() -1 == index_after_child_l as usize);
                 let index_after_child_r =
                     child_r.custom_flatten_tree(vec, index_after_child_l + 1, constructor);
                 let child_r_node = constructor(child_r_aabb,
