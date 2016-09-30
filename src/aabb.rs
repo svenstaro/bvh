@@ -162,6 +162,7 @@ impl AABB {
     }
 
     /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and `other`.
+    /// The result is the convex hull of the both [`AABB`]s.
     ///
     /// # Examples
     /// ```
@@ -200,7 +201,8 @@ impl AABB {
                                       self.max.z.max(other.max.z)))
     }
 
-    /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and the [`Point3`] `other`.
+    /// Returns a new minimal [`AABB`] which contains both
+    /// this [`AABB`] and the [`Point3`] `other`.
     ///
     /// # Examples
     /// ```
