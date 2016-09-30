@@ -4,6 +4,7 @@
 //! [`BVH`]: struct.BVH.html
 //!
 
+use EPSILON;
 use aabb::{AABB, Bounded};
 use ray::Ray;
 use std::boxed::Box;
@@ -11,9 +12,10 @@ use std::f32;
 use std::iter::repeat;
 
 /// Enum which describes the union type of a node in a [`BVH`].
-/// This structure does not allow to store a root node's [`AABB`]. Therefore rays
+/// This structure does not allow for storing a root node's [`AABB`]. Therefore rays
 /// which do not hit the root [`AABB`] perform two [`AABB`] tests (left/right) instead of one.
-/// On the other hand this structure decreases the total number of indirections.
+/// On the other hand this structure decreases the total number of indirections when traversing
+/// the BVH. Only those nodes are accessed, which are definetely hit.
 ///
 /// [`AABB`]: ../aabb/struct.AABB.html
 /// [`BVH`]: struct.BVH.html
@@ -26,10 +28,10 @@ enum BVHNode {
     },
     /// Inner node.
     Node {
-        /// The union `AABB` of the shapes in child_l.
+        /// The convex hull of the shapes' `AABB`s in child_l.
         child_l_aabb: AABB,
         child_l: Box<BVHNode>,
-        /// The union `AABB` of the shapes in child_r.
+        /// The convex hull of the shapes' `AABB`s in child_r.
         child_r_aabb: AABB,
         child_r: Box<BVHNode>,
     },
@@ -43,18 +45,18 @@ impl BVHNode {
     pub fn build<T: Bounded>(shapes: &[T], indices: Vec<usize>) -> BVHNode {
 
         // Helper function to accumulate the AABB union and the centroids AABB
-        fn grow_union_bounds(union_bounds: (AABB, AABB), shape_aabb: &AABB) -> (AABB, AABB) {
+        fn grow_convex_hull(convex_hull: (AABB, AABB), shape_aabb: &AABB) -> (AABB, AABB) {
             let center = &shape_aabb.center();
-            let union_aabbs = &union_bounds.0;
-            let union_centroids = &union_bounds.1;
-            (union_aabbs.union(shape_aabb), union_centroids.grow(center))
+            let convex_hull_aabbs = &convex_hull.0;
+            let convex_hull_centroids = &convex_hull.1;
+            (convex_hull_aabbs.join(shape_aabb), convex_hull_centroids.grow(center))
         }
 
-        let mut union_bounds = Default::default();
+        let mut convex_hull = Default::default();
         for index in &indices {
-            union_bounds = grow_union_bounds(union_bounds, &shapes[*index].aabb());
+            convex_hull = grow_convex_hull(convex_hull, &shapes[*index].aabb());
         }
-        let (aabb_bounds, centroid_bounds) = union_bounds;
+        let (aabb_bounds, centroid_bounds) = convex_hull;
 
         // If there are less than five elements, don't split anymore
         if indices.len() <= 5 {
@@ -65,7 +67,6 @@ impl BVHNode {
         let split_axis = centroid_bounds.largest_axis();
         let split_axis_size = centroid_bounds.max[split_axis] - centroid_bounds.min[split_axis];
 
-        const EPSILON: f32 = 0.0000001;
         if split_axis_size < EPSILON {
             return BVHNode::Leaf { shapes: indices };
         }
@@ -89,15 +90,15 @@ impl BVHNode {
             /// Extends this `Bucket` by the given `AABB`.
             fn add_aabb(&mut self, aabb: &AABB) {
                 self.size += 1;
-                self.aabb = self.aabb.union(aabb);
+                self.aabb = self.aabb.join(aabb);
             }
         }
 
-        /// Returns the union of two `Bucket`s.
-        fn bucket_union(a: Bucket, b: &Bucket) -> Bucket {
+        /// Joins two `Bucket`s.
+        fn join_bucket(a: Bucket, b: &Bucket) -> Bucket {
             Bucket {
                 size: a.size + b.size,
-                aabb: a.aabb.union(&b.aabb),
+                aabb: a.aabb.join(&b.aabb),
             }
         }
 
@@ -131,8 +132,8 @@ impl BVHNode {
         let mut child_l_aabb = AABB::empty();
         let mut child_r_aabb = AABB::empty();
         for i in 0..(NUM_BUCKETS - 1) {
-            let child_l = buckets.iter().take(i + 1).fold(Bucket::empty(), bucket_union);
-            let child_r = buckets.iter().skip(i + 1).fold(Bucket::empty(), bucket_union);
+            let child_l = buckets.iter().take(i + 1).fold(Bucket::empty(), join_bucket);
+            let child_r = buckets.iter().skip(i + 1).fold(Bucket::empty(), join_bucket);
 
             let cost = (child_l.size as f32 * child_l.aabb.surface_area() +
                         child_r.size as f32 * child_r.aabb.surface_area()) /
@@ -169,14 +170,14 @@ impl BVHNode {
     ///
     /// [`BVH`]: struct.BVH.html
     ///
-    fn print(&self, depth: usize) {
+    fn pretty_print(&self, depth: usize) {
         let padding: String = repeat(" ").take(depth).collect();
         match *self {
             BVHNode::Node { ref child_l, ref child_r, .. } => {
                 println!("{}child_l", padding);
-                child_l.print(depth + 1);
+                child_l.pretty_print(depth + 1);
                 println!("{}child_r", padding);
-                child_r.print(depth + 1);
+                child_r.pretty_print(depth + 1);
             }
             BVHNode::Leaf { ref shapes } => {
                 println!("{}shapes\t{:?}", padding, shapes);
@@ -184,8 +185,8 @@ impl BVHNode {
         }
     }
 
-    /// Traverses the [`BVH`] recursively and returns a [`Vec`]
-    /// of all shapes which are hit with a high probability.
+    /// Traverses the [`BVH`] recursively and insterts shapes which are hit with a
+    /// high probability into the [`Vec`] `indices`.
     ///
     /// [`BVH`]: struct.BVH.html
     /// [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
@@ -209,8 +210,7 @@ impl BVHNode {
     }
 }
 
-/// The [`BVH`] data structure. Only contains the [`BVH`] structure and indices to
-/// the slice of shapes given in the [`build`] function.
+/// The [`BVH`] data structure. Only contains the root node of the [`BVH`] tree.
 ///
 /// [`BVH`]: struct.BVH.html
 /// [`build`]: struct.BVH.html#method.build
@@ -238,8 +238,8 @@ impl BVH {
     ///
     /// [`BVH`]: struct.BVH.html
     ///
-    pub fn print(&self) {
-        self.root.print(0);
+    pub fn pretty_print(&self) {
+        self.root.pretty_print(0);
     }
 
     /// Traverses the tree recursively. Returns an array of all shapes, the [`AABB`]s of which
