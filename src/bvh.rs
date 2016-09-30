@@ -188,7 +188,7 @@ impl BVHNode {
 
             // Get the relative position of the shape centroid [0.0..1.0]
             let bucket_num_relative = (shape_center[split_axis] - centroid_bounds.min[split_axis]) /
-                split_axis_size;
+                                      split_axis_size;
 
             // Convert that to the actual `Bucket` number
             let bucket_num = (bucket_num_relative * (NUM_BUCKETS as f32 - 0.01)) as usize;
@@ -210,7 +210,7 @@ impl BVHNode {
 
             let cost = (child_l.size as f32 * child_l.aabb.surface_area() +
                         child_r.size as f32 * child_r.aabb.surface_area()) /
-                aabb_bounds.surface_area();
+                       aabb_bounds.surface_area();
 
             if cost < min_cost {
                 min_bucket = i;
@@ -340,26 +340,26 @@ impl BVHNode {
                                         vec: &mut Vec<FNodeType>,
                                         next_free: usize,
                                         constructor: &F)
-        -> usize
-            where F: Fn(&AABB, u32, u32, u32) -> FNodeType
-            {
-                // Create dummy node
-                let dummy = constructor(&AABB::empty(), 0, 0, 0);
-                vec.push(dummy);
-                assert!(vec.len() - 1 == next_free as usize);
+                                        -> usize
+        where F: Fn(&AABB, u32, u32, u32) -> FNodeType
+    {
+        // Create dummy node
+        let dummy = constructor(&AABB::empty(), 0, 0, 0);
+        vec.push(dummy);
+        assert!(vec.len() - 1 == next_free as usize);
 
-                // Create subtree
-                let index_after_subtree = self.flatten_custom(vec, next_free + 1, constructor);
+        // Create subtree
+        let index_after_subtree = self.flatten_custom(vec, next_free + 1, constructor);
 
-                // Replace dummy node by actual node with the entry index pointing to the subtree
-                // and the exit index pointing to the next node after the subtree
-                let navigator_node = constructor(this_aabb,
-                                                 (next_free + 1) as u32,
-                                                 index_after_subtree as u32,
-                                                 u32::max_value());
-                vec[next_free as usize] = navigator_node;
-                index_after_subtree
-            }
+        // Replace dummy node by actual node with the entry index pointing to the subtree
+        // and the exit index pointing to the next node after the subtree
+        let navigator_node = constructor(this_aabb,
+                                         (next_free + 1) as u32,
+                                         index_after_subtree as u32,
+                                         u32::max_value());
+        vec[next_free as usize] = navigator_node;
+        index_after_subtree
+    }
 
     /// Flattens the [`BVH`], so that it can be traversed in an iterative manner.
     /// The iterative traverse procedure is implemented in [`traverse_flat_bvh`].
@@ -372,33 +372,33 @@ impl BVHNode {
                                         vec: &mut Vec<FNodeType>,
                                         next_free: usize,
                                         constructor: &F)
-        -> usize
+                                        -> usize
         where F: Fn(&AABB, u32, u32, u32) -> FNodeType
-        {
+    {
 
 
-            match *self {
-                BVHNode::Node { ref child_l_aabb, ref child_l, ref child_r_aabb, ref child_r } => {
-                    let index_after_child_l =
-                        child_l.create_flat_branch(child_l_aabb, vec, next_free, constructor);
-                    child_r.create_flat_branch(child_r_aabb, vec, index_after_child_l, constructor)
+        match *self {
+            BVHNode::Node { ref child_l_aabb, ref child_l, ref child_r_aabb, ref child_r } => {
+                let index_after_child_l =
+                    child_l.create_flat_branch(child_l_aabb, vec, next_free, constructor);
+                child_r.create_flat_branch(child_r_aabb, vec, index_after_child_l, constructor)
+            }
+
+            BVHNode::Leaf { ref shapes } => {
+                let mut next_shape = next_free;
+                for shape_index in shapes {
+                    next_shape += 1;
+                    let leaf_node = constructor(&AABB::empty(),
+                                                u32::max_value(),
+                                                next_shape as u32,
+                                                *shape_index as u32);
+                    vec.push(leaf_node);
                 }
 
-                BVHNode::Leaf { ref shapes } => {
-                    let mut next_shape = next_free;
-                    for shape_index in shapes {
-                        next_shape += 1;
-                        let leaf_node = constructor(&AABB::empty(),
-                        u32::max_value(),
-                        next_shape as u32,
-                        *shape_index as u32);
-                        vec.push(leaf_node);
-                    }
-
-                    next_shape
-                }
+                next_shape
             }
         }
+    }
 }
 
 /// The [`BVH`] data structure. Only contains the [`BVH`] structure and indices to
@@ -469,11 +469,11 @@ impl BVH {
     ///
     pub fn flatten_custom<F, FNodeType>(&self, constructor: &F) -> Vec<FNodeType>
         where F: Fn(&AABB, u32, u32, u32) -> FNodeType
-        {
-            let mut vec = Vec::new();
-            self.root.flatten_custom(&mut vec, 0, constructor);
-            vec
-        }
+    {
+        let mut vec = Vec::new();
+        self.root.flatten_custom(&mut vec, 0, constructor);
+        vec
+    }
 }
 
 #[cfg(test)]
@@ -615,6 +615,7 @@ mod tests {
         assert!(hit_shapes_3.contains(&17));
     }
 
+    /// A triangle struct. Instance of a more complex `Bounded` primitive.
     struct Triangle {
         a: Point3<f32>,
         b: Point3<f32>,
@@ -812,20 +813,22 @@ mod tests {
                               entry_index: u32,
                               exit_index: u32,
                               shape_index: u32)
-            -> FlatNode {
-                FlatNode {
-                    aabb: *aabb,
-                    entry_index: entry_index,
-                    exit_index: exit_index,
-                    shape_index: shape_index,
-                }
+                              -> FlatNode {
+            FlatNode {
+                aabb: *aabb,
+                entry_index: entry_index,
+                exit_index: exit_index,
+                shape_index: shape_index,
             }
+        }
 
+        // Generate a BVH and flatten it defaultly, and using a custom constructor
         let triangles = create_n_cubes(1_000);
         let bvh = BVH::build(&triangles);
         let flat_bvh = bvh.flatten();
         let flat_bvh_custom = bvh.flatten_custom(&custom_constructor);
 
+        // It should produce the same structure in both cases
         for (default_node, custom_node) in flat_bvh.iter().zip(flat_bvh_custom.iter()) {
             assert_eq!(default_node.entry_index, custom_node.entry_index);
             assert_eq!(default_node.exit_index, custom_node.exit_index);
