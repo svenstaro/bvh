@@ -10,7 +10,7 @@ use std::boxed::Box;
 use std::f32;
 use std::iter::repeat;
 
-/// Enum which describes the union type of a node in a [`BVH`]s.
+/// Enum which describes the union type of a node in a [`BVH`].
 /// This structure does not allow to store a root node's [`AABB`]. Therefore rays
 /// which do not hit the root [`AABB`] perform two [`AABB`] tests (left/right) instead of one.
 /// On the other hand this structure decreases the total number of indirections.
@@ -42,7 +42,7 @@ impl BVHNode {
     ///
     pub fn build<T: Bounded>(shapes: &[T], indices: Vec<usize>) -> BVHNode {
 
-        // Helper function to accumulate the AABB union and the centroids AABB.
+        // Helper function to accumulate the AABB union and the centroids AABB
         fn grow_union_bounds(union_bounds: (AABB, AABB), shape_aabb: &AABB) -> (AABB, AABB) {
             let center = &shape_aabb.center();
             let union_aabbs = &union_bounds.0;
@@ -70,7 +70,7 @@ impl BVHNode {
             return BVHNode::Leaf { shapes: indices };
         }
 
-        /// Defines a Bucket utility object
+        /// Defines a Bucket utility object.
         #[derive(Copy, Clone)]
         struct Bucket {
             size: usize,
@@ -78,7 +78,7 @@ impl BVHNode {
         }
 
         impl Bucket {
-            /// Returns an empty bucket
+            /// Returns an empty bucket.
             fn empty() -> Bucket {
                 Bucket {
                     size: 0,
