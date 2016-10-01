@@ -223,7 +223,7 @@ pub struct BVH {
 }
 
 impl BVH {
-    /// Creates a new [`BVH`] from the slice of shapes.
+    /// Creates a new [`BVH`] from the `shapes` slice.
     ///
     /// [`BVH`]: struct.BVH.html
     ///
