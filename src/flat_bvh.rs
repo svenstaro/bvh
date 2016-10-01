@@ -107,19 +107,32 @@ pub fn pretty_print_flat_bvh(flat_nodes: &[FlatNode]) {
 pub fn traverse_flat_bvh(ray: &Ray, flat_nodes: &[FlatNode]) -> Vec<usize> {
     let mut hit_shapes = Vec::new();
     let mut index = 0;
+
+    // The traversal loop should terminate when `max_length` is set as the next node index
     let max_length = flat_nodes.len();
+
+    // Iterate while the node index is valid
     while index < max_length {
         let node = &flat_nodes[index];
+
         if node.entry_index == u32::max_value() {
+            // If the entry_index is MAX_UINT32, then it's a leaf node
             let shape_index = node.shape_index;
             hit_shapes.push(shape_index as usize);
+
+            // Exit the current node
             index = node.exit_index as usize;
         } else if ray.intersects_aabb(&node.aabb) {
+            // If entry_index is not MAX_UINT32 and the AABB test passes, then
+            // proceed to the node in entry_index (which goes down the bvh branch)
             index = node.entry_index as usize;
         } else {
+            // If entry_index is not MAX_UINT32 and the AABB test fails, then
+            // proceed to the node in exit_index (which defines the next untested partition)
             index = node.exit_index as usize;
         }
     }
+
     hit_shapes
 }
 
@@ -132,10 +145,10 @@ impl BVHNode {
     ///
     pub fn flatten(&self, vec: &mut Vec<FlatNode>, next_free: usize) -> usize {
         match *self {
-            BVHNode::Node { ref child_l_aabb, ref child_l, ref child_r_aabb, ref child_r } => {
+            BVHNode::Node { child_l_aabb, ref child_l, child_r_aabb, ref child_r } => {
 
                 vec.push(FlatNode {
-                    aabb: *child_l_aabb,
+                    aabb: child_l_aabb,
                     entry_index: (next_free + 1) as u32,
                     exit_index: 0,
                     shape_index: u32::max_value(),
@@ -145,7 +158,7 @@ impl BVHNode {
                 vec[next_free as usize].exit_index = index_after_child_l as u32;
 
                 vec.push(FlatNode {
-                    aabb: *child_r_aabb,
+                    aabb: child_r_aabb,
                     entry_index: (index_after_child_l + 1) as u32,
                     exit_index: 0,
                     shape_index: u32::max_value(),
@@ -188,7 +201,7 @@ impl BVHNode {
         // Create dummy node
         let dummy = constructor(&AABB::empty(), 0, 0, 0);
         vec.push(dummy);
-        assert!(vec.len() - 1 == next_free as usize);
+        assert!(vec.len() - 1 == next_free);
 
         // Create subtree
         let index_after_subtree = self.flatten_custom(vec, next_free + 1, constructor);
@@ -199,7 +212,7 @@ impl BVHNode {
                                          (next_free + 1) as u32,
                                          index_after_subtree as u32,
                                          u32::max_value());
-        vec[next_free as usize] = navigator_node;
+        vec[next_free] = navigator_node;
         index_after_subtree
     }
 
@@ -300,6 +313,12 @@ impl BVH {
     /// Constructs the flat nodes using the supplied function.
     /// This function can be used, when the flat bvh nodes should be of some particular
     /// non-default structure.
+    /// The `constructor` is fed the following arguments in this order:
+    ///
+    /// 1.0 &AABB: The enclosing `AABB`
+    /// 2.0 u32: The index of the nested node
+    /// 3.0 u32: The exit index
+    /// 4.0 u32: The shape index
     ///
     /// [`BVH`]: struct.BVH.html
     ///
@@ -381,7 +400,7 @@ mod tests {
     use ray::Ray;
 
     #[test]
-    /// Tests whether the `flatten` procedure succeeds in not failing.
+    /// Tests whether the `flatten` procedure succeeds.
     fn test_flatten() {
         let (_, bvh) = build_some_bvh();
         bvh.flatten();
