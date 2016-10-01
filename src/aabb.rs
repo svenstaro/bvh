@@ -16,10 +16,10 @@ pub const Z_AXIS: usize = 2;
 /// AABB struct.
 #[derive(Debug, Copy, Clone)]
 pub struct AABB {
-    // Minimum coordinates
+    /// Minimum coordinates
     pub min: Point3<f32>,
 
-    // Maximum coordinates
+    /// Maximum coordinates
     pub max: Point3<f32>,
 }
 
