@@ -42,6 +42,8 @@ pub struct Intersection {
 }
 
 impl Intersection {
+    /// Constructs an `Intersection`. `distance` should be set to positive infinity,
+    /// if the intersection does not occur.
     pub fn new(distance: f32, u: f32, v: f32) -> Intersection {
         Intersection {
             distance: distance,

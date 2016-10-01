@@ -16,10 +16,10 @@ pub const Z_AXIS: usize = 2;
 /// AABB struct.
 #[derive(Debug, Copy, Clone)]
 pub struct AABB {
-    // Minimum coordinates
+    /// Minimum coordinates
     pub min: Point3<f32>,
 
-    // Maximum coordinates
+    /// Maximum coordinates
     pub max: Point3<f32>,
 }
 
@@ -162,6 +162,7 @@ impl AABB {
     }
 
     /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and `other`.
+    /// The result is the convex hull of the both [`AABB`]s.
     ///
     /// # Examples
     /// ```
@@ -170,28 +171,28 @@ impl AABB {
     ///
     /// let aabb1 = AABB::with_bounds(Point3::new(-101.0,0.0,0.0), Point3::new(-100.0,1.0,1.0));
     /// let aabb2 = AABB::with_bounds(Point3::new(100.0,0.0,0.0), Point3::new(101.0,1.0,1.0));
-    /// let union = aabb1.union(&aabb2);
+    /// let joint = aabb1.join(&aabb2);
     ///
     /// let point_inside_aabb1 = Point3::new(-100.5,0.5,0.5);
     /// let point_inside_aabb2 = Point3::new(100.5,0.5,0.5);
-    /// let point_inside_union = Point3::new(0.0,0.5,0.5);
+    /// let point_inside_joint = Point3::new(0.0,0.5,0.5);
     ///
     /// # assert!(aabb1.contains(&point_inside_aabb1));
     /// # assert!(!aabb1.contains(&point_inside_aabb2));
-    /// # assert!(!aabb1.contains(&point_inside_union));
+    /// # assert!(!aabb1.contains(&point_inside_joint));
     /// #
     /// # assert!(!aabb2.contains(&point_inside_aabb1));
     /// # assert!(aabb2.contains(&point_inside_aabb2));
-    /// # assert!(!aabb2.contains(&point_inside_union));
+    /// # assert!(!aabb2.contains(&point_inside_joint));
     ///
-    /// assert!(union.contains(&point_inside_aabb1));
-    /// assert!(union.contains(&point_inside_aabb2));
-    /// assert!(union.contains(&point_inside_union));
+    /// assert!(joint.contains(&point_inside_aabb1));
+    /// assert!(joint.contains(&point_inside_aabb2));
+    /// assert!(joint.contains(&point_inside_joint));
     /// ```
     ///
     /// [`AABB`]: struct.AABB.html
     ///
-    pub fn union(&self, other: &AABB) -> AABB {
+    pub fn join(&self, other: &AABB) -> AABB {
         AABB::with_bounds(Point3::new(self.min.x.min(other.min.x),
                                       self.min.y.min(other.min.y),
                                       self.min.z.min(other.min.z)),
@@ -200,7 +201,8 @@ impl AABB {
                                       self.max.z.max(other.max.z)))
     }
 
-    /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and the [`Point3`] `other`.
+    /// Returns a new minimal [`AABB`] which contains both
+    /// this [`AABB`] and the [`Point3`] `other`.
     ///
     /// # Examples
     /// ```
@@ -253,7 +255,7 @@ impl AABB {
     ///
     /// let aabb = AABB::empty();
     /// let something = Something;
-    /// let aabb1 = aabb.union_bounded(&something);
+    /// let aabb1 = aabb.join_bounded(&something);
     ///
     /// let center = something.aabb().center();
     /// assert!(aabb1.contains(&center));
@@ -262,8 +264,8 @@ impl AABB {
     /// [`AABB`]: struct.AABB.html
     /// [`Bounded`]: trait.Bounded.html
     ///
-    pub fn union_bounded<T: Bounded>(&self, other: &T) -> AABB {
-        self.union(&other.aabb())
+    pub fn join_bounded<T: Bounded>(&self, other: &T) -> AABB {
+        self.join(&other.aabb())
     }
 
     /// Returns the size of this [`AABB`] in all three dimensions.
@@ -416,6 +418,32 @@ impl Index<usize> for AABB {
     }
 }
 
+/// Implementation of [`Bounded`] for [`AABB`].
+///
+/// # Examples
+/// ```
+/// use bvh::aabb::{AABB, Bounded};
+/// use bvh::nalgebra::Point3;
+///
+/// let point_a = Point3::new(3.0,4.0,5.0);
+/// let point_b = Point3::new(17.0,18.0,19.0);
+/// let aabb = AABB::empty().grow(&point_a).grow(&point_b);
+///
+/// let aabb_aabb = aabb.aabb();
+///
+/// assert_eq!(aabb_aabb.min, aabb.min);
+/// assert_eq!(aabb_aabb.max, aabb.max);
+/// ```
+///
+/// [`AABB`]: struct.AABB.html
+/// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
+///
+impl Bounded for AABB {
+    fn aabb(&self) -> AABB {
+        *self
+    }
+}
+
 /// Implementation of [`Bounded`] for [`Point3`].
 ///
 /// # Examples
@@ -490,14 +518,14 @@ mod tests {
             let p2 = to_point(&b);
 
             // Span the `AABB`
-            let aabb = AABB::empty().grow(&p1).union_bounded(&p2);
+            let aabb = AABB::empty().grow(&p1).join_bounded(&p2);
 
             // Its center should be inside the `AABB`
             aabb.contains(&aabb.center())
         }
     }
 
-    /// Test whether the union of two point-sets contains all the points.
+    /// Test whether the joint of two point-sets contains all the points.
     quickcheck!{
         fn test_join_two_aabbs(a: (TupleVec, TupleVec, TupleVec, TupleVec, TupleVec),
                                b: (TupleVec, TupleVec, TupleVec, TupleVec, TupleVec))
@@ -521,10 +549,10 @@ mod tests {
                 .skip(5)
                 .fold(true, |b, point| b && aabb2.contains(&point));
 
-            // Build the union of the two `AABB`s
-            let aabbu = aabb1.union(&aabb2);
+            // Build the joint of the two `AABB`s
+            let aabbu = aabb1.join(&aabb2);
 
-            // The union should contain all points
+            // The joint should contain all points
             let aabbu_contains_all = points.iter()
                 .fold(true, |b, point| b && aabbu.contains(&point));
 
