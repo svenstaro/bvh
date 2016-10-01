@@ -146,7 +146,7 @@ impl BVHNode {
     pub fn flatten(&self, vec: &mut Vec<FlatNode>, next_free: usize) -> usize {
         match *self {
             BVHNode::Node { child_l_aabb, ref child_l, child_r_aabb, ref child_r } => {
-
+                // Create the enclosing node for the left subtree
                 vec.push(FlatNode {
                     aabb: child_l_aabb,
                     entry_index: (next_free + 1) as u32,
@@ -154,9 +154,11 @@ impl BVHNode {
                     shape_index: u32::max_value(),
                 });
 
+                // Create the flat left subtree and update the exit index in the enclosing node
                 let index_after_child_l = child_l.flatten(vec, next_free + 1);
                 vec[next_free as usize].exit_index = index_after_child_l as u32;
 
+                // Create the enclosing node for the right subtree
                 vec.push(FlatNode {
                     aabb: child_r_aabb,
                     entry_index: (index_after_child_l + 1) as u32,
@@ -164,6 +166,7 @@ impl BVHNode {
                     shape_index: u32::max_value(),
                 });
 
+                // Create the flat right subtree and update the exit index in the enclosing node
                 let index_after_child_r = child_r.flatten(vec, index_after_child_l + 1);
                 vec[index_after_child_l as usize].exit_index = index_after_child_r as u32;
 
@@ -171,15 +174,18 @@ impl BVHNode {
             }
             BVHNode::Leaf { ref shapes } => {
                 let mut next_shape = next_free;
+
+                // Create a node for each shape of a leaf
                 for shape_index in shapes {
                     next_shape += 1;
-                    let leaf_node = FlatNode {
+
+                    // Create the flat leaf node
+                    vec.push(FlatNode {
                         aabb: AABB::empty(),
                         entry_index: u32::max_value(),
                         exit_index: next_shape as u32,
                         shape_index: *shape_index as u32,
-                    };
-                    vec.push(leaf_node);
+                    });
                 }
 
                 next_shape
@@ -230,8 +236,6 @@ impl BVHNode {
                                         -> usize
         where F: Fn(&AABB, u32, u32, u32) -> FNodeType
     {
-
-
         match *self {
             BVHNode::Node { ref child_l_aabb, ref child_l, ref child_r_aabb, ref child_r } => {
                 let index_after_child_l =
