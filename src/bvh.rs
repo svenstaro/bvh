@@ -43,8 +43,7 @@ impl BVHNode {
     /// [`BVHNode`]: enum.BVHNode.html
     ///
     pub fn build<T: Bounded>(shapes: &[T], indices: Vec<usize>) -> BVHNode {
-
-        // Helper function to accumulate the AABB union and the centroids AABB
+        // Helper function to accumulate the AABB joint and the centroids AABB
         fn grow_convex_hull(convex_hull: (AABB, AABB), shape_aabb: &AABB) -> (AABB, AABB) {
             let center = &shape_aabb.center();
             let convex_hull_aabbs = &convex_hull.0;
@@ -107,7 +106,7 @@ impl BVHNode {
         let mut buckets = [Bucket::empty(); NUM_BUCKETS];
         let mut bucket_assignments: [Vec<usize>; NUM_BUCKETS] = Default::default();
 
-        // Iterate through all shapes
+        // Assign each shape to a bucket
         for idx in &indices {
             let shape = &shapes[*idx];
             let shape_aabb = shape.aabb();
@@ -186,7 +185,7 @@ impl BVHNode {
     }
 
     /// Traverses the [`BVH`] recursively and insterts shapes which are hit with a
-    /// high probability into the [`Vec`] `indices`.
+    /// high probability by `ray` into the [`Vec`] `indices`.
     ///
     /// [`BVH`]: struct.BVH.html
     /// [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
@@ -242,8 +241,8 @@ impl BVH {
         self.root.pretty_print(0);
     }
 
-    /// Traverses the tree recursively. Returns an array of all shapes, the [`AABB`]s of which
-    /// were hit.
+    /// Traverses the tree recursively. Returns a subset of `shapes`, in which the [`AABB`]s
+    /// of the elements were hit by the `ray`.
     ///
     /// [`AABB`]: ../aabb/struct.AABB.html
     ///
