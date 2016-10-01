@@ -227,6 +227,43 @@ impl BVH {
     ///
     /// [`BVH`]: struct.BVH.html
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bvh::aabb::{AABB, Bounded};
+    /// use bvh::bvh::BVH;
+    /// use bvh::nalgebra::{Point3, Vector3};
+    ///
+    /// # struct Sphere {
+    /// #     position: Point3<f32>,
+    /// #     radius: f32,
+    /// # }
+    /// #
+    /// # impl Bounded for Sphere {
+    /// #     fn aabb(&self) -> AABB {
+    /// #         let half_size = Vector3::new(self.radius, self.radius, self.radius);
+    /// #         let min = self.position - half_size;
+    /// #         let max = self.position + half_size;
+    /// #         AABB::with_bounds(min, max)
+    /// #     }
+    /// # }
+    /// #
+    /// # fn create_bounded_shapes() -> Vec<Sphere> {
+    /// #     let mut spheres = Vec::new();
+    /// #     for i in 0..1000u32 {
+    /// #         let position = Point3::new(i as f32, i as f32, i as f32);
+    /// #         let radius = (i % 10) as f32 + 1.0;
+    /// #         spheres.push(Sphere {
+    /// #             position: position,
+    /// #             radius: radius,
+    /// #         });
+    /// #     }
+    /// #     spheres
+    /// # }
+    ///
+    /// let shapes = create_bounded_shapes();
+    /// let bvh = BVH::build(&shapes);
+    /// ```
     pub fn build<T: Bounded>(shapes: &[T]) -> BVH {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
         let root = BVHNode::build(shapes, indices);
@@ -246,6 +283,48 @@ impl BVH {
     ///
     /// [`AABB`]: ../aabb/struct.AABB.html
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bvh::aabb::{AABB, Bounded};
+    /// use bvh::bvh::BVH;
+    /// use bvh::nalgebra::{Point3, Vector3};
+    /// use bvh::ray::Ray;
+    ///
+    /// # struct Sphere {
+    /// #     position: Point3<f32>,
+    /// #     radius: f32,
+    /// # }
+    /// #
+    /// # impl Bounded for Sphere {
+    /// #     fn aabb(&self) -> AABB {
+    /// #         let half_size = Vector3::new(self.radius, self.radius, self.radius);
+    /// #         let min = self.position - half_size;
+    /// #         let max = self.position + half_size;
+    /// #         AABB::with_bounds(min, max)
+    /// #     }
+    /// # }
+    /// #
+    /// # fn create_bounded_shapes() -> Vec<Sphere> {
+    /// #     let mut spheres = Vec::new();
+    /// #     for i in 0..1000u32 {
+    /// #         let position = Point3::new(i as f32, i as f32, i as f32);
+    /// #         let radius = (i % 10) as f32 + 1.0;
+    /// #         spheres.push(Sphere {
+    /// #             position: position,
+    /// #             radius: radius,
+    /// #         });
+    /// #     }
+    /// #     spheres
+    /// # }
+    ///
+    /// let origin = Point3::new(0.0,0.0,0.0);
+    /// let direction = Vector3::new(1.0,0.0,0.0);
+    /// let ray = Ray::new(origin, direction);
+    /// let shapes = create_bounded_shapes();
+    /// let bvh = BVH::build(&shapes);
+    /// let hit_sphere_aabbs = bvh.traverse_recursive(&ray, &shapes);
+    /// ```
     pub fn traverse_recursive<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
         let mut indices = Vec::new();
         self.root.traverse_recursive(ray, &mut indices);
@@ -358,19 +437,11 @@ mod tests {
 
     impl Triangle {
         fn new(a: Point3<f32>, b: Point3<f32>, c: Point3<f32>) -> Triangle {
-            let mut min = a;
-            let mut max = a;
-            min.x = min.x.min(b.x).min(c.x);
-            min.y = min.y.min(b.y).min(c.y);
-            min.z = min.z.min(b.z).min(c.z);
-            max.x = max.x.max(b.x).max(c.x);
-            max.y = max.y.max(b.y).max(c.y);
-            max.z = max.z.max(b.z).max(c.z);
             Triangle {
                 a: a,
                 b: b,
                 c: c,
-                aabb: AABB::with_bounds(min, max),
+                aabb: AABB::empty().grow(&a).grow(&b).grow(&c),
             }
         }
     }

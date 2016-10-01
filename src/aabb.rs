@@ -418,6 +418,32 @@ impl Index<usize> for AABB {
     }
 }
 
+/// Implementation of [`Bounded`] for [`AABB`].
+///
+/// # Examples
+/// ```
+/// use bvh::aabb::{AABB, Bounded};
+/// use bvh::nalgebra::Point3;
+///
+/// let point_a = Point3::new(3.0,4.0,5.0);
+/// let point_b = Point3::new(17.0,18.0,19.0);
+/// let aabb = AABB::empty().grow(&point_a).grow(&point_b);
+///
+/// let aabb_aabb = aabb.aabb();
+///
+/// assert_eq!(aabb_aabb.min, aabb.min);
+/// assert_eq!(aabb_aabb.max, aabb.max);
+/// ```
+///
+/// [`AABB`]: struct.AABB.html
+/// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
+///
+impl Bounded for AABB {
+    fn aabb(&self) -> AABB {
+        *self
+    }
+}
+
 /// Implementation of [`Bounded`] for [`Point3`].
 ///
 /// # Examples
