@@ -404,7 +404,7 @@ mod tests {
     use ray::Ray;
 
     #[test]
-    /// Tests whether the `flatten` procedure succeeds.
+    /// Builds and flattens a BVH. Tests whether the `flatten` procedure succeeds.
     fn test_flatten() {
         let (_, bvh) = build_some_bvh();
         bvh.flatten();
@@ -453,6 +453,37 @@ mod tests {
         assert!(hit_shapes_3.contains(&17));
     }
 
+    #[test]
+    /// Test whether the `flatten_custom` produces a flat `BVH` with the same relative structure
+    /// as `flatten`.
+    fn test_compare_default_and_custom_flat_bvh() {
+        fn custom_constructor(aabb: &AABB,
+                              entry_index: u32,
+                              exit_index: u32,
+                              shape_index: u32)
+                              -> FlatNode {
+            FlatNode {
+                aabb: *aabb,
+                entry_index: entry_index,
+                exit_index: exit_index,
+                shape_index: shape_index,
+            }
+        }
+
+        // Generate a BVH and flatten it defaultly, and using a custom constructor
+        let triangles = create_n_cubes(1_000);
+        let bvh = BVH::build(&triangles);
+        let flat_bvh = bvh.flatten();
+        let flat_bvh_custom = bvh.flatten_custom(&custom_constructor);
+
+        // It should produce the same structure in both cases
+        for (default_node, custom_node) in flat_bvh.iter().zip(flat_bvh_custom.iter()) {
+            assert_eq!(default_node.entry_index, custom_node.entry_index);
+            assert_eq!(default_node.exit_index, custom_node.exit_index);
+            assert_eq!(default_node.shape_index, custom_node.shape_index);
+        }
+    }
+
     #[bench]
     /// Benchmark the flattening of a BVH with 120,000 triangles.
     fn bench_flatten_120k_triangles_bvh(b: &mut ::test::Bencher) {
@@ -484,36 +515,5 @@ mod tests {
                 ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
             }
         });
-    }
-
-    #[test]
-    /// Test whether the `flatten_custom` produces a flat bvh with the same relative structure
-    /// as flatten
-    fn test_compare_default_and_custom_flat_bvh() {
-        fn custom_constructor(aabb: &AABB,
-                              entry_index: u32,
-                              exit_index: u32,
-                              shape_index: u32)
-                              -> FlatNode {
-            FlatNode {
-                aabb: *aabb,
-                entry_index: entry_index,
-                exit_index: exit_index,
-                shape_index: shape_index,
-            }
-        }
-
-        // Generate a BVH and flatten it defaultly, and using a custom constructor
-        let triangles = create_n_cubes(1_000);
-        let bvh = BVH::build(&triangles);
-        let flat_bvh = bvh.flatten();
-        let flat_bvh_custom = bvh.flatten_custom(&custom_constructor);
-
-        // It should produce the same structure in both cases
-        for (default_node, custom_node) in flat_bvh.iter().zip(flat_bvh_custom.iter()) {
-            assert_eq!(default_node.entry_index, custom_node.entry_index);
-            assert_eq!(default_node.exit_index, custom_node.exit_index);
-            assert_eq!(default_node.shape_index, custom_node.shape_index);
-        }
     }
 }
