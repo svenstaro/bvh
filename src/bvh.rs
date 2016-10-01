@@ -20,7 +20,7 @@ use std::iter::repeat;
 /// [`AABB`]: ../aabb/struct.AABB.html
 /// [`BVH`]: struct.BVH.html
 ///
-enum BVHNode {
+pub enum BVHNode {
     /// Leaf node.
     Leaf {
         /// The shapes contained in this leaf.
@@ -30,9 +30,14 @@ enum BVHNode {
     Node {
         /// The convex hull of the shapes' `AABB`s in child_l.
         child_l_aabb: AABB,
+
+        /// Left subtree.
         child_l: Box<BVHNode>,
+
         /// The convex hull of the shapes' `AABB`s in child_r.
         child_r_aabb: AABB,
+
+        /// Left subtree.
         child_r: Box<BVHNode>,
     },
 }
@@ -219,7 +224,7 @@ pub struct BVH {
     ///
     /// [`BVH`]: struct.BVH.html
     ///
-    root: BVHNode,
+    pub root: BVHNode,
 }
 
 impl BVH {
@@ -340,7 +345,7 @@ impl BVH {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use aabb::{AABB, Bounded};
     use bvh::BVH;
     use nalgebra::{Point3, Vector3};
@@ -348,7 +353,7 @@ mod tests {
     use ray::Ray;
 
     /// Define some Bounded structure.
-    struct XBox {
+    pub struct XBox {
         x: i32,
     }
 
@@ -362,7 +367,7 @@ mod tests {
     }
 
     /// Creates a `BVH` for a fixed scene structure.
-    fn build_some_bvh() -> (Vec<XBox>, BVH) {
+    pub fn build_some_bvh() -> (Vec<XBox>, BVH) {
         // Create 21 boxes along the x-axis
         let mut shapes = Vec::new();
         for x in -10..11 {
@@ -429,9 +434,9 @@ mod tests {
 
     /// A triangle struct. Instance of a more complex `Bounded` primitive.
     pub struct Triangle {
-        a: Point3<f32>,
-        b: Point3<f32>,
-        c: Point3<f32>,
+        pub a: Point3<f32>,
+        pub b: Point3<f32>,
+        pub c: Point3<f32>,
         aabb: AABB,
     }
 
