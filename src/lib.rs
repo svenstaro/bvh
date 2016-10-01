@@ -3,14 +3,14 @@
 //!
 //! ## About
 //!
-//! This crate can be used for application which contain intersection computations of rays
-//! with primitives. For this purpose a binary BVH (Bounding Volume Hierarchy) is of great use
-//! if the scene which the ray traverses contains a huge number of primitives. With a BVH the
+//! This crate can be used for applications which contain intersection computations of rays
+//! with primitives. For this purpose a binary tree BVH (Bounding Volume Hierarchy) is of great
+//! use if the scene which the ray traverses contains a huge number of primitives. With a BVH the
 //! intersection test complexity is reduced from O(n) to O(log2(n)) at the cost of building
-//! the BVH once in advance. This technique is especially useful in Ray/Path tracers. For
+//! the BVH once in advance. This technique is especially useful in ray/path tracers. For
 //! use in a shader this module also exports a flattening procedure, which allows for
 //! iterative traversal of the BVH.
-//! The library is built on top of `nalgebra`.
+//! This library is built on top of [`nalgebra`].
 //!
 //! ## Example
 //!
@@ -51,6 +51,9 @@
 //! let bvh = BVH::build(&spheres);
 //! let hit_sphere_aabbs = bvh.traverse_recursive(&ray, &spheres);
 //! ```
+//!
+//! ['nalgebra']: http://nalgebra.org/doc/nalgebra/
+//!
 
 #![deny(missing_docs)]
 
