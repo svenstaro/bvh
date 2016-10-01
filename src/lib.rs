@@ -1,3 +1,5 @@
+#![deny(missing_docs)]
+
 #![feature(plugin)]
 #![feature(test)]
 
