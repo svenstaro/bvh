@@ -52,7 +52,7 @@
 //! let hit_sphere_aabbs = bvh.traverse_recursive(&ray, &spheres);
 //! ```
 //!
-//! ['nalgebra']: http://nalgebra.org/doc/nalgebra/
+//! [`nalgebra`]: http://nalgebra.org/doc/nalgebra/
 //!
 
 #![deny(missing_docs)]

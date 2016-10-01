@@ -95,7 +95,7 @@ pub fn pretty_print_flat_bvh(flat_nodes: &[FlatNode]) {
 /// #     }
 /// #     spheres
 /// # }
-///
+/// #
 /// let origin = Point3::new(0.0,0.0,0.0);
 /// let direction = Vector3::new(1.0,0.0,0.0);
 /// let ray = Ray::new(origin, direction);
@@ -282,7 +282,7 @@ impl BVH {
     /// #     }
     /// #     spheres
     /// # }
-    ///
+    /// #
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
     /// let ray = Ray::new(origin, direction);
@@ -337,7 +337,7 @@ impl BVH {
     /// #     }
     /// #     spheres
     /// # }
-    ///
+    /// #
     /// struct CustomStruct {
     ///     aabb: AABB,
     ///     entry_index: u32,
