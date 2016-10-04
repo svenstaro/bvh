@@ -57,10 +57,7 @@
 
 #![deny(missing_docs)]
 
-#![feature(plugin)]
 #![feature(test)]
-
-#![plugin(clippy)]
 
 #[cfg(test)]
 extern crate test;
