@@ -106,7 +106,7 @@ impl BVHNode {
             }
         }
 
-        // Create twelve buckets, and twelve index assignment vectors
+        // Create six buckets, and six index assignment vectors
         const NUM_BUCKETS: usize = 6;
         let mut buckets = [Bucket::empty(); NUM_BUCKETS];
         let mut bucket_assignments: [Vec<usize>; NUM_BUCKETS] = Default::default();
