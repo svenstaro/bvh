@@ -62,7 +62,7 @@ impl BVHNode {
         }
         let (aabb_bounds, centroid_bounds) = convex_hull;
 
-        // If there are five or less elements, don't split anymore
+        // If there are five or fewer elements, don't split anymore
         if indices.len() <= 5 {
             return BVHNode::Leaf { shapes: indices };
         }
