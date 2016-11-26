@@ -37,7 +37,7 @@ pub enum BVHNode {
         /// The convex hull of the shapes' `AABB`s in child_r.
         child_r_aabb: AABB,
 
-        /// Left subtree.
+        /// Right subtree.
         child_r: Box<BVHNode>,
     },
 }
