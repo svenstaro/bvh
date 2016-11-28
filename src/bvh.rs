@@ -37,7 +37,7 @@ pub enum BVHNode {
         /// The convex hull of the shapes' `AABB`s in child_r.
         child_r_aabb: AABB,
 
-        /// Left subtree.
+        /// Right subtree.
         child_r: Box<BVHNode>,
     },
 }
@@ -62,7 +62,7 @@ impl BVHNode {
         }
         let (aabb_bounds, centroid_bounds) = convex_hull;
 
-        // If there are five or less elements, don't split anymore
+        // If there are five or fewer elements, don't split anymore
         if indices.len() <= 5 {
             return BVHNode::Leaf { shapes: indices };
         }
