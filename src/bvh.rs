@@ -80,12 +80,6 @@ impl BVHNode {
         let split_axis = centroid_bounds.largest_axis();
         let split_axis_size = centroid_bounds.max[split_axis] - centroid_bounds.min[split_axis];
 
-        // TODO Highly dangerous
-        // if split_axis_size < EPSILON {
-        //     panic!("Small split axis! But also {} shapes!.", indices.len());
-        //     // return BVHNode::Leaf { shapes: indices };
-        // }
-
         /// Defines a Bucket utility object.
         #[derive(Copy, Clone)]
         struct Bucket {
