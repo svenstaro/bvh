@@ -7,7 +7,6 @@
 use EPSILON;
 use aabb::{AABB, Bounded};
 use ray::Ray;
-use std::boxed::Box;
 use std::f32;
 use std::iter::repeat;
 
@@ -23,31 +22,40 @@ use std::iter::repeat;
 pub enum BVHNode {
     /// Leaf node.
     Leaf {
-        /// The shapes contained in this leaf.
-        shapes: Vec<usize>,
+        /// The node's parent
+        parent: usize,
+
+        /// The shape contained in this leaf.
+        shape: usize,
     },
     /// Inner node.
     Node {
+        /// The node's parent
+        parent: usize,
+
         /// The convex hull of the shapes' `AABB`s in child_l.
         child_l_aabb: AABB,
 
         /// Left subtree.
-        child_l: Box<BVHNode>,
+        child_l: usize,
 
         /// The convex hull of the shapes' `AABB`s in child_r.
         child_r_aabb: AABB,
 
         /// Right subtree.
-        child_r: Box<BVHNode>,
+        child_r: usize,
     },
+    /// Dummy node for later replacement
+    Dummy,
 }
 
 impl BVHNode {
     /// Builds a [`BVHNode`] recursively using SAH partitioning.
+    /// Returns the index of the node in the nodes vector.
     ///
     /// [`BVHNode`]: enum.BVHNode.html
     ///
-    pub fn build<T: Bounded>(shapes: &[T], indices: Vec<usize>) -> BVHNode {
+    pub fn build<T: Bounded>(shapes: &[T], indices: Vec<usize>, nodes: &mut Vec<BVHNode>, parent: usize) -> usize {
         // Helper function to accumulate the AABB joint and the centroids AABB
         fn grow_convex_hull(convex_hull: (AABB, AABB), shape_aabb: &AABB) -> (AABB, AABB) {
             let center = &shape_aabb.center();
@@ -62,18 +70,21 @@ impl BVHNode {
         }
         let (aabb_bounds, centroid_bounds) = convex_hull;
 
-        // If there are five or fewer elements, don't split anymore
-        if indices.len() <= 5 {
-            return BVHNode::Leaf { shapes: indices };
+        // If there is only one element left, don't split anymore
+        if indices.len() == 1 {
+            nodes.push(BVHNode::Leaf { parent: parent, shape: indices[0] });
+            return nodes.len() - 1;
         }
 
         // Find the axis along which the shapes are spread the most
         let split_axis = centroid_bounds.largest_axis();
         let split_axis_size = centroid_bounds.max[split_axis] - centroid_bounds.min[split_axis];
 
-        if split_axis_size < EPSILON {
-            return BVHNode::Leaf { shapes: indices };
-        }
+        // TODO Highly dangerous
+        // if split_axis_size < EPSILON {
+        //     panic!("Small split axis! But also {} shapes!.", indices.len());
+        //     // return BVHNode::Leaf { shapes: indices };
+        // }
 
         /// Defines a Bucket utility object.
         #[derive(Copy, Clone)]
@@ -111,22 +122,35 @@ impl BVHNode {
         let mut buckets = [Bucket::empty(); NUM_BUCKETS];
         let mut bucket_assignments: [Vec<usize>; NUM_BUCKETS] = Default::default();
 
-        // Assign each shape to a bucket
-        for idx in &indices {
-            let shape = &shapes[*idx];
-            let shape_aabb = shape.aabb();
-            let shape_center = shape_aabb.center();
+        if split_axis_size < EPSILON {
+            let mut bucket_num = 0;
+            for idx in &indices {
+                let shape = &shapes[*idx];
+                let shape_aabb = shape.aabb();
 
-            // Get the relative position of the shape centroid [0.0..1.0]
-            let bucket_num_relative = (shape_center[split_axis] - centroid_bounds.min[split_axis]) /
-                                      split_axis_size;
+                buckets[bucket_num].add_aabb(&shape_aabb);
+                bucket_assignments[bucket_num].push(*idx);
 
-            // Convert that to the actual `Bucket` number
-            let bucket_num = (bucket_num_relative * (NUM_BUCKETS as f32 - 0.01)) as usize;
+                bucket_num = (bucket_num + 1) % NUM_BUCKETS;
+            }
+        } else {
+            // Assign each shape to a bucket
+            for idx in &indices {
+                let shape = &shapes[*idx];
+                let shape_aabb = shape.aabb();
+                let shape_center = shape_aabb.center();
 
-            // Extend the selected `Bucket` and add the index to the actual bucket
-            buckets[bucket_num].add_aabb(&shape_aabb);
-            bucket_assignments[bucket_num].push(*idx);
+                // Get the relative position of the shape centroid [0.0..1.0]
+                let bucket_num_relative = (shape_center[split_axis] - centroid_bounds.min[split_axis]) /
+                                          split_axis_size;
+
+                // Convert that to the actual `Bucket` number
+                let bucket_num = (bucket_num_relative * (NUM_BUCKETS as f32 - 0.01)) as usize;
+
+                // Extend the selected `Bucket` and add the index to the actual bucket
+                buckets[bucket_num].add_aabb(&shape_aabb);
+                bucket_assignments[bucket_num].push(*idx);
+            }
         }
 
         // Compute the costs for each configuration and
@@ -161,30 +185,43 @@ impl BVHNode {
             child_r_indices.append(&mut indices);
         }
 
+        let node_index = nodes.len();
+
+        nodes.push(BVHNode::Dummy);
+
+        let child_l = BVHNode::build(shapes, child_l_indices, nodes, node_index);
+        let child_r = BVHNode::build(shapes, child_r_indices, nodes, node_index);
+
         // Construct the actual data structure
-        BVHNode::Node {
+        nodes[node_index] = BVHNode::Node {
+            parent: parent,
             child_l_aabb: child_l_aabb,
-            child_l: Box::new(BVHNode::build(shapes, child_l_indices)),
+            child_l: child_l,
             child_r_aabb: child_r_aabb,
-            child_r: Box::new(BVHNode::build(shapes, child_r_indices)),
-        }
+            child_r: child_r,
+        };
+
+        node_index
     }
 
     /// Prints a textual representation of the recursive [`BVH`] structure.
     ///
     /// [`BVH`]: struct.BVH.html
     ///
-    fn pretty_print(&self, depth: usize) {
+    fn pretty_print(&self, nodes: &Vec<BVHNode>, depth: usize) {
         let padding: String = repeat(" ").take(depth).collect();
         match *self {
-            BVHNode::Node { ref child_l, ref child_r, .. } => {
+            BVHNode::Node { child_l, child_r, .. } => {
                 println!("{}child_l", padding);
-                child_l.pretty_print(depth + 1);
+                nodes[child_l].pretty_print(nodes, depth + 1);
                 println!("{}child_r", padding);
-                child_r.pretty_print(depth + 1);
+                nodes[child_r].pretty_print(nodes, depth + 1);
             }
-            BVHNode::Leaf { ref shapes } => {
-                println!("{}shapes\t{:?}", padding, shapes);
+            BVHNode::Leaf { shape, .. } => {
+                println!("{}shape\t{:?}", padding, shape);
+            }
+            BVHNode::Dummy => {
+                println!("{}dummy node!", padding);
             }
         }
     }
@@ -195,20 +232,21 @@ impl BVHNode {
     /// [`BVH`]: struct.BVH.html
     /// [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
     ///
-    pub fn traverse_recursive(&self, ray: &Ray, indices: &mut Vec<usize>) {
+    pub fn traverse_recursive(&self, nodes: &Vec<BVHNode>, ray: &Ray, indices: &mut Vec<usize>) {
         match *self {
-            BVHNode::Node { ref child_l_aabb, ref child_l, ref child_r_aabb, ref child_r } => {
+            BVHNode::Node { ref child_l_aabb, child_l, ref child_r_aabb, child_r, .. } => {
                 if ray.intersects_aabb(child_l_aabb) {
-                    child_l.traverse_recursive(ray, indices);
+                    nodes[child_l].traverse_recursive(nodes, ray, indices);
                 }
                 if ray.intersects_aabb(child_r_aabb) {
-                    child_r.traverse_recursive(ray, indices);
+                    nodes[child_r].traverse_recursive(nodes, ray, indices);
                 }
             }
-            BVHNode::Leaf { ref shapes } => {
-                for index in shapes {
-                    indices.push(*index);
-                }
+            BVHNode::Leaf { shape, .. } => {
+                    indices.push(shape);
+            }
+            BVHNode::Dummy => {
+                panic!("Dummy node found during BVH traversal!");
             }
         }
     }
@@ -224,7 +262,7 @@ pub struct BVH {
     ///
     /// [`BVH`]: struct.BVH.html
     ///
-    pub root: BVHNode,
+    pub nodes: Vec<BVHNode>,
 }
 
 impl BVH {
@@ -271,8 +309,9 @@ impl BVH {
     /// ```
     pub fn build<T: Bounded>(shapes: &[T]) -> BVH {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
-        let root = BVHNode::build(shapes, indices);
-        BVH { root: root }
+        let mut nodes = Vec::new();
+        BVHNode::build(shapes, indices, &mut nodes, 0);
+        BVH { nodes: nodes }
     }
 
     /// Prints the [`BVH`] in a tree-like visualization.
@@ -280,7 +319,7 @@ impl BVH {
     /// [`BVH`]: struct.BVH.html
     ///
     pub fn pretty_print(&self) {
-        self.root.pretty_print(0);
+        self.nodes[0].pretty_print(&self.nodes, 0);
     }
 
     /// Traverses the tree recursively. Returns a subset of `shapes`, in which the [`AABB`]s
@@ -332,13 +371,13 @@ impl BVH {
     /// ```
     pub fn traverse_recursive<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
         let mut indices = Vec::new();
-        self.root.traverse_recursive(ray, &mut indices);
+        self.nodes[0].traverse_recursive(&self.nodes, ray, &mut indices);
         let mut hit_shapes = Vec::new();
         for index in &indices {
             let shape = &shapes[*index];
-            if ray.intersects_aabb(&shape.aabb()) {
+            // if ray.intersects_aabb(&shape.aabb()) {
                 hit_shapes.push(shape);
-            }
+            // }
         }
         hit_shapes
     }

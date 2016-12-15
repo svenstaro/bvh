@@ -143,9 +143,9 @@ impl BVHNode {
     /// [`BVH`]: struct.BVH.html
     /// [`traverse_flat_bvh()`]: method.traverse_flat_bvh.html
     ///
-    pub fn flatten(&self, vec: &mut Vec<FlatNode>, next_free: usize) -> usize {
+    pub fn flatten(&self, nodes: &Vec<BVHNode>, vec: &mut Vec<FlatNode>, next_free: usize) -> usize {
         match *self {
-            BVHNode::Node { child_l_aabb, ref child_l, child_r_aabb, ref child_r } => {
+            BVHNode::Node { child_l_aabb, child_l, child_r_aabb, child_r, .. } => {
                 // Create the enclosing node for the left subtree
                 vec.push(FlatNode {
                     aabb: child_l_aabb,
@@ -155,7 +155,7 @@ impl BVHNode {
                 });
 
                 // Create the flat left subtree and update the exit index in the enclosing node
-                let index_after_child_l = child_l.flatten(vec, next_free + 1);
+                let index_after_child_l = nodes[child_l].flatten(nodes, vec, next_free + 1);
                 vec[next_free as usize].exit_index = index_after_child_l as u32;
 
                 // Create the enclosing node for the right subtree
@@ -167,29 +167,27 @@ impl BVHNode {
                 });
 
                 // Create the flat right subtree and update the exit index in the enclosing node
-                let index_after_child_r = child_r.flatten(vec, index_after_child_l + 1);
+                let index_after_child_r = nodes[child_r].flatten(nodes, vec, index_after_child_l + 1);
                 vec[index_after_child_l as usize].exit_index = index_after_child_r as u32;
 
                 index_after_child_r
             }
-            BVHNode::Leaf { ref shapes } => {
+            BVHNode::Leaf { shape, .. } => {
                 let mut next_shape = next_free;
 
-                // Create a node for each shape of a leaf
-                for shape_index in shapes {
-                    next_shape += 1;
+                next_shape += 1;
 
-                    // Create the flat leaf node
-                    vec.push(FlatNode {
-                        aabb: AABB::empty(),
-                        entry_index: u32::max_value(),
-                        exit_index: next_shape as u32,
-                        shape_index: *shape_index as u32,
-                    });
-                }
+                // Create the flat leaf node
+                vec.push(FlatNode {
+                    aabb: AABB::empty(),
+                    entry_index: u32::max_value(),
+                    exit_index: next_shape as u32,
+                    shape_index: shape as u32,
+                });
 
                 next_shape
             }
+            BVHNode::Dummy => panic!("Found dummy node while flattening BVH.")
         }
     }
 
@@ -197,6 +195,7 @@ impl BVHNode {
     /// TODO: change the algorithm which pushes `FlatNode`s to a vector to not use indices this
     /// much. Implement an algorithm which writes directly to a writable slice.
     fn create_flat_branch<F, FNodeType>(&self,
+                                        nodes: &Vec<BVHNode>,
                                         this_aabb: &AABB,
                                         vec: &mut Vec<FNodeType>,
                                         next_free: usize,
@@ -210,7 +209,7 @@ impl BVHNode {
         assert!(vec.len() - 1 == next_free);
 
         // Create subtree
-        let index_after_subtree = self.flatten_custom(vec, next_free + 1, constructor);
+        let index_after_subtree = self.flatten_custom(nodes, vec, next_free + 1, constructor);
 
         // Replace dummy node by actual node with the entry index pointing to the subtree
         // and the exit index pointing to the next node after the subtree
@@ -230,6 +229,7 @@ impl BVHNode {
     /// [`traverse_flat_bvh`]: method.traverse_flat_bvh.html
     ///
     pub fn flatten_custom<F, FNodeType>(&self,
+                                        nodes: &Vec<BVHNode>,
                                         vec: &mut Vec<FNodeType>,
                                         next_free: usize,
                                         constructor: &F)
@@ -237,25 +237,25 @@ impl BVHNode {
         where F: Fn(&AABB, u32, u32, u32) -> FNodeType
     {
         match *self {
-            BVHNode::Node { ref child_l_aabb, ref child_l, ref child_r_aabb, ref child_r } => {
+            BVHNode::Node { ref child_l_aabb, child_l, ref child_r_aabb, child_r, .. } => {
                 let index_after_child_l =
-                    child_l.create_flat_branch(child_l_aabb, vec, next_free, constructor);
-                child_r.create_flat_branch(child_r_aabb, vec, index_after_child_l, constructor)
+                    nodes[child_l].create_flat_branch(nodes, child_l_aabb, vec, next_free, constructor);
+                nodes[child_r].create_flat_branch(nodes, child_r_aabb, vec, index_after_child_l, constructor)
             }
 
-            BVHNode::Leaf { ref shapes } => {
+            BVHNode::Leaf { shape, .. } => {
                 let mut next_shape = next_free;
-                for shape_index in shapes {
-                    next_shape += 1;
-                    let leaf_node = constructor(&AABB::empty(),
-                                                u32::max_value(),
-                                                next_shape as u32,
-                                                *shape_index as u32);
-                    vec.push(leaf_node);
-                }
+                next_shape += 1;
+                let leaf_node = constructor(&AABB::empty(),
+                                            u32::max_value(),
+                                            next_shape as u32,
+                                            shape as u32);
+                vec.push(leaf_node);
 
                 next_shape
             }
+
+            BVHNode::Dummy => panic!("Found dummy node while flattening BVH.")
         }
     }
 }
@@ -309,7 +309,7 @@ impl BVH {
     /// ```
     pub fn flatten(&self) -> Vec<FlatNode> {
         let mut vec = Vec::new();
-        self.root.flatten(&mut vec, 0);
+        self.nodes[0].flatten(&self.nodes, &mut vec, 0);
         vec
     }
 
@@ -389,7 +389,7 @@ impl BVH {
         where F: Fn(&AABB, u32, u32, u32) -> FNodeType
     {
         let mut vec = Vec::new();
-        self.root.flatten_custom(&mut vec, 0, constructor);
+        self.nodes[0].flatten_custom(&self.nodes, &mut vec, 0, constructor);
         vec
     }
 }
@@ -448,6 +448,7 @@ mod tests {
         let direction_3 = Vector3::new(-2.0, -1.0, 0.0);
         let ray_3 = Ray::new(position_3, direction_3);
         let hit_shapes_3 = test_ray(&ray_3, &flat_bvh, &shapes);
+        
         assert!(hit_shapes_3.contains(&15));
         assert!(hit_shapes_3.contains(&16));
         assert!(hit_shapes_3.contains(&17));
