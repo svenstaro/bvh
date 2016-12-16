@@ -62,7 +62,12 @@ impl BVHNode {
     ///
     /// [`BVHNode`]: enum.BVHNode.html
     ///
-    pub fn build<T: Bounded>(shapes: &[T], indices: Vec<usize>, nodes: &mut Vec<BVHNode>, parent: usize, depth: u32) -> usize {
+    pub fn build<T: Bounded>(shapes: &[T],
+                             indices: Vec<usize>,
+                             nodes: &mut Vec<BVHNode>,
+                             parent: usize,
+                             depth: u32)
+                             -> usize {
         // Helper function to accumulate the AABB joint and the centroids AABB
         fn grow_convex_hull(convex_hull: (AABB, AABB), shape_aabb: &AABB) -> (AABB, AABB) {
             let center = &shape_aabb.center();
@@ -79,7 +84,11 @@ impl BVHNode {
 
         // If there is only one element left, don't split anymore
         if indices.len() == 1 {
-            nodes.push(BVHNode::Leaf { parent: parent, depth: depth, shape: indices[0] });
+            nodes.push(BVHNode::Leaf {
+                parent: parent,
+                depth: depth,
+                shape: indices[0],
+            });
             return nodes.len() - 1;
         }
 
@@ -144,8 +153,8 @@ impl BVHNode {
                 let shape_center = shape_aabb.center();
 
                 // Get the relative position of the shape centroid [0.0..1.0]
-                let bucket_num_relative = (shape_center[split_axis] - centroid_bounds.min[split_axis]) /
-                                          split_axis_size;
+                let bucket_num_relative =
+                    (shape_center[split_axis] - centroid_bounds.min[split_axis]) / split_axis_size;
 
                 // Convert that to the actual `Bucket` number
                 let bucket_num = (bucket_num_relative * (NUM_BUCKETS as f32 - 0.01)) as usize;
@@ -247,7 +256,7 @@ impl BVHNode {
                 }
             }
             BVHNode::Leaf { shape, .. } => {
-                    indices.push(shape);
+                indices.push(shape);
             }
             BVHNode::Dummy => {
                 panic!("Dummy node found during BVH traversal!");
@@ -319,7 +328,10 @@ impl BVH {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
         let mut nodes = Vec::new();
         BVHNode::build(shapes, indices, &mut nodes, 0, 0);
-        BVH { nodes: nodes, refit_nodes: HashSet::new() }
+        BVH {
+            nodes: nodes,
+            refit_nodes: HashSet::new(),
+        }
     }
 
     /// Prints the [`BVH`] in a tree-like visualization.
@@ -384,7 +396,7 @@ impl BVH {
         for index in &indices {
             let shape = &shapes[*index];
             // if ray.intersects_aabb(&shape.aabb()) {
-                hit_shapes.push(shape);
+            hit_shapes.push(shape);
             // }
         }
         hit_shapes

@@ -143,7 +143,11 @@ impl BVHNode {
     /// [`BVH`]: struct.BVH.html
     /// [`traverse_flat_bvh()`]: method.traverse_flat_bvh.html
     ///
-    pub fn flatten(&self, nodes: &Vec<BVHNode>, vec: &mut Vec<FlatNode>, next_free: usize) -> usize {
+    pub fn flatten(&self,
+                   nodes: &Vec<BVHNode>,
+                   vec: &mut Vec<FlatNode>,
+                   next_free: usize)
+                   -> usize {
         match *self {
             BVHNode::Node { child_l_aabb, child_l, child_r_aabb, child_r, .. } => {
                 // Create the enclosing node for the left subtree
@@ -167,7 +171,8 @@ impl BVHNode {
                 });
 
                 // Create the flat right subtree and update the exit index in the enclosing node
-                let index_after_child_r = nodes[child_r].flatten(nodes, vec, index_after_child_l + 1);
+                let index_after_child_r = nodes[child_r]
+                    .flatten(nodes, vec, index_after_child_l + 1);
                 vec[index_after_child_l as usize].exit_index = index_after_child_r as u32;
 
                 index_after_child_r
@@ -187,7 +192,7 @@ impl BVHNode {
 
                 next_shape
             }
-            BVHNode::Dummy => panic!("Found dummy node while flattening BVH.")
+            BVHNode::Dummy => panic!("Found dummy node while flattening BVH."),
         }
     }
 
@@ -238,9 +243,10 @@ impl BVHNode {
     {
         match *self {
             BVHNode::Node { ref child_l_aabb, child_l, ref child_r_aabb, child_r, .. } => {
-                let index_after_child_l =
-                    nodes[child_l].create_flat_branch(nodes, child_l_aabb, vec, next_free, constructor);
-                nodes[child_r].create_flat_branch(nodes, child_r_aabb, vec, index_after_child_l, constructor)
+                let index_after_child_l = nodes[child_l]
+                    .create_flat_branch(nodes, child_l_aabb, vec, next_free, constructor);
+                nodes[child_r]
+                    .create_flat_branch(nodes, child_r_aabb, vec, index_after_child_l, constructor)
             }
 
             BVHNode::Leaf { shape, .. } => {
@@ -255,7 +261,7 @@ impl BVHNode {
                 next_shape
             }
 
-            BVHNode::Dummy => panic!("Found dummy node while flattening BVH.")
+            BVHNode::Dummy => panic!("Found dummy node while flattening BVH."),
         }
     }
 }
