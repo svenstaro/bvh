@@ -81,7 +81,7 @@ impl BVHNode {
     ///
     /// [`BVHNode`]: enum.BVHNode.html
     ///
-    pub fn build<T: Bounded + BVHShape>(shapes: &[T],
+    pub fn build<T: Bounded + BVHShape>(shapes: &mut [T],
                                         indices: Vec<usize>,
                                         nodes: &mut Vec<BVHNode>,
                                         parent: usize,
@@ -103,12 +103,16 @@ impl BVHNode {
 
         // If there is only one element left, don't split anymore
         if indices.len() == 1 {
+            let shape_index = indices[0];
             nodes.push(BVHNode::Leaf {
                 parent: parent,
                 depth: depth,
-                shape: indices[0],
+                shape: shape_index,
             });
-            return nodes.len() - 1;
+            let node_index = nodes.len() - 1;
+            // Let the shape know the index of the node that represents it
+            shapes[shape_index].set_bvh_node_index(node_index);
+            return node_index;
         }
 
         // Find the axis along which the shapes are spread the most
@@ -351,7 +355,7 @@ impl BVH {
     /// let shapes = create_bounded_shapes();
     /// let bvh = BVH::build(&shapes);
     /// ```
-    pub fn build<T: Bounded + BVHShape>(shapes: &[T]) -> BVH {
+    pub fn build<T: Bounded + BVHShape>(shapes: &mut [T]) -> BVH {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
         let mut nodes = Vec::new();
         BVHNode::build(shapes, indices, &mut nodes, 0, 0);
@@ -458,8 +462,7 @@ impl BVH {
 
             // Find max_depth and sweep_node_indices in one iteration
             for refit_node_index in refit_node_indices.iter() {
-                let ref refit_node = shapes[*refit_node_index];
-                let depth = match self.nodes[refit_node.bvh_node_index()] {
+                let depth = match self.nodes[*refit_node_index] {
                     BVHNode::Node { depth, .. } => depth,
                     BVHNode::Leaf { depth, .. } => depth,
                     BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
@@ -543,7 +546,7 @@ pub mod tests {
     pub struct XBox {
         pub x: i32,
         node_index: usize,
-        has_good_bvh_position: bool, // If the XBox's node in the BVH gets moved, we panic if this is true
+        pub has_good_bvh_position: bool, // If the XBox's node in the BVH gets moved, we panic if this is true
     }
 
     /// `XBox`'s `AABB`s are unit `AABB`s centered on the given x-position.
@@ -560,6 +563,8 @@ pub mod tests {
             self.node_index = index;
             if self.has_good_bvh_position {
                 panic!("An XBox's BVHNode has been moved even though it shouldn't have.");
+            } else {
+                self.has_good_bvh_position = true;
             }
         }
 
@@ -576,11 +581,11 @@ pub mod tests {
             shapes.push(XBox {
                 x: x,
                 node_index: 0,
-                has_good_bvh_position: true,
+                has_good_bvh_position: false,
             });
         }
 
-        let bvh = BVH::build(&shapes);
+        let bvh = BVH::build(&mut shapes);
         (shapes, bvh)
     }
 
@@ -752,10 +757,10 @@ pub mod tests {
     #[bench]
     /// Benchmark the construction of a BVH with 120,000 triangles.
     fn bench_build_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        let triangles = create_n_cubes(10_000);
+        let mut triangles = create_n_cubes(10_000);
 
         b.iter(|| {
-            BVH::build(&triangles);
+            BVH::build(&mut triangles);
         });
     }
 
@@ -797,8 +802,8 @@ pub mod tests {
     #[bench]
     /// Benchmark intersecting 120,000 triangles using the recursive BVH.
     fn bench_intersect_120k_triangles_bvh_recursive(b: &mut ::test::Bencher) {
-        let triangles = create_n_cubes(10_000);
-        let bvh = BVH::build(&triangles);
+        let mut triangles = create_n_cubes(10_000);
+        let bvh = BVH::build(&mut triangles);
         let mut seed = 0;
 
         b.iter(|| {

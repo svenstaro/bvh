@@ -521,8 +521,8 @@ mod tests {
         }
 
         // Generate a BVH and flatten it defaultly, and using a custom constructor
-        let triangles = create_n_cubes(1_000);
-        let bvh = BVH::build(&triangles);
+        let mut triangles = create_n_cubes(1_000);
+        let bvh = BVH::build(&mut triangles);
         let flat_bvh = bvh.flatten();
         let flat_bvh_custom = bvh.flatten_custom(&custom_constructor);
 
@@ -537,8 +537,8 @@ mod tests {
     #[bench]
     /// Benchmark the flattening of a BVH with 120,000 triangles.
     fn bench_flatten_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        let triangles = create_n_cubes(10_000);
-        let bvh = BVH::build(&triangles);
+        let mut triangles = create_n_cubes(10_000);
+        let bvh = BVH::build(&mut triangles);
 
         b.iter(|| {
             bvh.flatten();
@@ -548,8 +548,8 @@ mod tests {
     #[bench]
     /// Benchmark intersecting 120,000 triangles using the recursive BVH.
     fn bench_intersect_120k_triangles_bvh_flat(b: &mut ::test::Bencher) {
-        let triangles = create_n_cubes(10_000);
-        let bvh = BVH::build(&triangles);
+        let mut triangles = create_n_cubes(10_000);
+        let bvh = BVH::build(&mut triangles);
         let flat_bvh = bvh.flatten();
         let mut seed = 0;
 
