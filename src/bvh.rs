@@ -504,14 +504,15 @@ impl BVH {
 
         let mut node = &nodes[node_index];
 
+        // If this node is not a grandparent, queue the parent for refitting and bail
         match *node {
             BVHNode::Node { parent, child_l, child_r, .. } => {
                 if let BVHNode::Leaf { .. } = nodes[child_l] {
-                    return Some(parent);
+                    if let BVHNode::Leaf { .. } = nodes[child_r] {
+                        return Some(parent);
+                    }
                 }
-                if let BVHNode::Leaf { .. } = nodes[child_r] {
-                    return Some(parent);
-                }
+
             }
             BVHNode::Leaf { parent, .. } => {
                 return Some(parent);
