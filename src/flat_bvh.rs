@@ -64,7 +64,7 @@ pub fn pretty_print_flat_bvh(flat_nodes: &[FlatNode]) {
 ///
 /// ```
 /// use bvh::aabb::{AABB, Bounded};
-/// use bvh::bvh::BVH;
+/// use bvh::bvh::{BVH, BVHShape};
 /// use bvh::flat_bvh::traverse_flat_bvh;
 /// use bvh::nalgebra::{Point3, Vector3};
 /// use bvh::ray::Ray;
@@ -72,6 +72,7 @@ pub fn pretty_print_flat_bvh(flat_nodes: &[FlatNode]) {
 /// # struct Sphere {
 /// #     position: Point3<f32>,
 /// #     radius: f32,
+/// #     node_index: usize,
 /// # }
 /// #
 /// # impl Bounded for Sphere {
@@ -83,6 +84,16 @@ pub fn pretty_print_flat_bvh(flat_nodes: &[FlatNode]) {
 /// #     }
 /// # }
 /// #
+/// # impl BVHShape for Sphere {
+/// #     fn set_bvh_node_index(&mut self, index: usize) {
+/// #         self.node_index = index;
+/// #     }
+/// #
+/// #     fn bvh_node_index(&self) -> usize {
+/// #         self.node_index
+/// #     }
+/// # }
+/// #
 /// # fn create_bounded_shapes() -> Vec<Sphere> {
 /// #     let mut spheres = Vec::new();
 /// #     for i in 0..1000u32 {
@@ -91,6 +102,7 @@ pub fn pretty_print_flat_bvh(flat_nodes: &[FlatNode]) {
 /// #         spheres.push(Sphere {
 /// #             position: position,
 /// #             radius: radius,
+/// #             node_index: 0,
 /// #         });
 /// #     }
 /// #     spheres
@@ -275,13 +287,14 @@ impl BVH {
     ///
     /// ```
     /// use bvh::aabb::{AABB, Bounded};
-    /// use bvh::bvh::BVH;
+    /// use bvh::bvh::{BVH, BVHShape};
     /// use bvh::nalgebra::{Point3, Vector3};
     /// use bvh::ray::Ray;
     ///
     /// # struct Sphere {
     /// #     position: Point3<f32>,
     /// #     radius: f32,
+    /// #     node_index: usize,
     /// # }
     /// #
     /// # impl Bounded for Sphere {
@@ -293,6 +306,16 @@ impl BVH {
     /// #     }
     /// # }
     /// #
+    /// # impl BVHShape for Sphere {
+    /// #     fn set_bvh_node_index(&mut self, index: usize) {
+    /// #         self.node_index = index;
+    /// #     }
+    /// #
+    /// #     fn bvh_node_index(&self) -> usize {
+    /// #         self.node_index
+    /// #     }
+    /// # }
+    /// #
     /// # fn create_bounded_shapes() -> Vec<Sphere> {
     /// #     let mut spheres = Vec::new();
     /// #     for i in 0..1000u32 {
@@ -301,6 +324,7 @@ impl BVH {
     /// #         spheres.push(Sphere {
     /// #             position: position,
     /// #             radius: radius,
+    /// #             node_index: 0,
     /// #         });
     /// #     }
     /// #     spheres
@@ -336,13 +360,14 @@ impl BVH {
     ///
     /// ```
     /// use bvh::aabb::{AABB, Bounded};
-    /// use bvh::bvh::BVH;
+    /// use bvh::bvh::{BVH, BVHShape};
     /// use bvh::nalgebra::{Point3, Vector3};
     /// use bvh::ray::Ray;
     ///
     /// # struct Sphere {
     /// #     position: Point3<f32>,
     /// #     radius: f32,
+    /// #     node_index: usize,
     /// # }
     /// #
     /// # impl Bounded for Sphere {
@@ -354,6 +379,16 @@ impl BVH {
     /// #     }
     /// # }
     /// #
+    /// # impl BVHShape for Sphere {
+    /// #     fn set_bvh_node_index(&mut self, index: usize) {
+    /// #         self.node_index = index;
+    /// #     }
+    /// #
+    /// #     fn bvh_node_index(&self) -> usize {
+    /// #         self.node_index
+    /// #     }
+    /// # }
+    /// #
     /// # fn create_bounded_shapes() -> Vec<Sphere> {
     /// #     let mut spheres = Vec::new();
     /// #     for i in 0..1000u32 {
@@ -362,6 +397,7 @@ impl BVH {
     /// #         spheres.push(Sphere {
     /// #             position: position,
     /// #             radius: radius,
+    /// #             node_index: 0,
     /// #         });
     /// #     }
     /// #     spheres

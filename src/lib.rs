@@ -16,7 +16,7 @@
 //!
 //! ```
 //! use bvh::aabb::{AABB, Bounded};
-//! use bvh::bvh::BVH;
+//! use bvh::bvh::{BVH, BVHShape};
 //! use bvh::nalgebra::{Point3, Vector3};
 //! use bvh::ray::Ray;
 //!
@@ -27,6 +27,7 @@
 //! struct Sphere {
 //!     position: Point3<f32>,
 //!     radius: f32,
+//!     node_index: usize,
 //! }
 //!
 //! impl Bounded for Sphere {
@@ -38,6 +39,16 @@
 //!     }
 //! }
 //!
+//! impl BVHShape for Sphere {
+//!     fn set_bvh_node_index(&mut self, index: usize) {
+//!         self.node_index = index;
+//!     }
+//!
+//!     fn bvh_node_index(&self) -> usize {
+//!         self.node_index
+//!     }
+//! }
+//!
 //! let mut spheres = Vec::new();
 //! for i in 0..1000u32 {
 //!     let position = Point3::new(i as f32, i as f32, i as f32);
@@ -45,6 +56,7 @@
 //!     spheres.push(Sphere {
 //!         position: position,
 //!         radius: radius,
+//!         node_index: 0,
 //!     });
 //! }
 //!

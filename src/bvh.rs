@@ -56,18 +56,37 @@ pub enum BVHNode {
     Dummy,
 }
 
+/// Describes a shape as referenced by a `BVHNode::Leaf`.
+/// Knows the index of the node in the [`BVH`] it is in.
+///
+/// [`BVH`]: struct.BVH.html
+///
+pub trait BVHShape {
+    /// Sets the index of the referenced [`BVHNode`].
+    ///
+    /// [`BVHNode`]: enum.BVHNode.html
+    ///
+    fn set_bvh_node_index(&mut self, usize);
+
+    /// Gets the index of the referenced [`BVHNode`].
+    ///
+    /// [`BVHNode`]: enum.BVHNode.html
+    ///
+    fn bvh_node_index(&self) -> usize;
+}
+
 impl BVHNode {
     /// Builds a [`BVHNode`] recursively using SAH partitioning.
     /// Returns the index of the node in the nodes vector.
     ///
     /// [`BVHNode`]: enum.BVHNode.html
     ///
-    pub fn build<T: Bounded>(shapes: &[T],
-                             indices: Vec<usize>,
-                             nodes: &mut Vec<BVHNode>,
-                             parent: usize,
-                             depth: u32)
-                             -> usize {
+    pub fn build<T: Bounded + BVHShape>(shapes: &[T],
+                                        indices: Vec<usize>,
+                                        nodes: &mut Vec<BVHNode>,
+                                        parent: usize,
+                                        depth: u32)
+                                        -> usize {
         // Helper function to accumulate the AABB joint and the centroids AABB
         fn grow_convex_hull(convex_hull: (AABB, AABB), shape_aabb: &AABB) -> (AABB, AABB) {
             let center = &shape_aabb.center();
@@ -276,10 +295,6 @@ pub struct BVH {
     /// [`BVH`]: struct.BVH.html
     ///
     pub nodes: Vec<BVHNode>,
-
-    /// A list of indices of nodes that have changed shapes.
-    ///
-    refit_nodes: HashSet<usize>,
 }
 
 impl BVH {
@@ -291,12 +306,13 @@ impl BVH {
     ///
     /// ```
     /// use bvh::aabb::{AABB, Bounded};
-    /// use bvh::bvh::BVH;
+    /// use bvh::bvh::{BVH, BVHShape};
     /// use bvh::nalgebra::{Point3, Vector3};
     ///
     /// # struct Sphere {
     /// #     position: Point3<f32>,
     /// #     radius: f32,
+    /// #     node_index: usize,
     /// # }
     /// #
     /// # impl Bounded for Sphere {
@@ -308,6 +324,16 @@ impl BVH {
     /// #     }
     /// # }
     /// #
+    /// # impl BVHShape for Sphere {
+    /// #     fn set_bvh_node_index(&mut self, index: usize) {
+    /// #         self.node_index = index;
+    /// #     }
+    /// #
+    /// #     fn bvh_node_index(&self) -> usize {
+    /// #         self.node_index
+    /// #     }
+    /// # }
+    /// #
     /// # fn create_bounded_shapes() -> Vec<Sphere> {
     /// #     let mut spheres = Vec::new();
     /// #     for i in 0..1000u32 {
@@ -316,6 +342,7 @@ impl BVH {
     /// #         spheres.push(Sphere {
     /// #             position: position,
     /// #             radius: radius,
+    /// #             node_index: 0,
     /// #         });
     /// #     }
     /// #     spheres
@@ -324,14 +351,11 @@ impl BVH {
     /// let shapes = create_bounded_shapes();
     /// let bvh = BVH::build(&shapes);
     /// ```
-    pub fn build<T: Bounded>(shapes: &[T]) -> BVH {
+    pub fn build<T: Bounded + BVHShape>(shapes: &[T]) -> BVH {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
         let mut nodes = Vec::new();
         BVHNode::build(shapes, indices, &mut nodes, 0, 0);
-        BVH {
-            nodes: nodes,
-            refit_nodes: HashSet::new(),
-        }
+        BVH { nodes: nodes }
     }
 
     /// Prints the [`BVH`] in a tree-like visualization.
@@ -351,13 +375,14 @@ impl BVH {
     ///
     /// ```
     /// use bvh::aabb::{AABB, Bounded};
-    /// use bvh::bvh::BVH;
+    /// use bvh::bvh::{BVH, BVHShape};
     /// use bvh::nalgebra::{Point3, Vector3};
     /// use bvh::ray::Ray;
     ///
     /// # struct Sphere {
     /// #     position: Point3<f32>,
     /// #     radius: f32,
+    /// #     node_index: usize,
     /// # }
     /// #
     /// # impl Bounded for Sphere {
@@ -369,6 +394,16 @@ impl BVH {
     /// #     }
     /// # }
     /// #
+    /// # impl BVHShape for Sphere {
+    /// #     fn set_bvh_node_index(&mut self, index: usize) {
+    /// #         self.node_index = index;
+    /// #     }
+    /// #
+    /// #     fn bvh_node_index(&self) -> usize {
+    /// #         self.node_index
+    /// #     }
+    /// # }
+    /// #
     /// # fn create_bounded_shapes() -> Vec<Sphere> {
     /// #     let mut spheres = Vec::new();
     /// #     for i in 0..1000u32 {
@@ -377,6 +412,7 @@ impl BVH {
     /// #         spheres.push(Sphere {
     /// #             position: position,
     /// #             radius: radius,
+    /// #             node_index: 0,
     /// #         });
     /// #     }
     /// #     spheres
@@ -402,93 +438,103 @@ impl BVH {
         hit_shapes
     }
 
-    /// Add node indices to the refit list,
-    /// so they are looked at during the next `optimize` call.
-    pub fn add_refit_nodes(&mut self, node_indices: Vec<usize>) {
-        for node_index in node_indices {
-            self.refit_nodes.insert(node_index);
-        }
-    }
-
-    // TODO Remember to remove shapes parameter if it turns out to not be needed
     /// Optimizes the `BVH` by batch-reorganizing updated nodes.
     /// Based on https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs
     ///
-    pub fn optimize<'a, T: Bounded>(&'a mut self, shapes: &'a [T]) {
-        // let mut nodes = &mut self.nodes;
-        // let mut refit_nodes = &mut self.refit_nodes;
+    /// Needs all the scene's shapes, plus the indeces of the shapes that were updated.
+    ///
+    pub fn optimize<Shape: BVHShape>(&mut self,
+                                     refit_shape_indices: &HashSet<usize>,
+                                     shapes: &mut [Shape]) {
+        let mut refit_node_indices: HashSet<usize> = refit_shape_indices.iter()
+            .map(|x| shapes[*x].bvh_node_index())
+            .collect();
 
         // As long as we have refit nodes left, take the list of refit nodes
         // with the highest depth (sweep nodes) and try to rotate them all
-        while self.refit_nodes.len() > 0 {
+        while refit_node_indices.len() > 0 {
             let mut max_depth = 0;
-            let mut sweep_nodes: Vec<usize> = Vec::new();
+            let mut sweep_node_indices: Vec<usize> = Vec::new();
 
-            // Find max_depth and sweep_nodes in one iteration
-            for node_index in self.refit_nodes.iter() {
-                let depth = match self.nodes[*node_index] {
+            // Find max_depth and sweep_node_indices in one iteration
+            for refit_node_index in refit_node_indices.iter() {
+                let ref refit_node = shapes[*refit_node_index];
+                let depth = match self.nodes[refit_node.bvh_node_index()] {
                     BVHNode::Node { depth, .. } => depth,
                     BVHNode::Leaf { depth, .. } => depth,
-                    BVHNode::Dummy => panic!("Dummy node found during BVH optimizing!"),
+                    BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
                 };
 
                 if depth > max_depth {
                     max_depth = depth;
-                    sweep_nodes.clear();
-                    sweep_nodes.push(*node_index);
+                    sweep_node_indices.clear();
+                    sweep_node_indices.push(*refit_node_index);
                 } else if depth == max_depth {
-                    sweep_nodes.push(*node_index);
+                    sweep_node_indices.push(*refit_node_index);
                 }
             }
 
-            for node_index in sweep_nodes.iter() {
-                self.refit_nodes.remove(&node_index);
-                self.try_rotate(*node_index, shapes);
+            // Try to find a useful tree rotation with all nodes previously found
+            for sweep_node_index in sweep_node_indices.iter() {
+                // This node does not need to be checked again
+                refit_node_indices.remove(&sweep_node_index);
+
+                let new_refit_node_index = self.try_rotate(*sweep_node_index, shapes);
+
+                // Instead of finding a useful tree rotation, we found another node
+                // that we should check, so we add its index to the refit_node_indices.
+                if let Some(index) = new_refit_node_index {
+                    refit_node_indices.insert(index);
+                }
             }
         }
     }
 
     /// Checks if there is a way to rotate a child and a grandchild node of
-    /// the given node that would improve the `BVH`.
+    /// the given node (specified by `node_index`) that would improve the `BVH`.
     /// If there is, the best rotation found is performed.
-    fn try_rotate<'a, T: Bounded>(&'a mut self, node_index: usize, shapes: &'a [T]) {
+    ///
+    /// Returns Some(usize) if a new node was found that should be used for optimization.
+    ///
+    fn try_rotate<Shape: BVHShape>(&mut self, node_index: usize, shapes: &mut [Shape]) -> Option<usize> {
         let mut nodes = &mut self.nodes;
-
-        macro_rules! add_node_and_bail {
-            ($parent_index:expr) => {
-                self.refit_nodes.insert($parent_index);
-                return;
-            }
-        }
 
         let mut node = &nodes[node_index];
 
         match *node {
             BVHNode::Node { parent, child_l, child_r, .. } => {
                 if let BVHNode::Leaf { .. } = nodes[child_l] {
-                    add_node_and_bail!(parent);
+                    return Some(parent);
                 }
                 if let BVHNode::Leaf { .. } = nodes[child_r] {
-                    add_node_and_bail!(parent);
+                    return Some(parent);
                 }
             }
             BVHNode::Leaf { parent, .. } => {
-                add_node_and_bail!(parent);
+                return Some(parent);
             }
-            BVHNode::Dummy => panic!("Dummy node found during BVH optimizing!"),
+            BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
         }
 
         // TODO Implement actual rotations
         println!("Potentially rotating node {}.", node_index);
+        match *node {
+            BVHNode::Leaf { shape, .. } => {
+                let mut actual_shape = &mut shapes[shape];
+                actual_shape.set_bvh_node_index(node_index);
+            }
+            _ => ()
+        }
 
-        // TODO don't forget to update AABBs
+        // TODO Don't forget to update AABBs
+        None
     }
 }
 
 #[cfg(test)]
 pub mod tests {
     use aabb::{AABB, Bounded};
-    use bvh::BVH;
+    use bvh::{BVH, BVHShape};
     use nalgebra::{Point3, Vector3};
     use std::collections::HashSet;
     use ray::Ray;
@@ -496,6 +542,8 @@ pub mod tests {
     /// Define some Bounded structure.
     pub struct XBox {
         pub x: i32,
+        node_index: usize,
+        has_good_bvh_position: bool, // If the XBox's node in the BVH gets moved, we panic if this is true
     }
 
     /// `XBox`'s `AABB`s are unit `AABB`s centered on the given x-position.
@@ -507,12 +555,29 @@ pub mod tests {
         }
     }
 
+    impl BVHShape for XBox {
+        fn set_bvh_node_index(&mut self, index: usize) {
+            self.node_index = index;
+            if self.has_good_bvh_position {
+                panic!("An XBox's BVHNode has been moved even though it shouldn't have.");
+            }
+        }
+
+        fn bvh_node_index(&self) -> usize {
+            self.node_index
+        }
+    }
+
     /// Creates a `BVH` for a fixed scene structure.
     pub fn build_some_bvh() -> (Vec<XBox>, BVH) {
         // Create 21 boxes along the x-axis
         let mut shapes = Vec::new();
         for x in -10..11 {
-            shapes.push(XBox { x: x });
+            shapes.push(XBox {
+                x: x,
+                node_index: 0,
+                has_good_bvh_position: true,
+            });
         }
 
         let bvh = BVH::build(&shapes);
@@ -573,6 +638,15 @@ pub mod tests {
         assert!(xs_3.contains(&4));
     }
 
+    #[test]
+    /// Tests if the optimize function tries to change a fresh BVH even though it shouldn't
+    fn test_optimizing_new_bvh() {
+        let (mut shapes, mut bvh) = build_some_bvh();
+
+        let refit_shape_indices: HashSet<usize> = (0..shapes.len()).collect();
+        bvh.optimize(&refit_shape_indices, &mut shapes);
+    }
+
     // TODO Add tests for:
     // * correct parent
     // * correct depth
@@ -585,6 +659,7 @@ pub mod tests {
         pub b: Point3<f32>,
         pub c: Point3<f32>,
         aabb: AABB,
+        node_index: usize,
     }
 
     impl Triangle {
@@ -594,6 +669,7 @@ pub mod tests {
                 b: b,
                 c: c,
                 aabb: AABB::empty().grow(&a).grow(&b).grow(&c),
+                node_index: 0,
             }
         }
     }
@@ -601,6 +677,16 @@ pub mod tests {
     impl Bounded for Triangle {
         fn aabb(&self) -> AABB {
             self.aabb
+        }
+    }
+
+    impl BVHShape for Triangle {
+        fn set_bvh_node_index(&mut self, index: usize) {
+            self.node_index = index;
+        }
+
+        fn bvh_node_index(&self) -> usize {
+            self.node_index
         }
     }
 
