@@ -9,6 +9,7 @@ use aabb::{AABB, Bounded};
 use ray::Ray;
 use std::f32;
 use std::iter::repeat;
+use std::collections::HashSet;
 
 /// Enum which describes the union type of a node in a [`BVH`].
 /// This structure does not allow for storing a root node's [`AABB`]. Therefore rays
@@ -252,11 +253,15 @@ impl BVHNode {
 /// [`build`]: struct.BVH.html#method.build
 ///
 pub struct BVH {
-    /// The root node of the [`BVH`].
+    /// The list of nodes of the [`BVH`].
     ///
     /// [`BVH`]: struct.BVH.html
     ///
     pub nodes: Vec<BVHNode>,
+
+    /// A list of indices of nodes that have changed shapes.
+    ///
+    refit_nodes: HashSet<usize>,
 }
 
 impl BVH {
@@ -305,7 +310,7 @@ impl BVH {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
         let mut nodes = Vec::new();
         BVHNode::build(shapes, indices, &mut nodes, 0);
-        BVH { nodes: nodes }
+        BVH { nodes: nodes, refit_nodes: HashSet::new() }
     }
 
     /// Prints the [`BVH`] in a tree-like visualization.
@@ -374,6 +379,15 @@ impl BVH {
             // }
         }
         hit_shapes
+    }
+
+    /// Optimizes the `BVH` by batch-reorganizing updated nodes.
+    ///
+    pub fn optimize<'a, T: Bounded>(&'a mut self, shapes: &'a [T]) {
+        while self.refit_nodes.len() > 0 {
+            // TODO implement
+            unimplemented!();
+        }
     }
 }
 
