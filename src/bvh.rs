@@ -402,11 +402,17 @@ impl BVH {
         hit_shapes
     }
 
-    // TODO Add function that adds indices of nodes to refit_nodes
+    /// Add node indices to the refit list,
+    /// so they are looked at during the next `optimize` call.
+    pub fn add_refit_nodes(&mut self, node_indices: Vec<usize>) {
+        for node_index in node_indices {
+            self.refit_nodes.insert(node_index);
+        }
+    }
 
     // TODO Remember to remove shapes parameter if it turns out to not be needed
     /// Optimizes the `BVH` by batch-reorganizing updated nodes.
-    /// Re-implemented from https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs
+    /// Based on https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs
     ///
     pub fn optimize<'a, T: Bounded>(&'a mut self, shapes: &'a [T]) {
         // let mut nodes = &mut self.nodes;
