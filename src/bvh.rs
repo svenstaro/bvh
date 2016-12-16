@@ -352,8 +352,8 @@ impl BVH {
     /// #     spheres
     /// # }
     ///
-    /// let shapes = create_bounded_shapes();
-    /// let bvh = BVH::build(&shapes);
+    /// let mut shapes = create_bounded_shapes();
+    /// let bvh = BVH::build(&mut shapes);
     /// ```
     pub fn build<T: Bounded + BVHShape>(shapes: &mut [T]) -> BVH {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
@@ -425,8 +425,8 @@ impl BVH {
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
     /// let ray = Ray::new(origin, direction);
-    /// let shapes = create_bounded_shapes();
-    /// let bvh = BVH::build(&shapes);
+    /// let mut shapes = create_bounded_shapes();
+    /// let bvh = BVH::build(&mut shapes);
     /// let hit_sphere_aabbs = bvh.traverse_recursive(&ray, &shapes);
     /// ```
     pub fn traverse_recursive<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {

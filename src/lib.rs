@@ -60,7 +60,7 @@
 //!     });
 //! }
 //!
-//! let bvh = BVH::build(&spheres);
+//! let bvh = BVH::build(&mut spheres);
 //! let hit_sphere_aabbs = bvh.traverse_recursive(&ray, &spheres);
 //! ```
 //!

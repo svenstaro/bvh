@@ -111,8 +111,8 @@ pub fn pretty_print_flat_bvh(flat_nodes: &[FlatNode]) {
 /// let origin = Point3::new(0.0,0.0,0.0);
 /// let direction = Vector3::new(1.0,0.0,0.0);
 /// let ray = Ray::new(origin, direction);
-/// let shapes = create_bounded_shapes();
-/// let bvh = BVH::build(&shapes);
+/// let mut shapes = create_bounded_shapes();
+/// let bvh = BVH::build(&mut shapes);
 /// let flat_bvh = bvh.flatten();
 /// let hit_shape_indices = traverse_flat_bvh(&ray, &flat_bvh);
 /// ```
@@ -333,8 +333,8 @@ impl BVH {
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
     /// let ray = Ray::new(origin, direction);
-    /// let shapes = create_bounded_shapes();
-    /// let bvh = BVH::build(&shapes);
+    /// let mut shapes = create_bounded_shapes();
+    /// let bvh = BVH::build(&mut shapes);
     /// let flat_bvh = bvh.flatten();
     /// ```
     pub fn flatten(&self) -> Vec<FlatNode> {
@@ -423,8 +423,8 @@ impl BVH {
     ///     }
     /// }
     ///
-    /// let shapes = create_bounded_shapes();
-    /// let bvh = BVH::build(&shapes);
+    /// let mut shapes = create_bounded_shapes();
+    /// let bvh = BVH::build(&mut shapes);
     /// let custom_flat_bvh = bvh.flatten_custom(&custom_struct_constructor);
     /// ```
     pub fn flatten_custom<F, FNodeType>(&self, constructor: &F) -> Vec<FNodeType>
