@@ -402,13 +402,80 @@ impl BVH {
         hit_shapes
     }
 
+    // TODO Add function that adds indices of nodes to refit_nodes
+
+    // TODO Remember to remove shapes parameter if it turns out to not be needed
     /// Optimizes the `BVH` by batch-reorganizing updated nodes.
+    /// Re-implemented from https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs
     ///
     pub fn optimize<'a, T: Bounded>(&'a mut self, shapes: &'a [T]) {
+        // let mut nodes = &mut self.nodes;
+        // let mut refit_nodes = &mut self.refit_nodes;
+
+        // As long as we have refit nodes left, take the list of refit nodes
+        // with the highest depth (sweep nodes) and try to rotate them all
         while self.refit_nodes.len() > 0 {
-            // TODO implement
-            unimplemented!();
+            let mut max_depth = 0;
+            let mut sweep_nodes: Vec<usize> = Vec::new();
+
+            // Find max_depth and sweep_nodes in one iteration
+            for node_index in self.refit_nodes.iter() {
+                let depth = match self.nodes[*node_index] {
+                    BVHNode::Node { depth, .. } => depth,
+                    BVHNode::Leaf { depth, .. } => depth,
+                    BVHNode::Dummy => panic!("Dummy node found during BVH optimizing!"),
+                };
+
+                if depth > max_depth {
+                    max_depth = depth;
+                    sweep_nodes.clear();
+                    sweep_nodes.push(*node_index);
+                } else if depth == max_depth {
+                    sweep_nodes.push(*node_index);
+                }
+            }
+
+            for node_index in sweep_nodes.iter() {
+                self.refit_nodes.remove(&node_index);
+                self.try_rotate(*node_index, shapes);
+            }
         }
+    }
+
+    /// Checks if there is a way to rotate a child and a grandchild node of
+    /// the given node that would improve the `BVH`.
+    /// If there is, the best rotation found is performed.
+    fn try_rotate<'a, T: Bounded>(&'a mut self, node_index: usize, shapes: &'a [T]) {
+        let mut nodes = &mut self.nodes;
+
+        macro_rules! add_node_and_bail {
+            ($parent_index:expr) => {
+                self.refit_nodes.insert($parent_index);
+                return;
+            }
+        }
+
+        let mut node = &nodes[node_index];
+
+        match *node {
+            BVHNode::Node { parent, child_l, child_r, .. } => {
+                if let BVHNode::Leaf { .. } = nodes[child_l] {
+                    add_node_and_bail!(parent);
+                }
+                if let BVHNode::Leaf { .. } = nodes[child_r] {
+                    add_node_and_bail!(parent);
+                }
+            }
+            BVHNode::Leaf { parent, .. } => {
+                add_node_and_bail!(parent);
+            }
+            BVHNode::Dummy => panic!("Dummy node found during BVH optimizing!"),
+        }
+
+        // TODO Implement actual rotations
+        println!("Potentially rotating node {}.", node_index);
+
+        // TODO don't forget to update AABBs
     }
 }
 
@@ -499,6 +566,12 @@ pub mod tests {
         assert!(xs_3.contains(&5));
         assert!(xs_3.contains(&4));
     }
+
+    // TODO Add tests for:
+    // * correct parent
+    // * correct depth
+    // * correct BVH after optimizing
+    // * correct parent and depth after optimizing
 
     /// A triangle struct. Instance of a more complex `Bounded` primitive.
     pub struct Triangle {
