@@ -401,6 +401,7 @@ mod tests {
     use bvh::tests::{XBox, build_some_bvh, create_n_cubes, create_ray};
     use flat_bvh::{traverse_flat_bvh, FlatNode};
     use nalgebra::{Point3, Vector3};
+    use std::collections::HashSet;
     use ray::Ray;
 
     #[test]
@@ -447,11 +448,17 @@ mod tests {
         let position_3 = Point3::new(6.0, 0.5, 0.0);
         let direction_3 = Vector3::new(-2.0, -1.0, 0.0);
         let ray_3 = Ray::new(position_3, direction_3);
+
+        // It should hit exactly three boxes
         let hit_shapes_3 = test_ray(&ray_3, &flat_bvh, &shapes);
-        
-        assert!(hit_shapes_3.contains(&15));
-        assert!(hit_shapes_3.contains(&16));
-        assert!(hit_shapes_3.contains(&17));
+        assert!(hit_shapes_3.len() == 3);
+        let mut xs_3 = HashSet::new();
+        for shape in &hit_shapes_3 {
+            xs_3.insert(shapes[*shape].x);
+        }
+        assert!(xs_3.contains(&6));
+        assert!(xs_3.contains(&5));
+        assert!(xs_3.contains(&4));
     }
 
     #[test]

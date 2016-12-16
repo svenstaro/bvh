@@ -387,7 +387,7 @@ pub mod tests {
 
     /// Define some Bounded structure.
     pub struct XBox {
-        x: i32,
+        pub x: i32,
     }
 
     /// `XBox`'s `AABB`s are unit `AABB`s centered on the given x-position.
