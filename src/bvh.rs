@@ -26,6 +26,9 @@ pub enum BVHNode {
         /// The node's parent.
         parent: usize,
 
+        /// The node's depth
+        depth: u32,
+
         /// The shape contained in this leaf.
         shape: usize,
     },
@@ -33,6 +36,9 @@ pub enum BVHNode {
     Node {
         /// The node's parent.
         parent: usize,
+
+        /// The node's depth
+        depth: u32,
 
         /// The convex hull of the shapes' `AABB`s in child_l.
         child_l_aabb: AABB,
@@ -56,7 +62,7 @@ impl BVHNode {
     ///
     /// [`BVHNode`]: enum.BVHNode.html
     ///
-    pub fn build<T: Bounded>(shapes: &[T], indices: Vec<usize>, nodes: &mut Vec<BVHNode>, parent: usize) -> usize {
+    pub fn build<T: Bounded>(shapes: &[T], indices: Vec<usize>, nodes: &mut Vec<BVHNode>, parent: usize, depth: u32) -> usize {
         // Helper function to accumulate the AABB joint and the centroids AABB
         fn grow_convex_hull(convex_hull: (AABB, AABB), shape_aabb: &AABB) -> (AABB, AABB) {
             let center = &shape_aabb.center();
@@ -73,7 +79,7 @@ impl BVHNode {
 
         // If there is only one element left, don't split anymore
         if indices.len() == 1 {
-            nodes.push(BVHNode::Leaf { parent: parent, shape: indices[0] });
+            nodes.push(BVHNode::Leaf { parent: parent, depth: depth, shape: indices[0] });
             return nodes.len() - 1;
         }
 
@@ -186,12 +192,13 @@ impl BVHNode {
 
         nodes.push(BVHNode::Dummy);
 
-        let child_l = BVHNode::build(shapes, child_l_indices, nodes, node_index);
-        let child_r = BVHNode::build(shapes, child_r_indices, nodes, node_index);
+        let child_l = BVHNode::build(shapes, child_l_indices, nodes, node_index, depth + 1);
+        let child_r = BVHNode::build(shapes, child_r_indices, nodes, node_index, depth + 1);
 
         // Construct the actual data structure
         nodes[node_index] = BVHNode::Node {
             parent: parent,
+            depth: depth,
             child_l_aabb: child_l_aabb,
             child_l: child_l,
             child_r_aabb: child_r_aabb,
@@ -311,7 +318,7 @@ impl BVH {
     pub fn build<T: Bounded>(shapes: &[T]) -> BVH {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
         let mut nodes = Vec::new();
-        BVHNode::build(shapes, indices, &mut nodes, 0);
+        BVHNode::build(shapes, indices, &mut nodes, 0, 0);
         BVH { nodes: nodes, refit_nodes: HashSet::new() }
     }
 
