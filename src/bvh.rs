@@ -23,7 +23,7 @@ use std::collections::HashSet;
 pub enum BVHNode {
     /// Leaf node.
     Leaf {
-        /// The node's parent
+        /// The node's parent.
         parent: usize,
 
         /// The shape contained in this leaf.
@@ -31,7 +31,7 @@ pub enum BVHNode {
     },
     /// Inner node.
     Node {
-        /// The node's parent
+        /// The node's parent.
         parent: usize,
 
         /// The convex hull of the shapes' `AABB`s in child_l.
@@ -118,6 +118,8 @@ impl BVHNode {
         let mut bucket_assignments: [Vec<usize>; NUM_BUCKETS] = Default::default();
 
         if split_axis_size < EPSILON {
+            // Spread the remaining shapes evenly across buckets,
+            // instead of using a heuristic
             let mut bucket_num = 0;
             for idx in &indices {
                 let shape = &shapes[*idx];
