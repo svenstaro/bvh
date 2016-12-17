@@ -448,6 +448,7 @@ mod tests {
         let direction_3 = Vector3::new(-2.0, -1.0, 0.0);
         let ray_3 = Ray::new(position_3, direction_3);
         let hit_shapes_3 = test_ray(&ray_3, &flat_bvh, &shapes);
+	println!("{:?}", hit_shapes_3);
         assert!(hit_shapes_3.contains(&15));
         assert!(hit_shapes_3.contains(&16));
         assert!(hit_shapes_3.contains(&17));

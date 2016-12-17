@@ -1,10 +1,20 @@
-//! Axis enum for AABBs and AAPs.
+//! Axis enum for indexing three-dimensional structures.
 
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 use std::fmt::{Display, Formatter, Result};
 
 /// An `Axis` in a three-dimensional coordinate system.
 /// Used to access `Vector3`/`Point3` structs via index.
+///
+/// # Example
+/// ```
+/// use bvh::axis::Axis;
+///
+/// let mut position = [1.0, 0.5, 42.0];
+/// position[Axis::Y] *= 4.0;
+///
+/// assert_eq!(position[Axis::Y], 2.0);
+/// ```
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Axis {
     /// Index of the X axis.
@@ -17,12 +27,19 @@ pub enum Axis {
     Z = 2,
 }
 
-/// Make slices indexable by `Axis`.
-impl Index<Axis> for [f32] {
+/// Make three-dimensional arrays indexable by `Axis`.
+impl Index<Axis> for [f32; 3] {
     type Output = f32;
 
     fn index(&self, axis: Axis) -> &f32 {
-        self.index(axis as usize)
+        &self[axis as usize]
+    }
+}
+
+/// Make three-dimensional arrays mutably accessible by `Axis`.
+impl IndexMut<Axis> for [f32; 3] {
+    fn index_mut(&mut self, axis: Axis) -> &mut f32 {
+        &mut self[axis as usize]
     }
 }
 
@@ -46,10 +63,20 @@ mod test {
     quickcheck!{
         fn test_index_by_axis(tpl: (f32, f32, f32)) -> bool {
             let a = [tpl.0, tpl.1, tpl.2];
-            assert_eq!(a[0], a[Axis::X]);
-            assert_eq!(a[1], a[Axis::Y]);
-            assert_eq!(a[2], a[Axis::Z]);
-            true
+
+            a[0] == a[Axis::X] && a[1] == a[Axis::Y] && a[2] == a[Axis::Z]
+        }
+    }
+
+    quickcheck!{
+        fn test_set_by_axis(tpl: (f32, f32, f32)) -> bool {
+            let mut a = [0.0, 0.0, 0.0];
+
+            a[Axis::X] = tpl.0;
+            a[Axis::Y] = tpl.1;
+            a[Axis::Z] = tpl.2;
+
+            a[0] == tpl.0 && a[1] == tpl.1 && a[2] == tpl.2
         }
     }
 }
