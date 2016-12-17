@@ -74,6 +74,7 @@ pub extern crate nalgebra;
 pub const EPSILON: f32 = 0.00001;
 
 pub mod aabb;
+pub mod axis;
 pub mod bvh;
 pub mod flat_bvh;
 pub mod ray;
