@@ -398,10 +398,12 @@ impl BVH {
 mod tests {
     use aabb::{AABB, Bounded};
     use bvh::BVH;
-    use bvh::tests::{XBox, build_some_bvh, create_n_cubes, create_ray};
+    use bvh::tests::build_some_bvh;
     use flat_bvh::{traverse_flat_bvh, FlatNode};
     use nalgebra::{Point3, Vector3};
     use ray::Ray;
+
+    use testbase::{UnitBox, Triangle, create_n_cubes, create_ray};
 
     #[test]
     /// Builds and flattens a BVH. Tests whether the `flatten` procedure succeeds.
@@ -417,7 +419,7 @@ mod tests {
         let (shapes, bvh) = build_some_bvh();
         let flat_bvh = bvh.flatten();
 
-        fn test_ray(ray: &Ray, flat_bvh: &[FlatNode], shapes: &[XBox]) -> Vec<usize> {
+        fn test_ray(ray: &Ray, flat_bvh: &[FlatNode], shapes: &[UnitBox]) -> Vec<usize> {
             let hit_shapes = traverse_flat_bvh(ray, flat_bvh);
             for (index, shape) in shapes.iter().enumerate() {
                 if !hit_shapes.contains(&index) {
@@ -448,7 +450,7 @@ mod tests {
         let direction_3 = Vector3::new(-2.0, -1.0, 0.0);
         let ray_3 = Ray::new(position_3, direction_3);
         let hit_shapes_3 = test_ray(&ray_3, &flat_bvh, &shapes);
-	println!("{:?}", hit_shapes_3);
+        println!("{:?}", hit_shapes_3);
         assert!(hit_shapes_3.contains(&15));
         assert!(hit_shapes_3.contains(&16));
         assert!(hit_shapes_3.contains(&17));

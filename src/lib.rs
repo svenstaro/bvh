@@ -78,3 +78,6 @@ pub mod axis;
 pub mod bvh;
 pub mod flat_bvh;
 pub mod ray;
+
+#[cfg(test)]
+mod testbase;
