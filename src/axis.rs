@@ -6,7 +6,7 @@ use std::fmt::{Display, Formatter, Result};
 /// An `Axis` in a three-dimensional coordinate system.
 /// Used to access `Vector3`/`Point3` structs via index.
 ///
-/// # Example
+/// # Examples
 /// ```
 /// use bvh::axis::Axis;
 ///
@@ -14,6 +14,25 @@ use std::fmt::{Display, Formatter, Result};
 /// position[Axis::Y] *= 4.0;
 ///
 /// assert_eq!(position[Axis::Y], 2.0);
+/// ```
+///
+/// `nalgebra` structures are also indexable using `Axis`.
+/// For reference see [the documentation]
+/// (http://nalgebra.org/doc/nalgebra/struct.Vector3.html#method.index).
+///
+/// ```
+/// extern crate bvh;
+/// extern crate nalgebra;
+///
+/// use bvh::axis::Axis;
+/// use nalgebra::Point3;
+///
+/// # fn main() {
+/// let mut position = Point3::new(1.0, 2.0, 3.0);
+/// position[Axis::X] = 1000.0;
+///
+/// assert_eq!(position[Axis::X], 1000.0);
+/// # }
 /// ```
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Axis {
@@ -27,22 +46,6 @@ pub enum Axis {
     Z = 2,
 }
 
-/// Make three-dimensional arrays indexable by `Axis`.
-impl Index<Axis> for [f32; 3] {
-    type Output = f32;
-
-    fn index(&self, axis: Axis) -> &f32 {
-        &self[axis as usize]
-    }
-}
-
-/// Make three-dimensional arrays mutably accessible by `Axis`.
-impl IndexMut<Axis> for [f32; 3] {
-    fn index_mut(&mut self, axis: Axis) -> &mut f32 {
-        &mut self[axis as usize]
-    }
-}
-
 /// Display implementation for `Axis`.
 impl Display for Axis {
     fn fmt(&self, f: &mut Formatter) -> Result {
@@ -52,6 +55,22 @@ impl Display for Axis {
             Axis::Z => "z",
         };
         write!(f, "{}", c)
+    }
+}
+
+/// Make slices indexable by `Axis`.
+impl Index<Axis> for [f32] {
+    type Output = f32;
+
+    fn index(&self, axis: Axis) -> &f32 {
+        &self[axis as usize]
+    }
+}
+
+/// Make slices mutably accessible by `Axis`.
+impl IndexMut<Axis> for [f32] {
+    fn index_mut(&mut self, axis: Axis) -> &mut f32 {
+        &mut self[axis as usize]
     }
 }
 
@@ -68,6 +87,7 @@ mod test {
         }
     }
 
+    /// Test whether arrays can be mutably set, by indexing via `Axis`.
     quickcheck!{
         fn test_set_by_axis(tpl: (f32, f32, f32)) -> bool {
             let mut a = [0.0, 0.0, 0.0];
