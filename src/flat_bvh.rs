@@ -136,34 +136,16 @@ impl BVH {
     /// use bvh::bvh::BVH;
     /// use bvh::nalgebra::{Point3, Vector3};
     /// use bvh::ray::Ray;
-    ///
-    /// # struct Sphere {
-    /// #     position: Point3<f32>,
-    /// #     radius: f32,
-    /// # }
-    /// #
-    /// # impl Bounded for Sphere {
-    /// #     fn aabb(&self) -> AABB {
-    /// #         let half_size = Vector3::new(self.radius, self.radius, self.radius);
-    /// #         let min = self.position - half_size;
-    /// #         let max = self.position + half_size;
-    /// #         AABB::with_bounds(min, max)
-    /// #     }
-    /// # }
-    /// #
-    /// # fn create_bounded_shapes() -> Vec<Sphere> {
-    /// #     let mut spheres = Vec::new();
+    /// # fn create_bounded_shapes() -> Vec<AABB> {
+    /// #     let mut shapes = Vec::new();
+    /// #     let offset = Vector3::new(1.0, 1.0, 1.0);
     /// #     for i in 0..1000u32 {
     /// #         let position = Point3::new(i as f32, i as f32, i as f32);
-    /// #         let radius = (i % 10) as f32 + 1.0;
-    /// #         spheres.push(Sphere {
-    /// #             position: position,
-    /// #             radius: radius,
-    /// #         });
+    /// #         shapes.push(AABB::with_bounds(position - offset, position + offset));
     /// #     }
-    /// #     spheres
+    /// #     shapes
     /// # }
-    /// #
+    ///
     /// struct CustomStruct {
     ///     aabb: AABB,
     ///     entry_index: u32,
@@ -171,22 +153,18 @@ impl BVH {
     ///     shape_index: u32,
     /// }
     ///
-    /// fn custom_struct_constructor(aabb: &AABB,
-    ///                              entry_index: u32,
-    ///                              exit_index: u32,
-    ///                              shape_index: u32)
-    ///                              -> CustomStruct {
+    /// let custom_constructor = |aabb: &AABB, entry, exit, shape| {
     ///     CustomStruct {
     ///         aabb: *aabb,
-    ///         entry_index: entry_index,
-    ///         exit_index: exit_index,
-    ///         shape_index: shape_index,
+    ///         entry_index: entry,
+    ///         exit_index: exit,
+    ///         shape_index: shape,
     ///     }
-    /// }
+    /// };
     ///
     /// let shapes = create_bounded_shapes();
     /// let bvh = BVH::build(&shapes);
-    /// let custom_flat_bvh = bvh.flatten_custom(&custom_struct_constructor);
+    /// let custom_flat_bvh = bvh.flatten_custom(&custom_constructor);
     /// ```
     pub fn flatten_custom<F, FNodeType>(&self, constructor: &F) -> Vec<FNodeType>
         where F: Fn(&AABB, u32, u32, u32) -> FNodeType
@@ -207,34 +185,16 @@ impl BVH {
     /// use bvh::bvh::BVH;
     /// use bvh::nalgebra::{Point3, Vector3};
     /// use bvh::ray::Ray;
-    ///
-    /// # struct Sphere {
-    /// #     position: Point3<f32>,
-    /// #     radius: f32,
-    /// # }
-    /// #
-    /// # impl Bounded for Sphere {
-    /// #     fn aabb(&self) -> AABB {
-    /// #         let half_size = Vector3::new(self.radius, self.radius, self.radius);
-    /// #         let min = self.position - half_size;
-    /// #         let max = self.position + half_size;
-    /// #         AABB::with_bounds(min, max)
-    /// #     }
-    /// # }
-    /// #
-    /// # fn create_bounded_shapes() -> Vec<Sphere> {
-    /// #     let mut spheres = Vec::new();
+    /// # fn create_bounded_shapes() -> Vec<AABB> {
+    /// #     let mut shapes = Vec::new();
+    /// #     let offset = Vector3::new(1.0, 1.0, 1.0);
     /// #     for i in 0..1000u32 {
     /// #         let position = Point3::new(i as f32, i as f32, i as f32);
-    /// #         let radius = (i % 10) as f32 + 1.0;
-    /// #         spheres.push(Sphere {
-    /// #             position: position,
-    /// #             radius: radius,
-    /// #         });
+    /// #         shapes.push(AABB::with_bounds(position - offset, position + offset));
     /// #     }
-    /// #     spheres
+    /// #     shapes
     /// # }
-    /// #
+    ///
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
     /// let ray = Ray::new(origin, direction);
@@ -274,44 +234,24 @@ impl BoundingHierarchy for FlatBVH {
     /// ```
     /// use bvh::aabb::{AABB, Bounded};
     /// use bvh::bounding_hierarchy::BoundingHierarchy;
-    /// use bvh::bvh::BVH;
     /// use bvh::flat_bvh::FlatBVH;
     /// use bvh::nalgebra::{Point3, Vector3};
     /// use bvh::ray::Ray;
-    ///
-    /// # struct Sphere {
-    /// #     position: Point3<f32>,
-    /// #     radius: f32,
-    /// # }
-    /// #
-    /// # impl Bounded for Sphere {
-    /// #     fn aabb(&self) -> AABB {
-    /// #         let half_size = Vector3::new(self.radius, self.radius, self.radius);
-    /// #         let min = self.position - half_size;
-    /// #         let max = self.position + half_size;
-    /// #         AABB::with_bounds(min, max)
-    /// #     }
-    /// # }
-    /// #
-    /// # fn create_bounded_shapes() -> Vec<Sphere> {
-    /// #     let mut spheres = Vec::new();
+    /// # fn create_bounded_shapes() -> Vec<AABB> {
+    /// #     let mut shapes = Vec::new();
+    /// #     let offset = Vector3::new(1.0, 1.0, 1.0);
     /// #     for i in 0..1000u32 {
     /// #         let position = Point3::new(i as f32, i as f32, i as f32);
-    /// #         let radius = (i % 10) as f32 + 1.0;
-    /// #         spheres.push(Sphere {
-    /// #             position: position,
-    /// #             radius: radius,
-    /// #         });
+    /// #         shapes.push(AABB::with_bounds(position - offset, position + offset));
     /// #     }
-    /// #     spheres
+    /// #     shapes
     /// # }
-    /// #
+    ///
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
     /// let ray = Ray::new(origin, direction);
     /// let shapes = create_bounded_shapes();
-    /// let bvh = BVH::build(&shapes);
-    /// let flat_bvh = bvh.flatten();
+    /// let flat_bvh = FlatBVH::build(&shapes);
     /// let hit_shapes = flat_bvh.traverse(&ray, &shapes);
     /// ```
     fn traverse<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {

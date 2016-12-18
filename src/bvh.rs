@@ -239,32 +239,14 @@ impl BVH {
     /// use bvh::aabb::{AABB, Bounded};
     /// use bvh::bvh::BVH;
     /// use bvh::nalgebra::{Point3, Vector3};
-    ///
-    /// # struct Sphere {
-    /// #     position: Point3<f32>,
-    /// #     radius: f32,
-    /// # }
-    /// #
-    /// # impl Bounded for Sphere {
-    /// #     fn aabb(&self) -> AABB {
-    /// #         let half_size = Vector3::new(self.radius, self.radius, self.radius);
-    /// #         let min = self.position - half_size;
-    /// #         let max = self.position + half_size;
-    /// #         AABB::with_bounds(min, max)
-    /// #     }
-    /// # }
-    /// #
-    /// # fn create_bounded_shapes() -> Vec<Sphere> {
-    /// #     let mut spheres = Vec::new();
+    /// # fn create_bounded_shapes() -> Vec<AABB> {
+    /// #     let mut shapes = Vec::new();
+    /// #     let offset = Vector3::new(1.0, 1.0, 1.0);
     /// #     for i in 0..1000u32 {
     /// #         let position = Point3::new(i as f32, i as f32, i as f32);
-    /// #         let radius = (i % 10) as f32 + 1.0;
-    /// #         spheres.push(Sphere {
-    /// #             position: position,
-    /// #             radius: radius,
-    /// #         });
+    /// #         shapes.push(AABB::with_bounds(position - offset, position + offset));
     /// #     }
-    /// #     spheres
+    /// #     shapes
     /// # }
     ///
     /// let shapes = create_bounded_shapes();
@@ -297,32 +279,14 @@ impl BoundingHierarchy for BVH {
     /// use bvh::bvh::BVH;
     /// use bvh::nalgebra::{Point3, Vector3};
     /// use bvh::ray::Ray;
-    ///
-    /// # struct Sphere {
-    /// #     position: Point3<f32>,
-    /// #     radius: f32,
-    /// # }
-    /// #
-    /// # impl Bounded for Sphere {
-    /// #     fn aabb(&self) -> AABB {
-    /// #         let half_size = Vector3::new(self.radius, self.radius, self.radius);
-    /// #         let min = self.position - half_size;
-    /// #         let max = self.position + half_size;
-    /// #         AABB::with_bounds(min, max)
-    /// #     }
-    /// # }
-    /// #
-    /// # fn create_bounded_shapes() -> Vec<Sphere> {
-    /// #     let mut spheres = Vec::new();
+    /// # fn create_bounded_shapes() -> Vec<AABB> {
+    /// #     let mut shapes = Vec::new();
+    /// #     let offset = Vector3::new(1.0, 1.0, 1.0);
     /// #     for i in 0..1000u32 {
     /// #         let position = Point3::new(i as f32, i as f32, i as f32);
-    /// #         let radius = (i % 10) as f32 + 1.0;
-    /// #         spheres.push(Sphere {
-    /// #             position: position,
-    /// #             radius: radius,
-    /// #         });
+    /// #         shapes.push(AABB::with_bounds(position - offset, position + offset));
     /// #     }
-    /// #     spheres
+    /// #     shapes
     /// # }
     ///
     /// let origin = Point3::new(0.0,0.0,0.0);
