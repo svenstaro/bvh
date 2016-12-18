@@ -16,6 +16,7 @@
 //!
 //! ```
 //! use bvh::aabb::{AABB, Bounded};
+//! use bvh::bounding_hierarchy::BoundingHierarchy;
 //! use bvh::bvh::BVH;
 //! use bvh::nalgebra::{Point3, Vector3};
 //! use bvh::ray::Ray;
@@ -49,7 +50,7 @@
 //! }
 //!
 //! let bvh = BVH::build(&spheres);
-//! let hit_sphere_aabbs = bvh.traverse_recursive(&ray, &spheres);
+//! let hit_sphere_aabbs = bvh.traverse(&ray, &spheres);
 //! ```
 //!
 //! [`nalgebra`]: http://nalgebra.org/doc/nalgebra/
@@ -75,6 +76,7 @@ pub const EPSILON: f32 = 0.00001;
 
 pub mod aabb;
 pub mod axis;
+pub mod bounding_hierarchy;
 pub mod bvh;
 pub mod flat_bvh;
 pub mod ray;

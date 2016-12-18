@@ -4,12 +4,14 @@
 //! [`BVH`]: struct.BVH.html
 //!
 
-use EPSILON;
-use aabb::{AABB, Bounded};
-use ray::Ray;
 use std::boxed::Box;
 use std::f32;
 use std::iter::repeat;
+
+use EPSILON;
+use aabb::{AABB, Bounded};
+use bounding_hierarchy::BoundingHierarchy;
+use ray::Ray;
 
 /// Enum which describes the union type of a node in a [`BVH`].
 /// This structure does not allow for storing a root node's [`AABB`]. Therefore rays
@@ -274,13 +276,13 @@ impl BVH {
         let root = BVHNode::build(shapes, indices);
         BVH { root: root }
     }
+}
 
-    /// Prints the [`BVH`] in a tree-like visualization.
-    ///
-    /// [`BVH`]: struct.BVH.html
-    ///
-    pub fn pretty_print(&self) {
-        self.root.pretty_print(0);
+impl BoundingHierarchy for BVH {
+    fn build<T: Bounded>(shapes: &[T]) -> BVH {
+        let indices = (0..shapes.len()).collect::<Vec<usize>>();
+        let root = BVHNode::build(shapes, indices);
+        BVH { root: root }
     }
 
     /// Traverses the tree recursively. Returns a subset of `shapes`, in which the [`AABB`]s
@@ -292,6 +294,7 @@ impl BVH {
     ///
     /// ```
     /// use bvh::aabb::{AABB, Bounded};
+    /// use bvh::bounding_hierarchy::BoundingHierarchy;
     /// use bvh::bvh::BVH;
     /// use bvh::nalgebra::{Point3, Vector3};
     /// use bvh::ray::Ray;
@@ -328,9 +331,9 @@ impl BVH {
     /// let ray = Ray::new(origin, direction);
     /// let shapes = create_bounded_shapes();
     /// let bvh = BVH::build(&shapes);
-    /// let hit_sphere_aabbs = bvh.traverse_recursive(&ray, &shapes);
+    /// let hit_sphere_aabbs = bvh.traverse(&ray, &shapes);
     /// ```
-    pub fn traverse_recursive<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
+    fn traverse<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
         let mut indices = Vec::new();
         self.root.traverse_recursive(ray, &mut indices);
         let mut hit_shapes = Vec::new();
@@ -342,6 +345,14 @@ impl BVH {
         }
         hit_shapes
     }
+
+    /// Prints the [`BVH`] in a tree-like visualization.
+    ///
+    /// [`BVH`]: struct.BVH.html
+    ///
+    fn pretty_print(&self) {
+        self.root.pretty_print(0);
+    }
 }
 
 #[cfg(test)]
@@ -351,6 +362,7 @@ pub mod tests {
     use nalgebra::{Point3, Vector3};
 
     use bvh::BVH;
+    use bounding_hierarchy::BoundingHierarchy;
     use ray::Ray;
     use testbase::{generate_aligned_boxes, UnitBox, create_n_cubes, create_ray};
 
@@ -373,7 +385,7 @@ pub mod tests {
                            bvh: &BVH,
                            expected_shapes: &HashSet<i32>) {
         let ray = Ray::new(ray_origin, ray_direction);
-        let hit_shapes = bvh.traverse_recursive(&ray, all_shapes);
+        let hit_shapes = bvh.traverse(&ray, all_shapes);
 
         assert_eq!(expected_shapes.len(), hit_shapes.len());
         for shape in hit_shapes {
@@ -445,7 +457,7 @@ pub mod tests {
             let ray = create_ray(&mut seed);
 
             // Traverse the BVH recursively
-            let hits = bvh.traverse_recursive(&ray, &triangles);
+            let hits = bvh.traverse(&ray, &triangles);
 
             // Traverse the resulting list of positive AABB tests
             for triangle in &hits {
