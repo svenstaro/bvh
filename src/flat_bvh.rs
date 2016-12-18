@@ -72,11 +72,9 @@ impl BVHNode {
     }
 
     /// Flattens the [`BVH`], so that it can be traversed in an iterative manner.
-    /// The iterative traverse procedure is implemented in [`traverse_flat_bvh`].
     /// This method constructs custom flat nodes using the `constructor`.
     ///
     /// [`BVH`]: struct.BVH.html
-    /// [`traverse_flat_bvh`]: method.traverse_flat_bvh.html
     ///
     pub fn flatten_custom<F, FNodeType>(&self,
                                         vec: &mut Vec<FNodeType>,
@@ -257,16 +255,19 @@ impl BVH {
 }
 
 impl BoundingHierarchy for FlatBVH {
+    /// A [`FlatBVH`] is built from a regular [`BVH`] using the [`flatten`] method.
+    ///
+    /// [`FlatBVH`]: struct.FlatBVH.html
+    /// [`BVH`]: struct.BVH.html
+    ///
     fn build<T: Bounded>(shapes: &[T]) -> FlatBVH {
         let bvh = BVH::build(shapes);
         bvh.flatten()
     }
 
-    /// Traverses a flat [`BVH`] structure iteratively.
-    /// Returns a [`Vec`] of indices which are hit by `ray` with a high probability.
+    /// Traverses a [`FlatBVH`] structure iteratively.
     ///
-    /// [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
-    /// [`BVH`]: struct.BVH.html
+    /// [`FlatBVH`]: struct.FlatBVH.html
     ///
     /// # Examples
     ///
@@ -362,99 +363,26 @@ impl BoundingHierarchy for FlatBVH {
     }
 }
 
-#[cfg(testo)]
+#[cfg(test)]
 mod tests {
-    use nalgebra::{Point3, Vector3};
-
-    use aabb::{AABB, Bounded};
-    use bounding_hierarchy::BoundingHierarchy;
     use bvh::BVH;
-    use bvh::tests::build_some_bvh;
-    use flat_bvh::FlatNode;
-    use ray::Ray;
+    use flat_bvh::FlatBVH;
 
-    use testbase::{UnitBox, Triangle, create_n_cubes, create_ray};
+    use testbase::{create_n_cubes, build_some_bh, traverse_some_bh, build_1200_triangles_bh,
+                   build_12k_triangles_bh, build_120k_triangles_bh, intersect_1200_triangles_bh,
+                   intersect_12k_triangles_bh, intersect_120k_triangles_bh};
 
     #[test]
-    /// Builds and flattens a BVH. Tests whether the `flatten` procedure succeeds.
-    fn test_flatten() {
-        let (_, bvh) = build_some_bvh();
-        bvh.flatten();
+    /// Tests whether the building procedure succeeds in not failing.
+    fn test_build_flat_bvh() {
+        build_some_bh::<FlatBVH>();
     }
 
     #[test]
-    /// Runs some primitive tests for intersections of a ray with
-    /// a fixed scene given as a flat BVH.
+    /// Runs some primitive tests for intersections of a ray with a fixed scene given
+    /// as a `FlatBVH`.
     fn test_traverse_flat_bvh() {
-        let (shapes, bvh) = build_some_bvh();
-        let flat_bvh = bvh.flatten();
-
-        fn test_ray(ray: &Ray, flat_bvh: &[FlatNode], shapes: &[UnitBox]) -> Vec<usize> {
-            let hit_shapes = traverse_flat_bvh(ray, flat_bvh);
-            for (index, shape) in shapes.iter().enumerate() {
-                if !hit_shapes.contains(&index) {
-                    assert!(!ray.intersects_aabb(&shape.aabb()));
-                }
-            }
-            hit_shapes
-        }
-
-        // Define a ray which traverses the x-axis from afar
-        let position_1 = Point3::new(-1000.0, 0.0, 0.0);
-        let direction_1 = Vector3::new(1.0, 0.0, 0.0);
-        let ray_1 = Ray::new(position_1, direction_1);
-        let hit_shapes_1 = test_ray(&ray_1, &flat_bvh, &shapes);
-        for i in 0..21 {
-            assert!(hit_shapes_1.contains(&i));
-        }
-
-        // Define a ray which traverses the y-axis from afar
-        let position_2 = Point3::new(1.0, -1000.0, 0.0);
-        let direction_2 = Vector3::new(0.0, 1.0, 0.0);
-        let ray_2 = Ray::new(position_2, direction_2);
-        let hit_shapes_2 = test_ray(&ray_2, &flat_bvh, &shapes);
-        assert!(hit_shapes_2.contains(&11));
-
-        // Define a ray which intersects the x-axis diagonally
-        let position_3 = Point3::new(6.0, 0.5, 0.0);
-        let direction_3 = Vector3::new(-2.0, -1.0, 0.0);
-        let ray_3 = Ray::new(position_3, direction_3);
-        let hit_shapes_3 = test_ray(&ray_3, &flat_bvh, &shapes);
-        println!("{:?}", hit_shapes_3);
-        assert!(hit_shapes_3.contains(&15));
-        assert!(hit_shapes_3.contains(&16));
-        assert!(hit_shapes_3.contains(&17));
-    }
-
-    #[test]
-    /// Test whether the `flatten_custom` produces a flat `BVH` with the same relative structure
-    /// as `flatten`.
-    fn test_compare_default_and_custom_flat_bvh() {
-        fn custom_constructor(aabb: &AABB,
-                              entry_index: u32,
-                              exit_index: u32,
-                              shape_index: u32)
-                              -> FlatNode {
-            FlatNode {
-                aabb: *aabb,
-                entry_index: entry_index,
-                exit_index: exit_index,
-                shape_index: shape_index,
-            }
-        }
-
-        // Generate a BVH and flatten it defaultly, and using a custom constructor
-        let triangles = create_n_cubes(1_000);
-        let bvh = BVH::build(&triangles);
-        let flat_bvh = bvh.flatten();
-        let flat_bvh_custom = bvh.flatten_custom(&custom_constructor);
-
-        // It should produce the same structure in both cases
-        for (default_node, custom_node) in flat_bvh.iter().zip(flat_bvh_custom.iter()) {
-            assert_eq!(default_node.entry_index, custom_node.entry_index);
-            assert_eq!(default_node.exit_index, custom_node.exit_index);
-            assert_eq!(default_node.shape_index, custom_node.shape_index);
-        }
+        traverse_some_bh::<FlatBVH>();
     }
 
     #[bench]
@@ -469,24 +397,38 @@ mod tests {
     }
 
     #[bench]
-    /// Benchmark intersecting 120,000 triangles using the recursive BVH.
-    fn bench_intersect_120k_triangles_bvh_flat(b: &mut ::test::Bencher) {
-        let triangles = create_n_cubes(10_000);
-        let bvh = BVH::build(&triangles);
-        let flat_bvh = bvh.flatten();
-        let mut seed = 0;
+    /// Benchmark the construction of a `FlatBVH` with 1,200 triangles.
+    fn bench_build_1200_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
+        build_1200_triangles_bh::<FlatBVH>(&mut b);
+    }
 
-        b.iter(|| {
-            let ray = create_ray(&mut seed);
+    #[bench]
+    /// Benchmark the construction of a `FlatBVH` with 12,000 triangles.
+    fn bench_build_12k_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
+        build_12k_triangles_bh::<FlatBVH>(&mut b);
+    }
 
-            // Traverse the flat BVH
-            let hits = traverse_flat_bvh(&ray, &flat_bvh);
+    #[bench]
+    /// Benchmark the construction of a `FlatBVH` with 120,000 triangles.
+    fn bench_build_120k_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
+        build_120k_triangles_bh::<FlatBVH>(&mut b);
+    }
 
-            // Traverse the resulting list of positive AABB tests
-            for index in &hits {
-                let triangle = &triangles[*index];
-                ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
-            }
-        });
+    #[bench]
+    /// Benchmark intersecting 1,200 triangles using the recursive `FlatBVH`.
+    fn bench_intersect_1200_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
+        intersect_1200_triangles_bh::<FlatBVH>(&mut b);
+    }
+
+    #[bench]
+    /// Benchmark intersecting 12,000 triangles using the recursive `FlatBVH`.
+    fn bench_intersect_12k_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
+        intersect_12k_triangles_bh::<FlatBVH>(&mut b);
+    }
+
+    #[bench]
+    /// Benchmark intersecting 120,000 triangles using the recursive `FlatBVH`.
+    fn bench_intersect_120k_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
+        intersect_120k_triangles_bh::<FlatBVH>(&mut b);
     }
 }

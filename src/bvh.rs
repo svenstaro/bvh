@@ -356,112 +356,56 @@ impl BoundingHierarchy for BVH {
 
 #[cfg(test)]
 pub mod tests {
-    use std::collections::HashSet;
-
-    use nalgebra::{Point3, Vector3};
-
     use bvh::BVH;
-    use bounding_hierarchy::BoundingHierarchy;
-    use ray::Ray;
-    use testbase::{generate_aligned_boxes, UnitBox, create_n_cubes, create_ray};
-
-    /// Creates a `BVH` for a fixed scene structure.
-    pub fn build_some_bvh() -> (Vec<UnitBox>, BVH) {
-        let boxes = generate_aligned_boxes();
-        let bvh = BVH::build(&boxes);
-        (boxes, bvh)
-    }
+    use testbase::{build_some_bh, traverse_some_bh, build_1200_triangles_bh,
+                   build_12k_triangles_bh, build_120k_triangles_bh, intersect_1200_triangles_bh,
+                   intersect_12k_triangles_bh, intersect_120k_triangles_bh};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
     fn test_build_bvh() {
-        build_some_bvh();
-    }
-
-    fn traverse_and_verify(ray_origin: Point3<f32>,
-                           ray_direction: Vector3<f32>,
-                           all_shapes: &Vec<UnitBox>,
-                           bvh: &BVH,
-                           expected_shapes: &HashSet<i32>) {
-        let ray = Ray::new(ray_origin, ray_direction);
-        let hit_shapes = bvh.traverse(&ray, all_shapes);
-
-        assert_eq!(expected_shapes.len(), hit_shapes.len());
-        for shape in hit_shapes {
-            assert!(expected_shapes.contains(&shape.id));
-        }
+        build_some_bh::<BVH>();
     }
 
     #[test]
     /// Runs some primitive tests for intersections of a ray with a fixed scene given as a BVH.
-    fn test_traverse_recursive_bvh() {
-        let (all_shapes, bvh) = build_some_bvh();
-
-        {
-            // Define a ray which traverses the x-axis from afar.
-            let origin = Point3::new(-1000.0, 0.0, 0.0);
-            let direction = Vector3::new(1.0, 0.0, 0.0);
-            let mut expected_shapes = HashSet::new();
-
-            // It should hit everything.
-            for id in -10..11 {
-                expected_shapes.insert(id);
-            }
-            traverse_and_verify(origin, direction, &all_shapes, &bvh, &expected_shapes);
-        }
-
-        {
-            // Define a ray which traverses the y-axis from afar.
-            let origin = Point3::new(0.0, -1000.0, 0.0);
-            let direction = Vector3::new(0.0, 1.0, 0.0);
-
-            // It should hit only one box.
-            let mut expected_shapes = HashSet::new();
-            expected_shapes.insert(0);
-            traverse_and_verify(origin, direction, &all_shapes, &bvh, &expected_shapes);
-        }
-
-        {
-            // Define a ray which intersects the x-axis diagonally.
-            let origin = Point3::new(6.0, 0.5, 0.0);
-            let direction = Vector3::new(-2.0, -1.0, 0.0);
-
-            // It should hit exactly three boxes.
-            let mut expected_shapes = HashSet::new();
-            expected_shapes.insert(4);
-            expected_shapes.insert(5);
-            expected_shapes.insert(6);
-            traverse_and_verify(origin, direction, &all_shapes, &bvh, &expected_shapes);
-        }
+    fn test_traverse_bvh() {
+        traverse_some_bh::<BVH>();
     }
 
     #[bench]
-    /// Benchmark the construction of a BVH with 120,000 triangles.
-    fn bench_build_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        let triangles = create_n_cubes(10_000);
-
-        b.iter(|| {
-            BVH::build(&triangles);
-        });
+    /// Benchmark the construction of a `BVH` with 1,200 triangles.
+    fn bench_build_1200_triangles_bvh(mut b: &mut ::test::Bencher) {
+        build_1200_triangles_bh::<BVH>(&mut b);
     }
 
     #[bench]
-    /// Benchmark intersecting 120,000 triangles using the recursive BVH.
-    fn bench_intersect_120k_triangles_bvh_recursive(b: &mut ::test::Bencher) {
-        let triangles = create_n_cubes(10_000);
-        let bvh = BVH::build(&triangles);
-        let mut seed = 0;
+    /// Benchmark the construction of a `BVH` with 12,000 triangles.
+    fn bench_build_12k_triangles_bvh(mut b: &mut ::test::Bencher) {
+        build_12k_triangles_bh::<BVH>(&mut b);
+    }
 
-        b.iter(|| {
-            let ray = create_ray(&mut seed);
+    #[bench]
+    /// Benchmark the construction of a `BVH` with 120,000 triangles.
+    fn bench_build_120k_triangles_bvh(mut b: &mut ::test::Bencher) {
+        build_120k_triangles_bh::<BVH>(&mut b);
+    }
 
-            // Traverse the BVH recursively
-            let hits = bvh.traverse(&ray, &triangles);
+    #[bench]
+    /// Benchmark intersecting 1,200 triangles using the recursive `BVH`.
+    fn bench_intersect_1200_triangles_bvh(mut b: &mut ::test::Bencher) {
+        intersect_1200_triangles_bh::<BVH>(&mut b);
+    }
 
-            // Traverse the resulting list of positive AABB tests
-            for triangle in &hits {
-                ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
-            }
-        });
+    #[bench]
+    /// Benchmark intersecting 12,000 triangles using the recursive `BVH`.
+    fn bench_intersect_12k_triangles_bvh(mut b: &mut ::test::Bencher) {
+        intersect_12k_triangles_bh::<BVH>(&mut b);
+    }
+
+    #[bench]
+    /// Benchmark intersecting 120,000 triangles using the recursive `BVH`.
+    fn bench_intersect_120k_triangles_bvh(mut b: &mut ::test::Bencher) {
+        intersect_120k_triangles_bh::<BVH>(&mut b);
     }
 }

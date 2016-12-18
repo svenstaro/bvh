@@ -1,9 +1,12 @@
 //! Common utilities shared by unit tests.
 #![cfg(test)]
 
+use std::collections::HashSet;
+
 use nalgebra::{Point3, Vector3};
 
 use aabb::{AABB, Bounded};
+use bounding_hierarchy::BoundingHierarchy;
 use ray::Ray;
 
 /// A vector represented as a tuple
@@ -46,6 +49,71 @@ pub fn generate_aligned_boxes() -> Vec<UnitBox> {
         });
     }
     shapes
+}
+
+/// Creates a `BoundingHierarchy` for a fixed scene structure.
+pub fn build_some_bh<BH: BoundingHierarchy>() -> (Vec<UnitBox>, BH) {
+    let boxes = generate_aligned_boxes();
+    let bh = BH::build(&boxes);
+    (boxes, bh)
+}
+
+/// Given a ray, a bounding hierarchy, the complete list of shapes in the scene and a list of
+/// expected hits, verifies, whether the ray hits only the expected shapes.
+fn traverse_and_verify<BH: BoundingHierarchy>(ray_origin: Point3<f32>,
+                                              ray_direction: Vector3<f32>,
+                                              all_shapes: &Vec<UnitBox>,
+                                              bh: &BH,
+                                              expected_shapes: &HashSet<i32>) {
+    let ray = Ray::new(ray_origin, ray_direction);
+    let hit_shapes = bh.traverse(&ray, all_shapes);
+
+    assert_eq!(expected_shapes.len(), hit_shapes.len());
+    for shape in hit_shapes {
+        assert!(expected_shapes.contains(&shape.id));
+    }
+}
+
+/// Perform some fixed intersection tests on BH structures.
+pub fn traverse_some_bh<BH: BoundingHierarchy>() {
+    let (all_shapes, bh) = build_some_bh::<BH>();
+
+    {
+        // Define a ray which traverses the x-axis from afar.
+        let origin = Point3::new(-1000.0, 0.0, 0.0);
+        let direction = Vector3::new(1.0, 0.0, 0.0);
+        let mut expected_shapes = HashSet::new();
+
+        // It should hit everything.
+        for id in -10..11 {
+            expected_shapes.insert(id);
+        }
+        traverse_and_verify(origin, direction, &all_shapes, &bh, &expected_shapes);
+    }
+
+    {
+        // Define a ray which traverses the y-axis from afar.
+        let origin = Point3::new(0.0, -1000.0, 0.0);
+        let direction = Vector3::new(0.0, 1.0, 0.0);
+
+        // It should hit only one box.
+        let mut expected_shapes = HashSet::new();
+        expected_shapes.insert(0);
+        traverse_and_verify(origin, direction, &all_shapes, &bh, &expected_shapes);
+    }
+
+    {
+        // Define a ray which intersects the x-axis diagonally.
+        let origin = Point3::new(6.0, 0.5, 0.0);
+        let direction = Vector3::new(-2.0, -1.0, 0.0);
+
+        // It should hit exactly three boxes.
+        let mut expected_shapes = HashSet::new();
+        expected_shapes.insert(4);
+        expected_shapes.insert(5);
+        expected_shapes.insert(6);
+        traverse_and_verify(origin, direction, &all_shapes, &bh, &expected_shapes);
+    }
 }
 
 /// A triangle struct. Instance of a more complex `Bounded` primitive.
@@ -135,6 +203,29 @@ pub fn create_ray(seed: &mut u64) -> Ray {
     Ray::new(origin, direction)
 }
 
+/// Benchmark the construction of a `BoundingHierarchy` with 120,000 triangles.
+fn build_n_triangles_bh<T: BoundingHierarchy>(n: u64, b: &mut ::test::Bencher) {
+    let triangles = create_n_cubes(n);
+    b.iter(|| {
+        T::build(&triangles);
+    });
+}
+
+/// Benchmark the construction of a `BoundingHierarchy` with 1,200 triangles.
+pub fn build_1200_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
+    build_n_triangles_bh::<T>(100, b);
+}
+
+/// Benchmark the construction of a `BoundingHierarchy` with 12,000 triangles.
+pub fn build_12k_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
+    build_n_triangles_bh::<T>(1_000, b);
+}
+
+/// Benchmark the construction of a `BoundingHierarchy` with 120,000 triangles.
+pub fn build_120k_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
+    build_n_triangles_bh::<T>(10_000, b);
+}
+
 #[bench]
 /// Benchmark intersecting 120,000 triangles directly.
 fn bench_intersect_120k_triangles_list(b: &mut ::test::Bencher) {
@@ -168,4 +259,42 @@ fn bench_intersect_120k_triangles_list_aabb(b: &mut ::test::Bencher) {
             }
         }
     });
+}
+
+/// Benchmark the traversal of a `BoundingHierarchy` with `n` triangles.
+pub fn intersect_n_triangles<T: BoundingHierarchy>(n: u64, b: &mut ::test::Bencher) {
+    let triangles = create_n_cubes(n);
+    let structure = T::build(&triangles);
+    let mut seed = 0;
+
+    // if n <= 50 {
+    //     structure.pretty_print();
+    // }
+
+    b.iter(|| {
+        let ray = create_ray(&mut seed);
+
+        // Traverse the `BoundingHierarchy` recursively.
+        let hits = structure.traverse(&ray, &triangles);
+
+        // Traverse the resulting list of positive AABB tests
+        for triangle in &hits {
+            ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
+        }
+    });
+}
+
+/// Benchmark the traversal of a `BoundingHierarchy` with 1,200 triangles.
+pub fn intersect_1200_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
+    intersect_n_triangles::<T>(100, b);
+}
+
+/// Benchmark the traversal of a `BoundingHierarchy` with 12,000 triangles.
+pub fn intersect_12k_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
+    intersect_n_triangles::<T>(1_000, b);
+}
+
+/// Benchmark the traversal of a `BoundingHierarchy` with 120,000 triangles.
+pub fn intersect_120k_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
+    intersect_n_triangles::<T>(10_000, b);
 }
