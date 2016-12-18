@@ -1,6 +1,7 @@
 //! This module exports methods to flatten the `BVH` and traverse it iteratively.
 
-use aabb::AABB;
+use aabb::{AABB, Bounded};
+use bounding_hierarchy::BoundingHierarchy;
 use bvh::{BVH, BVHNode};
 use ray::Ray;
 
@@ -40,159 +41,7 @@ pub struct FlatNode {
     shape_index: u32,
 }
 
-/// Prints a textual representation of a flat [`BVH`].
-///
-/// [`BVH`]: struct.BVH.html
-///
-pub fn pretty_print_flat_bvh(flat_nodes: &[FlatNode]) {
-    for (i, node) in flat_nodes.iter().enumerate() {
-        println!("{}\tentry {}\texit {}\tshape {}",
-                 i,
-                 node.entry_index,
-                 node.exit_index,
-                 node.shape_index);
-    }
-}
-
-/// Traverses a flat [`BVH`] structure iteratively.
-/// Returns a [`Vec`] of indices which are hit by `ray` with a high probability.
-///
-/// [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
-/// [`BVH`]: struct.BVH.html
-///
-/// # Examples
-///
-/// ```
-/// use bvh::aabb::{AABB, Bounded};
-/// use bvh::bvh::BVH;
-/// use bvh::flat_bvh::traverse_flat_bvh;
-/// use bvh::nalgebra::{Point3, Vector3};
-/// use bvh::ray::Ray;
-///
-/// # struct Sphere {
-/// #     position: Point3<f32>,
-/// #     radius: f32,
-/// # }
-/// #
-/// # impl Bounded for Sphere {
-/// #     fn aabb(&self) -> AABB {
-/// #         let half_size = Vector3::new(self.radius, self.radius, self.radius);
-/// #         let min = self.position - half_size;
-/// #         let max = self.position + half_size;
-/// #         AABB::with_bounds(min, max)
-/// #     }
-/// # }
-/// #
-/// # fn create_bounded_shapes() -> Vec<Sphere> {
-/// #     let mut spheres = Vec::new();
-/// #     for i in 0..1000u32 {
-/// #         let position = Point3::new(i as f32, i as f32, i as f32);
-/// #         let radius = (i % 10) as f32 + 1.0;
-/// #         spheres.push(Sphere {
-/// #             position: position,
-/// #             radius: radius,
-/// #         });
-/// #     }
-/// #     spheres
-/// # }
-/// #
-/// let origin = Point3::new(0.0,0.0,0.0);
-/// let direction = Vector3::new(1.0,0.0,0.0);
-/// let ray = Ray::new(origin, direction);
-/// let shapes = create_bounded_shapes();
-/// let bvh = BVH::build(&shapes);
-/// let flat_bvh = bvh.flatten();
-/// let hit_shape_indices = traverse_flat_bvh(&ray, &flat_bvh);
-/// ```
-pub fn traverse_flat_bvh(ray: &Ray, flat_nodes: &[FlatNode]) -> Vec<usize> {
-    let mut hit_shapes = Vec::new();
-    let mut index = 0;
-
-    // The traversal loop should terminate when `max_length` is set as the next node index
-    let max_length = flat_nodes.len();
-
-    // Iterate while the node index is valid
-    while index < max_length {
-        let node = &flat_nodes[index];
-
-        if node.entry_index == u32::max_value() {
-            // If the entry_index is MAX_UINT32, then it's a leaf node
-            let shape_index = node.shape_index;
-            hit_shapes.push(shape_index as usize);
-
-            // Exit the current node
-            index = node.exit_index as usize;
-        } else if ray.intersects_aabb(&node.aabb) {
-            // If entry_index is not MAX_UINT32 and the AABB test passes, then
-            // proceed to the node in entry_index (which goes down the bvh branch)
-            index = node.entry_index as usize;
-        } else {
-            // If entry_index is not MAX_UINT32 and the AABB test fails, then
-            // proceed to the node in exit_index (which defines the next untested partition)
-            index = node.exit_index as usize;
-        }
-    }
-
-    hit_shapes
-}
-
 impl BVHNode {
-    /// Flattens the [`BVH`], so that it can be traversed in an iterative manner.
-    /// The iterative traverse procedure is implemented in [`traverse_flat_bvh()`].
-    ///
-    /// [`BVH`]: struct.BVH.html
-    /// [`traverse_flat_bvh()`]: method.traverse_flat_bvh.html
-    ///
-    pub fn flatten(&self, vec: &mut Vec<FlatNode>, next_free: usize) -> usize {
-        match *self {
-            BVHNode::Node { child_l_aabb, ref child_l, child_r_aabb, ref child_r } => {
-                // Create the enclosing node for the left subtree
-                vec.push(FlatNode {
-                    aabb: child_l_aabb,
-                    entry_index: (next_free + 1) as u32,
-                    exit_index: 0,
-                    shape_index: u32::max_value(),
-                });
-
-                // Create the flat left subtree and update the exit index in the enclosing node
-                let index_after_child_l = child_l.flatten(vec, next_free + 1);
-                vec[next_free as usize].exit_index = index_after_child_l as u32;
-
-                // Create the enclosing node for the right subtree
-                vec.push(FlatNode {
-                    aabb: child_r_aabb,
-                    entry_index: (index_after_child_l + 1) as u32,
-                    exit_index: 0,
-                    shape_index: u32::max_value(),
-                });
-
-                // Create the flat right subtree and update the exit index in the enclosing node
-                let index_after_child_r = child_r.flatten(vec, index_after_child_l + 1);
-                vec[index_after_child_l as usize].exit_index = index_after_child_r as u32;
-
-                index_after_child_r
-            }
-            BVHNode::Leaf { ref shapes } => {
-                let mut next_shape = next_free;
-
-                // Create a node for each shape of a leaf
-                for shape_index in shapes {
-                    next_shape += 1;
-
-                    // Create the flat leaf node
-                    vec.push(FlatNode {
-                        aabb: AABB::empty(),
-                        entry_index: u32::max_value(),
-                        exit_index: next_shape as u32,
-                        shape_index: *shape_index as u32,
-                    });
-                }
-
-                next_shape
-            }
-        }
-    }
-
     /// Creates a flat node from a BVH inner node and its AABB. Returns the next free index.
     /// TODO: change the algorithm which pushes `FlatNode`s to a vector to not use indices this
     /// much. Implement an algorithm which writes directly to a writable slice.
@@ -204,16 +53,16 @@ impl BVHNode {
                                         -> usize
         where F: Fn(&AABB, u32, u32, u32) -> FNodeType
     {
-        // Create dummy node
+        // Create dummy node.
         let dummy = constructor(&AABB::empty(), 0, 0, 0);
         vec.push(dummy);
         assert!(vec.len() - 1 == next_free);
 
-        // Create subtree
+        // Create subtree.
         let index_after_subtree = self.flatten_custom(vec, next_free + 1, constructor);
 
         // Replace dummy node by actual node with the entry index pointing to the subtree
-        // and the exit index pointing to the next node after the subtree
+        // and the exit index pointing to the next node after the subtree.
         let navigator_node = constructor(this_aabb,
                                          (next_free + 1) as u32,
                                          index_after_subtree as u32,
@@ -242,7 +91,6 @@ impl BVHNode {
                     child_l.create_flat_branch(child_l_aabb, vec, next_free, constructor);
                 child_r.create_flat_branch(child_r_aabb, vec, index_after_child_l, constructor)
             }
-
             BVHNode::Leaf { ref shapes } => {
                 let mut next_shape = next_free;
                 for shape_index in shapes {
@@ -260,73 +108,30 @@ impl BVHNode {
     }
 }
 
-impl BVH {
-    /// Flattens the [`BVH`] so that it can be traversed iteratively.
-    ///
-    /// [`BVH`]: struct.BVH.html
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use bvh::aabb::{AABB, Bounded};
-    /// use bvh::bvh::BVH;
-    /// use bvh::nalgebra::{Point3, Vector3};
-    /// use bvh::ray::Ray;
-    ///
-    /// # struct Sphere {
-    /// #     position: Point3<f32>,
-    /// #     radius: f32,
-    /// # }
-    /// #
-    /// # impl Bounded for Sphere {
-    /// #     fn aabb(&self) -> AABB {
-    /// #         let half_size = Vector3::new(self.radius, self.radius, self.radius);
-    /// #         let min = self.position - half_size;
-    /// #         let max = self.position + half_size;
-    /// #         AABB::with_bounds(min, max)
-    /// #     }
-    /// # }
-    /// #
-    /// # fn create_bounded_shapes() -> Vec<Sphere> {
-    /// #     let mut spheres = Vec::new();
-    /// #     for i in 0..1000u32 {
-    /// #         let position = Point3::new(i as f32, i as f32, i as f32);
-    /// #         let radius = (i % 10) as f32 + 1.0;
-    /// #         spheres.push(Sphere {
-    /// #             position: position,
-    /// #             radius: radius,
-    /// #         });
-    /// #     }
-    /// #     spheres
-    /// # }
-    /// #
-    /// let origin = Point3::new(0.0,0.0,0.0);
-    /// let direction = Vector3::new(1.0,0.0,0.0);
-    /// let ray = Ray::new(origin, direction);
-    /// let shapes = create_bounded_shapes();
-    /// let bvh = BVH::build(&shapes);
-    /// let flat_bvh = bvh.flatten();
-    /// ```
-    pub fn flatten(&self) -> Vec<FlatNode> {
-        let mut vec = Vec::new();
-        self.root.flatten(&mut vec, 0);
-        vec
-    }
+/// A flat [`BVH`]. Represented by a vector of [`FlatNode`]s. The [`FlatBVH`] is designed for use
+/// where a recursive traversal of a data structure is not possible.
+///
+/// [`BVH`]: struct.BVH.html
+/// [`FlatNode`]: struct.FlatNode.html
+/// [`FlatBVH`]: struct.FlatBVH.html
+///
+pub type FlatBVH = Vec<FlatNode>;
 
+impl BVH {
     /// Flattens the [`BVH`] so that it can be traversed iteratively.
     /// Constructs the flat nodes using the supplied function.
     /// This function can be used, when the flat bvh nodes should be of some particular
     /// non-default structure.
     /// The `constructor` is fed the following arguments in this order:
     ///
-    /// 1.0 &AABB: The enclosing `AABB`
-    /// 2.0 u32: The index of the nested node
-    /// 3.0 u32: The exit index
-    /// 4.0 u32: The shape index
+    /// 1 - &AABB: The enclosing `AABB`
+    /// 2 - u32: The index of the nested node
+    /// 3 - u32: The exit index
+    /// 4 - u32: The shape index
     ///
     /// [`BVH`]: struct.BVH.html
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```
     /// use bvh::aabb::{AABB, Bounded};
@@ -392,15 +197,180 @@ impl BVH {
         self.root.flatten_custom(&mut vec, 0, constructor);
         vec
     }
+
+    /// Flattens the [`BVH`] so that it can be traversed iteratively.
+    ///
+    /// [`BVH`]: struct.BVH.html
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bvh::aabb::{AABB, Bounded};
+    /// use bvh::bvh::BVH;
+    /// use bvh::nalgebra::{Point3, Vector3};
+    /// use bvh::ray::Ray;
+    ///
+    /// # struct Sphere {
+    /// #     position: Point3<f32>,
+    /// #     radius: f32,
+    /// # }
+    /// #
+    /// # impl Bounded for Sphere {
+    /// #     fn aabb(&self) -> AABB {
+    /// #         let half_size = Vector3::new(self.radius, self.radius, self.radius);
+    /// #         let min = self.position - half_size;
+    /// #         let max = self.position + half_size;
+    /// #         AABB::with_bounds(min, max)
+    /// #     }
+    /// # }
+    /// #
+    /// # fn create_bounded_shapes() -> Vec<Sphere> {
+    /// #     let mut spheres = Vec::new();
+    /// #     for i in 0..1000u32 {
+    /// #         let position = Point3::new(i as f32, i as f32, i as f32);
+    /// #         let radius = (i % 10) as f32 + 1.0;
+    /// #         spheres.push(Sphere {
+    /// #             position: position,
+    /// #             radius: radius,
+    /// #         });
+    /// #     }
+    /// #     spheres
+    /// # }
+    /// #
+    /// let origin = Point3::new(0.0,0.0,0.0);
+    /// let direction = Vector3::new(1.0,0.0,0.0);
+    /// let ray = Ray::new(origin, direction);
+    /// let shapes = create_bounded_shapes();
+    /// let bvh = BVH::build(&shapes);
+    /// let flat_bvh = bvh.flatten();
+    /// ```
+    pub fn flatten(&self) -> FlatBVH {
+        self.flatten_custom(&|aabb, entry, exit, shape| {
+            FlatNode {
+                aabb: *aabb,
+                entry_index: entry,
+                exit_index: exit,
+                shape_index: shape,
+            }
+        })
+    }
 }
 
-#[cfg(test)]
+impl BoundingHierarchy for FlatBVH {
+    fn build<T: Bounded>(shapes: &[T]) -> FlatBVH {
+        let bvh = BVH::build(shapes);
+        bvh.flatten()
+    }
+
+    /// Traverses a flat [`BVH`] structure iteratively.
+    /// Returns a [`Vec`] of indices which are hit by `ray` with a high probability.
+    ///
+    /// [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
+    /// [`BVH`]: struct.BVH.html
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bvh::aabb::{AABB, Bounded};
+    /// use bvh::bounding_hierarchy::BoundingHierarchy;
+    /// use bvh::bvh::BVH;
+    /// use bvh::flat_bvh::FlatBVH;
+    /// use bvh::nalgebra::{Point3, Vector3};
+    /// use bvh::ray::Ray;
+    ///
+    /// # struct Sphere {
+    /// #     position: Point3<f32>,
+    /// #     radius: f32,
+    /// # }
+    /// #
+    /// # impl Bounded for Sphere {
+    /// #     fn aabb(&self) -> AABB {
+    /// #         let half_size = Vector3::new(self.radius, self.radius, self.radius);
+    /// #         let min = self.position - half_size;
+    /// #         let max = self.position + half_size;
+    /// #         AABB::with_bounds(min, max)
+    /// #     }
+    /// # }
+    /// #
+    /// # fn create_bounded_shapes() -> Vec<Sphere> {
+    /// #     let mut spheres = Vec::new();
+    /// #     for i in 0..1000u32 {
+    /// #         let position = Point3::new(i as f32, i as f32, i as f32);
+    /// #         let radius = (i % 10) as f32 + 1.0;
+    /// #         spheres.push(Sphere {
+    /// #             position: position,
+    /// #             radius: radius,
+    /// #         });
+    /// #     }
+    /// #     spheres
+    /// # }
+    /// #
+    /// let origin = Point3::new(0.0,0.0,0.0);
+    /// let direction = Vector3::new(1.0,0.0,0.0);
+    /// let ray = Ray::new(origin, direction);
+    /// let shapes = create_bounded_shapes();
+    /// let bvh = BVH::build(&shapes);
+    /// let flat_bvh = bvh.flatten();
+    /// let hit_shapes = flat_bvh.traverse(&ray, &shapes);
+    /// ```
+    fn traverse<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
+        let mut hit_shapes = Vec::new();
+        let mut index = 0;
+
+        // The traversal loop should terminate when `max_length` is set as the next node index.
+        let max_length = self.len();
+
+        // Iterate while the node index is valid.
+        while index < max_length {
+            let node = &self[index];
+
+            if node.entry_index == u32::max_value() {
+                // If the entry_index is MAX_UINT32, then it's a leaf node.
+                let shape = &shapes[node.shape_index as usize];
+                if ray.intersects_aabb(&shape.aabb()) {
+                    hit_shapes.push(shape);
+                }
+
+                // Exit the current node.
+                index = node.exit_index as usize;
+            } else if ray.intersects_aabb(&node.aabb) {
+                // If entry_index is not MAX_UINT32 and the AABB test passes, then
+                // proceed to the node in entry_index (which goes down the bvh branch).
+                index = node.entry_index as usize;
+            } else {
+                // If entry_index is not MAX_UINT32 and the AABB test fails, then
+                // proceed to the node in exit_index (which defines the next untested partition).
+                index = node.exit_index as usize;
+            }
+        }
+
+        hit_shapes
+    }
+
+    /// Prints a textual representation of a [`FlatBVH`].
+    ///
+    /// [`FlatBVH`]: struct.FlatBVH.html
+    ///
+    fn pretty_print(&self) {
+        for (i, node) in self.iter().enumerate() {
+            println!("{}\tentry {}\texit {}\tshape {}",
+                     i,
+                     node.entry_index,
+                     node.exit_index,
+                     node.shape_index);
+        }
+    }
+}
+
+#[cfg(testo)]
 mod tests {
+    use nalgebra::{Point3, Vector3};
+
     use aabb::{AABB, Bounded};
+    use bounding_hierarchy::BoundingHierarchy;
     use bvh::BVH;
     use bvh::tests::build_some_bvh;
-    use flat_bvh::{traverse_flat_bvh, FlatNode};
-    use nalgebra::{Point3, Vector3};
+    use flat_bvh::FlatNode;
     use ray::Ray;
 
     use testbase::{UnitBox, Triangle, create_n_cubes, create_ray};

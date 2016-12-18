@@ -219,7 +219,6 @@ impl BVHNode {
 /// The [`BVH`] data structure. Only contains the root node of the [`BVH`] tree.
 ///
 /// [`BVH`]: struct.BVH.html
-/// [`build`]: struct.BVH.html#method.build
 ///
 pub struct BVH {
     /// The root node of the [`BVH`].
@@ -234,7 +233,7 @@ impl BVH {
     ///
     /// [`BVH`]: struct.BVH.html
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```
     /// use bvh::aabb::{AABB, Bounded};
@@ -290,7 +289,7 @@ impl BoundingHierarchy for BVH {
     ///
     /// [`AABB`]: ../aabb/struct.AABB.html
     ///
-    /// # Examples
+    /// # Example
     ///
     /// ```
     /// use bvh::aabb::{AABB, Bounded};
