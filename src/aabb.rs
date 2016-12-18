@@ -1,17 +1,11 @@
 //! Axis Aligned Bounding Boxes.
 
-use nalgebra::{Point3, Vector3};
 use std::f32;
 use std::ops::Index;
 
-/// Index of the X axis. Used to access `Vector3`/`Point3` structs via index.
-pub const X_AXIS: usize = 0;
+use nalgebra::{Point3, Vector3};
 
-/// Index of the Y axis. Used to access `Vector3`/`Point3` structs via index.
-pub const Y_AXIS: usize = 1;
-
-/// Index of the Z axis. Used to access `Vector3`/`Point3` structs via index.
-pub const Z_AXIS: usize = 2;
+use axis::Axis;
 
 /// AABB struct.
 #[derive(Debug, Copy, Clone)]
@@ -356,7 +350,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::{AABB, X_AXIS};
+    /// use bvh::aabb::AABB;
+    /// use bvh::axis::Axis;
     /// use bvh::nalgebra::Point3;
     ///
     /// let min = Point3::new(-100.0,0.0,0.0);
@@ -364,19 +359,19 @@ impl AABB {
     ///
     /// let aabb = AABB::with_bounds(min, max);
     /// let axis = aabb.largest_axis();
-    /// assert!(axis == X_AXIS);
+    /// assert!(axis == Axis::X);
     /// ```
     ///
     /// [`AABB`]: struct.AABB.html
     ///
-    pub fn largest_axis(&self) -> usize {
+    pub fn largest_axis(&self) -> Axis {
         let size = self.size();
         if size.x > size.y && size.x > size.z {
-            X_AXIS
+            Axis::X
         } else if size.y > size.z {
-            Y_AXIS
+            Axis::Y
         } else {
-            Z_AXIS
+            Axis::Z
         }
     }
 }
