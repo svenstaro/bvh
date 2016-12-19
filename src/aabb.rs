@@ -1,17 +1,11 @@
 //! Axis Aligned Bounding Boxes.
 
-use nalgebra::{Point3, Vector3};
 use std::f32;
 use std::ops::Index;
 
-/// Index of the X axis. Used to access `Vector3`/`Point3` structs via index.
-pub const X_AXIS: usize = 0;
+use nalgebra::{Point3, Vector3};
 
-/// Index of the Y axis. Used to access `Vector3`/`Point3` structs via index.
-pub const Y_AXIS: usize = 1;
-
-/// Index of the Z axis. Used to access `Vector3`/`Point3` structs via index.
-pub const Z_AXIS: usize = 2;
+use axis::Axis;
 
 /// AABB struct.
 #[derive(Debug, Copy, Clone)]
@@ -356,7 +350,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::{AABB, X_AXIS};
+    /// use bvh::aabb::AABB;
+    /// use bvh::axis::Axis;
     /// use bvh::nalgebra::Point3;
     ///
     /// let min = Point3::new(-100.0,0.0,0.0);
@@ -364,19 +359,19 @@ impl AABB {
     ///
     /// let aabb = AABB::with_bounds(min, max);
     /// let axis = aabb.largest_axis();
-    /// assert!(axis == X_AXIS);
+    /// assert!(axis == Axis::X);
     /// ```
     ///
     /// [`AABB`]: struct.AABB.html
     ///
-    pub fn largest_axis(&self) -> usize {
+    pub fn largest_axis(&self) -> Axis {
         let size = self.size();
         if size.x > size.y && size.x > size.z {
-            X_AXIS
+            Axis::X
         } else if size.y > size.z {
-            Y_AXIS
+            Axis::Y
         } else {
-            Z_AXIS
+            Axis::Z
         }
     }
 }
@@ -436,7 +431,7 @@ impl Index<usize> for AABB {
 /// ```
 ///
 /// [`AABB`]: struct.AABB.html
-/// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
+/// [`Bounded`]: trait.Bounded.html
 ///
 impl Bounded for AABB {
     fn aabb(&self) -> AABB {
@@ -472,21 +467,13 @@ mod tests {
     use aabb::{AABB, Bounded};
     use nalgebra::{Point3, Vector3};
 
-    type TupleVec = (f32, f32, f32);
-
-    fn to_point(tpl: &TupleVec) -> Point3<f32> {
-        Point3::new(tpl.0, tpl.1, tpl.2)
-    }
-
-    fn to_vector(tpl: &TupleVec) -> Vector3<f32> {
-        Vector3::new(tpl.0, tpl.1, tpl.2)
-    }
+    use testbase::{TupleVec, tuple_to_point, tuple_to_vector};
 
     /// Test whether an empty `AABB` does not contains anything.
     quickcheck!{
         fn test_empty_contains_nothing(tpl: TupleVec) -> bool {
             // Define a random Point
-            let p = to_point(&tpl);
+            let p = tuple_to_point(&tpl);
 
             // Create an empty AABB
             let aabb = AABB::empty();
@@ -500,7 +487,7 @@ mod tests {
     quickcheck!{
         fn test_default_is_empty(tpl: TupleVec) -> bool {
             // Define a random Point
-            let p = to_point(&tpl);
+            let p = tuple_to_point(&tpl);
 
             // Create a default AABB
             let aabb: AABB = Default::default();
@@ -514,8 +501,8 @@ mod tests {
     quickcheck!{
         fn test_aabb_contains_center(a: TupleVec, b: TupleVec) -> bool {
             // Define two points which will be the corners of the `AABB`
-            let p1 = to_point(&a);
-            let p2 = to_point(&b);
+            let p1 = tuple_to_point(&a);
+            let p2 = tuple_to_point(&b);
 
             // Span the `AABB`
             let aabb = AABB::empty().grow(&p1).join_bounded(&p2);
@@ -534,7 +521,7 @@ mod tests {
             let points = [a.0, a.1, a.2, a.3, a.4, b.0, b.1, b.2, b.3, b.4];
 
             // Convert these points to `Point3`
-            let points = points.iter().map(to_point).collect::<Vec<Point3<f32>>>();
+            let points = points.iter().map(tuple_to_point).collect::<Vec<Point3<f32>>>();
 
             // Create two `AABB`s. One spanned the first five points,
             // the other by the last five points
@@ -566,8 +553,8 @@ mod tests {
         fn test_points_relative_to_center_and_size(a: TupleVec, b: TupleVec) -> bool {
             // Generate some nonempty AABB
             let aabb = AABB::empty()
-                .grow(&to_point(&a))
-                .grow(&to_point(&b));
+                .grow(&tuple_to_point(&a))
+                .grow(&tuple_to_point(&b));
 
             // Get its size and center
             let size = aabb.size();
@@ -595,8 +582,8 @@ mod tests {
     quickcheck!{
         fn test_surface_always_positive(a: TupleVec, b: TupleVec) -> bool {
             let aabb = AABB::empty()
-                .grow(&to_point(&a))
-                .grow(&to_point(&b));
+                .grow(&tuple_to_point(&a))
+                .grow(&tuple_to_point(&b));
             aabb.surface_area() >= 0.0
         }
     }
@@ -605,7 +592,7 @@ mod tests {
     quickcheck!{
         fn test_surface_area_cube(pos: TupleVec, size: f32) -> bool {
             // Generate some non-empty AABB
-            let pos = to_point(&pos);
+            let pos = tuple_to_point(&pos);
             let size_vec = Vector3::new(size, size, size);
             let aabb = AABB::with_bounds(pos, pos + size_vec);
 
@@ -620,8 +607,8 @@ mod tests {
     quickcheck!{
         fn test_volume_always_positive(a: TupleVec, b: TupleVec) -> bool {
             let aabb = AABB::empty()
-                .grow(&to_point(&a))
-                .grow(&to_point(&b));
+                .grow(&tuple_to_point(&a))
+                .grow(&tuple_to_point(&b));
             aabb.volume() >= 0.0
         }
     }
@@ -630,8 +617,8 @@ mod tests {
     quickcheck!{
         fn test_volume_by_hand(pos: TupleVec, size: TupleVec) -> bool {
             // Generate some non-empty AABB
-            let pos = to_point(&pos);
-            let size = to_vector(&size);
+            let pos = tuple_to_point(&pos);
+            let size = tuple_to_vector(&size);
             let aabb = pos.aabb().grow(&(pos + size));
 
             // Check its volume
@@ -645,12 +632,12 @@ mod tests {
     quickcheck!{
         fn test_create_aabb_from_indexable(a: TupleVec, b: TupleVec, p: TupleVec) -> bool {
             // Create a random point
-            let point = to_point(&p);
+            let point = tuple_to_point(&p);
 
             // Create a random AABB
             let aabb = AABB::empty()
-                .grow(&to_point(&a))
-                .grow(&to_point(&b));
+                .grow(&tuple_to_point(&a))
+                .grow(&tuple_to_point(&b));
 
             // Create an AABB by using the index-access method
             let aabb_by_index = AABB::with_bounds(aabb[0], aabb[1]);

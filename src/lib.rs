@@ -16,7 +16,8 @@
 //!
 //! ```
 //! use bvh::aabb::{AABB, Bounded};
-//! use bvh::bvh::{BVH, BVHShape};
+//! use bvh::bounding_hierarchy::{BoundingHierarchy, BHShape};
+//! use bvh::bvh::BVH;
 //! use bvh::nalgebra::{Point3, Vector3};
 //! use bvh::ray::Ray;
 //!
@@ -39,12 +40,12 @@
 //!     }
 //! }
 //!
-//! impl BVHShape for Sphere {
-//!     fn set_bvh_node_index(&mut self, index: usize) {
+//! impl BHShape for Sphere {
+//!     fn set_bh_node_index(&mut self, index: usize) {
 //!         self.node_index = index;
 //!     }
 //!
-//!     fn bvh_node_index(&self) -> usize {
+//!     fn bh_node_index(&self) -> usize {
 //!         self.node_index
 //!     }
 //! }
@@ -61,7 +62,7 @@
 //! }
 //!
 //! let bvh = BVH::build(&mut spheres);
-//! let hit_sphere_aabbs = bvh.traverse_recursive(&ray, &spheres);
+//! let hit_sphere_aabbs = bvh.traverse(&ray, &spheres);
 //! ```
 //!
 //! [`nalgebra`]: http://nalgebra.org/doc/nalgebra/
@@ -86,6 +87,11 @@ pub extern crate nalgebra;
 pub const EPSILON: f32 = 0.00001;
 
 pub mod aabb;
+pub mod axis;
+pub mod bounding_hierarchy;
 pub mod bvh;
 pub mod flat_bvh;
 pub mod ray;
+
+#[cfg(test)]
+mod testbase;
