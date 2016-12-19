@@ -42,7 +42,7 @@ pub struct FlatNode {
 }
 
 impl BVHNode {
-    /// Creates a flat node from a BVH inner node and its AABB. Returns the next free index.
+    /// Creates a flat node from a `BVH` inner node and its `AABB`. Returns the next free index.
     /// TODO: change the algorithm which pushes `FlatNode`s to a vector to not use indices this
     /// much. Implement an algorithm which writes directly to a writable slice.
     fn create_flat_branch<F, FNodeType>(&self,

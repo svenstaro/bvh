@@ -267,10 +267,6 @@ pub fn intersect_n_triangles<T: BoundingHierarchy>(n: u64, b: &mut ::test::Bench
     let structure = T::build(&triangles);
     let mut seed = 0;
 
-    // if n <= 50 {
-    //     structure.pretty_print();
-    // }
-
     b.iter(|| {
         let ray = create_ray(&mut seed);
 
