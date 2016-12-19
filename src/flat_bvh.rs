@@ -107,7 +107,7 @@ impl BVHNode {
 }
 
 /// A flat [`BVH`]. Represented by a vector of [`FlatNode`]s. The [`FlatBVH`] is designed for use
-/// where a recursive traversal of a data structure is not possible.
+/// where a recursive traversal of a data structure is not possible, for example shader programs.
 ///
 /// [`BVH`]: struct.BVH.html
 /// [`FlatNode`]: struct.FlatNode.html

@@ -289,12 +289,13 @@ impl BoundingHierarchy for BVH {
     /// #     shapes
     /// # }
     ///
+    /// let shapes = create_bounded_shapes();
+    /// let bvh = BVH::build(&shapes);
+    ///
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
     /// let ray = Ray::new(origin, direction);
-    /// let shapes = create_bounded_shapes();
-    /// let bvh = BVH::build(&shapes);
-    /// let hit_sphere_aabbs = bvh.traverse(&ray, &shapes);
+    /// let hit_shapes = bvh.traverse(&ray, &shapes);
     /// ```
     fn traverse<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
         let mut indices = Vec::new();
