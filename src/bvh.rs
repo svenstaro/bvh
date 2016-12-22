@@ -394,7 +394,7 @@ impl BVH {
     ///
     pub fn optimize<Shape: BHShape>(&mut self,
                                      refit_shape_indices: &HashSet<usize>,
-                                     shapes: &mut [Shape]) {
+                                     shapes: &[Shape]) {
         let mut refit_node_indices: HashSet<usize> = refit_shape_indices.iter()
             .map(|x| shapes[*x].bh_node_index())
             .collect();
@@ -444,7 +444,7 @@ impl BVH {
     ///
     /// Returns Some(usize) if a new node was found that should be used for optimization.
     ///
-    fn try_rotate<Shape: BHShape>(&mut self, node_index: usize, shapes: &mut [Shape]) -> Option<usize> {
+    fn try_rotate<Shape: BHShape>(&mut self, node_index: usize, shapes: &[Shape]) -> Option<usize> {
         let mut nodes = &mut self.nodes;
 
         let mut node = &nodes[node_index];
@@ -467,16 +467,53 @@ impl BVH {
 
         // TODO Implement actual rotations
         println!("Potentially rotating node {}.", node_index);
-        match *node {
-            BVHNode::Leaf { shape, .. } => {
-                let mut actual_shape = &mut shapes[shape];
-                actual_shape.set_bh_node_index(node_index);
-            }
-            _ => ()
-        }
 
         // TODO Don't forget to update AABBs
         None
+    }
+
+    // Switch two nodes by rewiring the involved indices (not by moving them in the nodes slice)
+    fn rotate(&mut self, node_parent_index: usize, node_a_index: usize, node_b_index: usize) {
+        let mut nodes = &mut self.nodes;
+        let mut node_a = &nodes[node_a_index];
+        let mut node_b = &nodes[node_b_index];
+
+        macro_rules! should_not_happen {
+            () => ( panic!("While rotating BVH nodes, something unexpected happened."); );
+            ($s:expr) => ( panic!("While rotating BVH nodes, something unexpected happened: {}", $s); );
+        }
+
+        // Find node a's parent's index
+        let node_a_parent_index = match *node_a {
+            BVHNode::Node { parent, .. } |
+            BVHNode::Leaf { parent, .. } => parent,
+            _ => should_not_happen!()
+        };
+
+        // Get node a's parent
+        let mut node_a_parent = &nodes[node_a_parent_index];
+
+        // Get whether or not node a is the left child
+        let a_is_left_child = match *node_a_parent {
+            BVHNode::Node { child_l, .. } => child_l == node_a_index,
+            _ => should_not_happen!()
+        };
+
+        // Find node b's parent's index
+        let node_b_parent_index = match *node_b {
+            BVHNode::Node { parent, .. } |
+            BVHNode::Leaf { parent, .. } => parent,
+            _ => should_not_happen!()
+        };
+
+        // Get node b's parent
+        let mut node_b_parent = &nodes[node_b_parent_index];
+
+        // Get whether or not node b is the left child
+        let b_is_left_child = match *node_b_parent {
+            BVHNode::Node { child_l, .. } => child_l == node_b_index,
+            _ => should_not_happen!()
+        };
     }
 }
 
