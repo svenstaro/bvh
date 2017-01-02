@@ -449,21 +449,37 @@ impl BVH {
 
         let mut node = &nodes[node_index];
 
-        // If this node is not a grandparent, queue the parent for refitting and bail
+        // Contains the surface area that would result from applying the currently favored rotation.
+        // The rotation with the smallest SA will be applied in the end.
+        // The value is calculated by child_l_aabb.surface_area() + child_r_aabb.surface_area()
+        let mut best_SA = 0f32;
+
+        // If this node is not a grandparent, queue the parent for refitting and bail out.
+        // If it is, calculate the current best_SA.
         match *node {
-            BVHNode::Node { parent, child_l, child_r, .. } => {
+            BVHNode::Node { parent, child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
                 if let BVHNode::Leaf { .. } = nodes[child_l] {
                     if let BVHNode::Leaf { .. } = nodes[child_r] {
                         return Some(parent);
                     }
+                } else {
+                    best_SA = child_l_aabb.surface_area() + child_r_aabb.surface_area();
                 }
-
             }
             BVHNode::Leaf { parent, .. } => {
                 return Some(parent);
             }
             BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
         }
+
+        struct Rotation {
+            node_a: usize,
+            node_b: usize,
+        }
+
+        let mut best_rotation: Option<Rotation> = None;
+
+
 
         // TODO Implement actual rotations
         println!("Potentially rotating node {}.", node_index);
