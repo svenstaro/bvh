@@ -481,69 +481,87 @@ impl BVH {
             ($s:expr) => ( panic!("While rotating BVH nodes, something unexpected happened: {}", $s); );
         }
 
-        // TODO To get this to work, perhaps this needs to be removed and replaced by lots of duplicate code
-        /// Returns (in this order):
-        /// * a reference to the node
-        /// * the node's parent's index
-        /// * a reference to the node's parent
-        /// * true if the node is the left child, otherwise false
-        fn get_node_info(node_index: usize, nodes: &mut Vec<BVHNode>) -> (&mut BVHNode, usize, &mut BVHNode, bool) {
-            let mut node = &mut nodes[node_index];
+        // Gather the information needed for the changes
+        let (node_a_parent_index, node_b_parent_index, node_a_is_left_child, node_b_is_left_child) = {
+            let node_a = &nodes[node_a_index];
+            let node_b = &nodes[node_b_index];
 
-            let node_parent_index = match *node {
+            let node_a_parent_index = match *node_a {
+                BVHNode::Node { parent, .. } |
+                BVHNode::Leaf { parent, .. } => parent,
+                _ => should_not_happen!()
+            };
+            let node_b_parent_index = match *node_b {
                 BVHNode::Node { parent, .. } |
                 BVHNode::Leaf { parent, .. } => parent,
                 _ => should_not_happen!()
             };
 
-            let mut node_parent = &mut nodes[node_parent_index];
+            let node_a_parent = &nodes[node_a_parent_index];
+            let node_b_parent = &nodes[node_b_parent_index];
 
-            // Get whether or not node a is the left child
-            let node_is_left_child = match *node_parent {
-                BVHNode::Node { child_l, .. } => child_l == node_index,
+            // Get whether or not the nodes are left childs
+            let node_a_is_left_child = match *node_a_parent {
+                BVHNode::Node { child_l, .. } => child_l == node_a_index,
+                _ => should_not_happen!()
+            };
+            let node_b_is_left_child = match *node_b_parent {
+                BVHNode::Node { child_l, .. } => child_l == node_b_index,
                 _ => should_not_happen!()
             };
 
-            (node, node_parent_index, node_parent, node_is_left_child)
+            (node_a_parent_index, node_b_parent_index, node_a_is_left_child, node_b_is_left_child)
+        };
+
+        // Change node a
+        {
+            let mut node_a = &mut nodes[node_a_index];
+            match node_a {
+                &mut BVHNode::Node { ref mut parent, .. } |
+                &mut BVHNode::Leaf { ref mut parent, .. } => *parent = node_b_parent_index,
+                _ => should_not_happen!()
+            };
         }
 
-        let (node_a, node_a_parent_index, node_a_parent, node_a_is_left_child) = get_node_info(node_a_index, &mut nodes);
-        let (node_b, node_b_parent_index, node_b_parent, node_b_is_left_child) = get_node_info(node_b_index, &mut nodes);
+        // Change node b
+        {
+            let mut node_b = &mut nodes[node_b_index];
+            match node_b {
+                &mut BVHNode::Node { ref mut parent, .. } |
+                &mut BVHNode::Leaf { ref mut parent, .. } => *parent = node_a_parent_index,
+                _ => should_not_happen!()
+            };
+        }
 
-        // Switch their parent indices
-        match node_a {
-            &mut BVHNode::Node { ref mut parent, .. } |
-            &mut BVHNode::Leaf { ref mut parent, .. } => *parent = node_b_parent_index,
-            _ => should_not_happen!()
-        };
-        // match node_b {
-        //     BVHNode::Node { ref mut parent, .. } |
-        //     BVHNode::Leaf { ref mut parent, .. } => *parent = node_a_parent_index,
-        //     _ => should_not_happen!()
-        // };
-        //
-        // // Switch their parent's child indices
-        // match node_a_parent {
-        //     BVHNode::Node { ref mut child_l, ref mut child_r, .. } => {
-        //         if node_a_is_left_child {
-        //             *child_l = node_b_index;
-        //         } else {
-        //             *child_r = node_b_index;
-        //         }
-        //     }
-        //     _ => should_not_happen!()
-        // };
-        //
-        // match node_b_parent {
-        //     BVHNode::Node { ref mut child_l, ref mut child_r, .. } => {
-        //         if node_b_is_left_child {
-        //             *child_l = node_a_index;
-        //         } else {
-        //             *child_r = node_a_index;
-        //         }
-        //     }
-        //     _ => should_not_happen!()
-        // };
+        // Change node a's (old) parent
+        {
+            let mut node_a_parent = &mut nodes[node_a_parent_index];
+            match node_a_parent {
+                &mut BVHNode::Node { ref mut child_l, ref mut child_r, .. } => {
+                    if node_a_is_left_child {
+                        *child_l = node_b_index;
+                    } else {
+                        *child_r = node_b_index;
+                    }
+                }
+                _ => should_not_happen!()
+            };
+        }
+
+        // Change node b's (old) parent
+        {
+            let mut node_b_parent = &mut nodes[node_b_parent_index];
+            match node_b_parent {
+                &mut BVHNode::Node { ref mut child_l, ref mut child_r, .. } => {
+                    if node_b_is_left_child {
+                        *child_l = node_a_index;
+                    } else {
+                        *child_r = node_a_index;
+                    }
+                }
+                _ => should_not_happen!()
+            };
+        }
     }
 }
 
