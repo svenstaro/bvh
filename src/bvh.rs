@@ -472,14 +472,7 @@ impl BVH {
             BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
         }
 
-        struct Rotation {
-            node_a: usize,
-            node_b: usize,
-        }
-
-        let mut best_rotation: Option<Rotation> = None;
-
-
+        let mut best_rotation: Option<(usize, usize)> = None;
 
         // TODO Implement actual rotations
         println!("Potentially rotating node {}.", node_index);
@@ -497,6 +490,7 @@ impl BVH {
             ($s:expr) => ( panic!("While rotating BVH nodes, something unexpected happened: {}", $s); );
         }
 
+        #[allow(dead_code)] // The compiler falsely detects dead code here
         fn get_parent_index(nodes: &Vec<BVHNode>, node_index: usize) -> usize {
             let node = &nodes[node_index];
 
@@ -510,6 +504,7 @@ impl BVH {
         let node_a_parent_index = get_parent_index(nodes, node_a_index);
         let node_b_parent_index = get_parent_index(nodes, node_b_index);
 
+        #[allow(dead_code)] // The compiler falsely detects dead code here
         fn get_is_left_child(nodes: &Vec<BVHNode>,
                              node_index: usize,
                              node_parent_index: usize)
@@ -525,6 +520,7 @@ impl BVH {
         let node_a_is_left_child = get_is_left_child(nodes, node_a_index, node_a_parent_index);
         let node_b_is_left_child = get_is_left_child(nodes, node_b_index, node_b_parent_index);
 
+        #[allow(dead_code)] // The compiler falsely detects dead code here
         fn connect_nodes(nodes: &mut Vec<BVHNode>,
                          child_index: usize,
                          parent_index: usize,
