@@ -64,11 +64,11 @@ impl BVHNode {
     /// [`BVHNode`]: enum.BVHNode.html
     ///
     pub fn build<T: BHShape>(shapes: &mut [T],
-                                        indices: Vec<usize>,
-                                        nodes: &mut Vec<BVHNode>,
-                                        parent: usize,
-                                        depth: u32)
-                                        -> usize {
+                             indices: Vec<usize>,
+                             nodes: &mut Vec<BVHNode>,
+                             parent: usize,
+                             depth: u32)
+                             -> usize {
         // Helper function to accumulate the AABB joint and the centroids AABB
         fn grow_convex_hull(convex_hull: (AABB, AABB), shape_aabb: &AABB) -> (AABB, AABB) {
             let center = &shape_aabb.center();
@@ -393,8 +393,8 @@ impl BVH {
     /// Needs all the scene's shapes, plus the indeces of the shapes that were updated.
     ///
     pub fn optimize<Shape: BHShape>(&mut self,
-                                     refit_shape_indices: &HashSet<usize>,
-                                     shapes: &[Shape]) {
+                                    refit_shape_indices: &HashSet<usize>,
+                                    shapes: &[Shape]) {
         let mut refit_node_indices: HashSet<usize> = refit_shape_indices.iter()
             .map(|x| shapes[*x].bh_node_index())
             .collect();
@@ -503,54 +503,70 @@ impl BVH {
             match *node {
                 BVHNode::Node { parent, .. } |
                 BVHNode::Leaf { parent, .. } => parent,
-                _ => should_not_happen!()
+                _ => should_not_happen!(),
             }
         }
 
         let node_a_parent_index = get_parent_index(nodes, node_a_index);
         let node_b_parent_index = get_parent_index(nodes, node_b_index);
 
-        fn get_is_left_child(nodes: &Vec<BVHNode>, node_index: usize, node_parent_index: usize) -> bool {
+        fn get_is_left_child(nodes: &Vec<BVHNode>,
+                             node_index: usize,
+                             node_parent_index: usize)
+                             -> bool {
             let node_parent = &nodes[node_parent_index];
 
             match *node_parent {
                 BVHNode::Node { child_l, .. } => child_l == node_index,
-                _ => should_not_happen!()
+                _ => should_not_happen!(),
             }
         }
 
         let node_a_is_left_child = get_is_left_child(nodes, node_a_index, node_a_parent_index);
         let node_b_is_left_child = get_is_left_child(nodes, node_b_index, node_b_parent_index);
 
-        fn connect_nodes(nodes: &mut Vec<BVHNode>, child_index: usize, parent_index: usize, left_child: bool) {
-            // Set child's parent
-            {
-                let mut child = &mut nodes[child_index];
-                match child {
-                    &mut BVHNode::Node { ref mut parent, .. } |
-                    &mut BVHNode::Leaf { ref mut parent, .. } => *parent = parent_index,
-                    _ => should_not_happen!()
-                };
-            }
-
-            // Change parent's child
-            {
+        fn connect_nodes(nodes: &mut Vec<BVHNode>,
+                         child_index: usize,
+                         parent_index: usize,
+                         left_child: bool) {
+            // Set parent's child and get its depth
+            let parent_depth = {
                 let mut parent = &mut nodes[parent_index];
                 match parent {
-                    &mut BVHNode::Node { ref mut child_l, ref mut child_r, .. } => {
+                    &mut BVHNode::Node { ref mut child_l, ref mut child_r, depth, .. } => {
                         if left_child {
                             *child_l = child_index;
                         } else {
                             *child_r = child_index;
                         }
+                        depth
                     }
-                    _ => should_not_happen!()
+                    _ => should_not_happen!(),
+                }
+            };
+
+            // Set child's parent and depth
+            {
+                let mut child = &mut nodes[child_index];
+                match child {
+                    &mut BVHNode::Node { ref mut parent, ref mut depth, .. } |
+                    &mut BVHNode::Leaf { ref mut parent, ref mut depth, .. } => {
+                        *parent = parent_index;
+                        *depth = parent_depth + 1;
+                    }
+                    _ => should_not_happen!(),
                 };
             }
         }
 
-        connect_nodes(nodes, node_a_index, node_b_parent_index, node_b_is_left_child);
-        connect_nodes(nodes, node_b_index, node_a_parent_index, node_a_is_left_child);
+        connect_nodes(nodes,
+                      node_a_index,
+                      node_b_parent_index,
+                      node_b_is_left_child);
+        connect_nodes(nodes,
+                      node_b_index,
+                      node_a_parent_index,
+                      node_a_is_left_child);
     }
 }
 
@@ -560,7 +576,7 @@ pub mod tests {
     use testbase::{build_some_bh, traverse_some_bh, build_1200_triangles_bh,
                    build_12k_triangles_bh, build_120k_triangles_bh, intersect_1200_triangles_bh,
                    intersect_12k_triangles_bh, intersect_120k_triangles_bh};
-   use std::collections::HashSet;
+    use std::collections::HashSet;
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
