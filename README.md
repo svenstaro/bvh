@@ -17,7 +17,7 @@ This library is built on top of [nalgebra](http://nalgebra.org/).
 
 ## Example
 
-```
+```rust
 use bvh::aabb::{AABB, Bounded};
 use bvh::bvh::BVH;
 use bvh::nalgebra::{Point3, Vector3};
