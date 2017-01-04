@@ -57,6 +57,7 @@ impl BVH {
     /// Checks if there is a way to rotate a child and a grandchild node of
     /// the given node (specified by `node_index`) that would improve the `BVH`.
     /// If there is, the best rotation found is performed.
+    /// Relies on the children nodes of the given node having correct AABBs.
     ///
     /// Returns Some(usize) if a new node was found that should be used for optimization.
     ///
@@ -105,10 +106,27 @@ impl BVH {
             BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
         }
 
+        // Stores the Rotation that would result in the surface area best_SA,
+        // thus being the favored rotation that will be executed after considering all rotations.
         let mut best_rotation: Option<(usize, usize)> = None;
 
-        // TODO Implement actual rotations
-        println!("Potentially rotating node {}.", node_index);
+        macro_rules! consider_rotation {
+            ($a:expr, $b:expr) => {
+                // TODO Calculate surface area that would result from rotating the given nodes.
+                // TODO If the result SA is smaller than the current best, save as best_SA and
+                // the nodes as best_rotation;
+                unimplemented!();
+            };
+        }
+
+        // Child to grandchild rotations
+        consider_rotation!(child_l, child_rl);
+        consider_rotation!(child_l, child_rr);
+        consider_rotation!(child_r, child_ll);
+        consider_rotation!(child_r, child_lr);
+        // Grandchild to grandchild rotations
+        consider_rotation!(child_ll, child_rl);
+        consider_rotation!(child_ll, child_rr);
 
         // TODO Don't forget to update AABBs
         None
