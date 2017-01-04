@@ -58,10 +58,10 @@ impl BVH {
         }
     }
 
-    /// Checks if there is a way to rotate a child and a grandchild node of
+    /// Checks if there is a way to rotate a child and a grandchild (or two grandchildren) of
     /// the given node (specified by `node_index`) that would improve the `BVH`.
     /// If there is, the best rotation found is performed.
-    /// Relies on the children nodes of the given node having correct AABBs.
+    /// Relies on the children and transitive children of the given node having correct AABBs.
     ///
     /// Returns Some(index_of_node) if a new node was found that should be used for optimization.
     ///
@@ -162,7 +162,7 @@ impl BVH {
         }
     }
 
-    /// Switch two nodes by rewiring the involved indices (not by moving them in the nodes slice)
+    /// Switch two nodes by rewiring the involved indices (not by moving them in the nodes slice).
     fn rotate(&mut self, node_a_index: usize, node_b_index: usize) {
         let mut nodes = &mut self.nodes;
 
@@ -182,6 +182,7 @@ impl BVH {
             }
         }
 
+        // Get parent indices
         let node_a_parent_index = get_parent_index(nodes, node_a_index);
         let node_b_parent_index = get_parent_index(nodes, node_b_index);
 
@@ -198,6 +199,7 @@ impl BVH {
             }
         }
 
+        // Get info about the nodes being a left or right child
         let node_a_is_left_child = get_is_left_child(nodes, node_a_index, node_a_parent_index);
         let node_b_is_left_child = get_is_left_child(nodes, node_b_index, node_b_parent_index);
 
@@ -236,6 +238,7 @@ impl BVH {
             }
         }
 
+        // Perform the switch
         connect_nodes(nodes,
                       node_a_index,
                       node_b_parent_index,
