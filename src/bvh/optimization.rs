@@ -2,6 +2,10 @@ use bvh::*;
 use bounding_hierarchy::BHShape;
 use std::collections::HashSet;
 
+// TODO Consider: Instead of getting the scene's shapes passed, let leaf nodes store an AABB
+// that is updated from the outside, perhaps by passing not only the indices of the changed
+// shapes, but also their new AABBs into optimize().
+
 impl BVH {
     /// Optimizes the `BVH` by batch-reorganizing updated nodes.
     /// Based on https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs
