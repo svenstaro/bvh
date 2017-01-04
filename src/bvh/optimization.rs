@@ -84,10 +84,12 @@ impl BVH {
                         // since at least one of them changed
                         let mut node = &mut nodes[node_index];
                         match node {
-                            &mut BVHNode::Node{ ref mut child_l_aabb, ref mut child_r_aabb, .. } => {
+                            &mut BVHNode::Node { ref mut child_l_aabb,
+                                                 ref mut child_r_aabb,
+                                                 .. } => {
                                 *child_l_aabb = shapes[shape_l_index].aabb();
                                 *child_r_aabb = shapes[shape_r_index].aabb();
-                            },
+                            }
                             _ => unreachable!(),
                         }
 
@@ -102,8 +104,6 @@ impl BVH {
             }
             BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
         }
-
-
 
         let mut best_rotation: Option<(usize, usize)> = None;
 
