@@ -20,6 +20,7 @@ use std::iter::repeat;
 /// [`AABB`]: ../aabb/struct.AABB.html
 /// [`BVH`]: struct.BVH.html
 ///
+#[derive(Debug, Copy, Clone)]
 pub enum BVHNode {
     /// Leaf node.
     Leaf {

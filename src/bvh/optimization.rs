@@ -63,20 +63,34 @@ impl BVH {
     fn try_rotate<Shape: BHShape>(&mut self, node_index: usize, shapes: &[Shape]) -> Option<usize> {
         let mut nodes = &mut self.nodes;
 
-        let node = &nodes[node_index];
+        let mut node_clone = nodes[node_index].clone();
 
         // Contains the surface area that would result from applying the currently favored rotation.
         // The rotation with the smallest SA will be applied in the end.
         // The value is calculated by child_l_aabb.surface_area() + child_r_aabb.surface_area()
         let mut best_SA = 0f32;
 
-        // If this node is not a grandparent, (TODO update the AABB?),
+        // If this node is not a grandparent, update the AABB,
         // queue the parent for refitting, and bail out.
         // If it is a grandparent, calculate the current best_SA.
-        match *node {
+        match node_clone {
             BVHNode::Node { parent, child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
-                if let BVHNode::Leaf { .. } = nodes[child_l] {
-                    if let BVHNode::Leaf { .. } = nodes[child_r] {
+                if let BVHNode::Leaf { shape, .. } = nodes[child_l] {
+                    let shape_l_index = shape;
+                    if let BVHNode::Leaf { shape, .. } = nodes[child_r] {
+                        let shape_r_index = shape;
+
+                        // Update the AABBs saved for the children
+                        // since at least one of them changed
+                        let mut node = &mut nodes[node_index];
+                        match node {
+                            &mut BVHNode::Node{ ref mut child_l_aabb, ref mut child_r_aabb, .. } => {
+                                *child_l_aabb = shapes[shape_l_index].aabb();
+                                *child_r_aabb = shapes[shape_r_index].aabb();
+                            },
+                            _ => unreachable!(),
+                        }
+
                         return Some(parent);
                     }
                 }
