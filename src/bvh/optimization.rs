@@ -59,7 +59,7 @@ impl BVH {
     /// If there is, the best rotation found is performed.
     /// Relies on the children nodes of the given node having correct AABBs.
     ///
-    /// Returns Some(usize) if a new node was found that should be used for optimization.
+    /// Returns Some(index_of_node) if a new node was found that should be used for optimization.
     ///
     fn try_rotate<Shape: BHShape>(&mut self, node_index: usize, shapes: &[Shape]) -> Option<usize> {
         let mut nodes = &mut self.nodes;
@@ -70,6 +70,9 @@ impl BVH {
         // The rotation with the smallest SA will be applied in the end.
         // The value is calculated by child_l_aabb.surface_area() + child_r_aabb.surface_area()
         let mut best_SA = 0f32;
+
+        // TODO Re-implement without mutability
+        let mut parent_index: usize = 0;
 
         // If this node is not a grandparent, update the AABB,
         // queue the parent for refitting, and bail out.
@@ -98,6 +101,7 @@ impl BVH {
                     }
                 }
 
+                parent_index = parent;
                 best_SA = child_l_aabb.surface_area() + child_r_aabb.surface_area();
             }
             BVHNode::Leaf { parent, .. } => {
@@ -114,7 +118,7 @@ impl BVH {
             ($a:expr, $b:expr) => {
                 // TODO Calculate surface area that would result from rotating the given nodes.
                 // TODO If the result SA is smaller than the current best, save as best_SA and
-                // the nodes as best_rotation;
+                // the nodes as best_rotation.
                 unimplemented!();
             };
         }
@@ -128,8 +132,30 @@ impl BVH {
         consider_rotation!(child_ll, child_rl);
         consider_rotation!(child_ll, child_rr);
 
-        // TODO Don't forget to update AABBs
-        None
+        let new_refit_node_index = if parent_index > 0 {
+            Some(parent_index)
+        } else {
+            None
+        };
+
+        if best_rotation == None {
+            // TODO Recalculate this node's AABBs (child_l_aabb, child_r_aabb)
+            // according to the children nodes' AABBs.
+
+            // Even with no rotation being useful for this node, a parent node's rotation
+            // could be beneficial, so queue the parent sometimes.
+            // TODO Return None most of the time, randomly
+            // (see https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH_Node.cs#L307)
+            new_refit_node_index
+        } else {
+            // TODO Perform rotation using rotate()
+
+            // TODO Update all changed node AABBs
+
+            // Return parent node's index for upcoming refitting,
+            // since this node just changed its AABB
+            new_refit_node_index
+        }
     }
 
     /// Switch two nodes by rewiring the involved indices (not by moving them in the nodes slice)
