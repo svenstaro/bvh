@@ -79,9 +79,26 @@ impl BVH {
         // TODO Re-implement without mutability
         let mut parent_index: usize = 0;
 
+        #[derive(Debug, Copy, Clone)]
         struct NodeData {
             index: usize,
             aabb: AABB,
+        }
+
+        macro_rules! get_children_node_data {
+            ($node_index:expr) => ({
+                let node = &nodes[$node_index];
+                match *node {
+                    BVHNode::Node { child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
+                        Some((NodeData{ index: child_l, aabb: child_l_aabb},
+                            NodeData{ index: child_r, aabb: child_r_aabb}))
+                    }
+                    BVHNode::Leaf { .. } => {
+                        None
+                    }
+                    BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
+                }
+            });
         }
 
         // If this node is not a grandparent, update the AABB,
@@ -111,10 +128,35 @@ impl BVH {
                     }
                 }
 
+                let left_children = match get_children_node_data!(child_l) {
+                    Some(x) => x,
+                    _ => unreachable!(),
+                };
+                let right_children = match get_children_node_data!(child_r) {
+                    Some(x) => x,
+                    _ => unreachable!(),
+                };
+
+                // Update the AABBs saved for the children
+                // since at least one of them changed
+                let aabb_l = left_children.0.aabb.join(&left_children.1.aabb);
+                let aabb_r = right_children.0.aabb.join(&right_children.1.aabb);
+
+                let mut node = &mut nodes[node_index];
+                match node {
+                    &mut BVHNode::Node { ref mut child_l_aabb,
+                                         ref mut child_r_aabb,
+                                         .. } => {
+                        *child_l_aabb = aabb_l;
+                        *child_r_aabb = aabb_r;
+                    }
+                    _ => unreachable!(),
+                }
+
                 parent_index = parent;
                 best_SA = child_l_aabb.surface_area() + child_r_aabb.surface_area();
-                (NodeData{index: child_l, aabb: child_l_aabb},
-                 NodeData{index:child_r, aabb:child_r_aabb})
+                (NodeData{index: child_l, aabb: aabb_l},
+                 NodeData{index: child_r, aabb: aabb_r})
             }
             BVHNode::Leaf { parent, .. } => {
                 return Some(parent);
@@ -135,29 +177,20 @@ impl BVH {
                     best_SA = surface_area;
                     best_rotation = Some(($a.index, $b.index));
                 }
-                unimplemented!();
             };
         }
 
-        macro_rules! get_children_node_data {
-            ($node:expr) => ({
-                let node = &nodes[$node.index];
-                match *node {
-                    BVHNode::Node { child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
-                        Some((NodeData{ index: child_l, aabb: child_l_aabb},
-                            NodeData{ index: child_r, aabb: child_r_aabb}))
-                    }
-                    BVHNode::Leaf { .. } => {
-                        None
-                    }
-                    BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
-                }
-            });
-        }
-
         // Get indices and AABBs of all grandchildren
-        let left_children_nodes = get_children_node_data!(child_l);
-        let right_children_nodes = get_children_node_data!(child_r);
+        let left_children_nodes = {
+            let node_data: NodeData = child_l;
+            let index = node_data.index;
+            get_children_node_data!(index)
+        };
+        let right_children_nodes = {
+            let node_data: NodeData = child_r;
+            let index = node_data.index;
+            get_children_node_data!(index)
+        };
 
         // Child to grandchild rotations
         if let Some((child_rl, child_rr)) = right_children_nodes {
