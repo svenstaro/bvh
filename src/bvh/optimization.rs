@@ -224,14 +224,20 @@ impl BVH {
             None
         };
 
-        if best_rotation == None {
+        if let Some(rotation) = best_rotation {
+            BVH::rotate(nodes, rotation.0, rotation.1);
+
+            // TODO Update all changed node AABBs
+
+            // Return parent node's index for upcoming refitting,
+            // since this node just changed its AABB
+            new_refit_node_index
+        } else {
             // Update this node's AABBs (child_l_aabb, child_r_aabb)
             // according to the children nodes' AABBs.
             let mut node = &mut nodes[node_index];
             match node {
-                &mut BVHNode::Node { ref mut child_l_aabb,
-                                     ref mut child_r_aabb,
-                                     .. } => {
+                &mut BVHNode::Node { ref mut child_l_aabb, ref mut child_r_aabb, .. } => {
                     *child_l_aabb = child_l.aabb;
                     *child_r_aabb = child_r.aabb;
                 }
@@ -243,21 +249,11 @@ impl BVH {
             // TODO Return None most of the time, randomly
             // (see https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH_Node.cs#L307)
             new_refit_node_index
-        } else {
-            // TODO Perform rotation using rotate()
-
-            // TODO Update all changed node AABBs
-
-            // Return parent node's index for upcoming refitting,
-            // since this node just changed its AABB
-            new_refit_node_index
         }
     }
 
     /// Switch two nodes by rewiring the involved indices (not by moving them in the nodes slice).
-    fn rotate(&mut self, node_a_index: usize, node_b_index: usize) {
-        let mut nodes = &mut self.nodes;
-
+    fn rotate(nodes: &mut Vec<BVHNode>, node_a_index: usize, node_b_index: usize) {
         macro_rules! should_not_happen {
             () => ( panic!("While rotating BVH nodes, something unexpected happened."); );
             ($s:expr) => ( panic!("While rotating BVH nodes, something unexpected happened: {}", $s); );
