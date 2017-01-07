@@ -118,11 +118,17 @@ impl BVH {
         // thus being the favored rotation that will be executed after considering all rotations.
         let mut best_rotation: Option<(usize, usize)> = None;
 
+        // TODO Get indices of all children and grandchildren
+
         macro_rules! consider_rotation {
             ($a:expr, $b:expr) => {
                 // TODO Calculate surface area that would result from rotating the given nodes.
-                // TODO If the result SA is smaller than the current best, save as best_SA and
-                // the nodes as best_rotation.
+                let surface_area = 100f32;
+
+                if surface_area < best_SA {
+                    best_SA = surface_area;
+                    best_rotation = Some(($a, $b));
+                }
                 unimplemented!();
             };
         }
