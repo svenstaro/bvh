@@ -142,17 +142,6 @@ impl BVH {
                 let aabb_l = left_children.0.aabb.join(&left_children.1.aabb);
                 let aabb_r = right_children.0.aabb.join(&right_children.1.aabb);
 
-                let mut node = &mut nodes[node_index];
-                match node {
-                    &mut BVHNode::Node { ref mut child_l_aabb,
-                                         ref mut child_r_aabb,
-                                         .. } => {
-                        *child_l_aabb = aabb_l;
-                        *child_r_aabb = aabb_r;
-                    }
-                    _ => unreachable!(),
-                }
-
                 parent_index = parent;
                 best_SA = child_l_aabb.surface_area() + child_r_aabb.surface_area();
                 (NodeData{index: child_l, aabb: aabb_l},
