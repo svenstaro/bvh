@@ -81,7 +81,7 @@ impl BVH {
         // If this node is not a grandparent, update the AABB,
         // queue the parent for refitting, and bail out.
         // If it is a grandparent, calculate the current best_SA.
-        match node_clone {
+        let (child_l, child_l_aabb, child_r, child_r_aabb) = match node_clone {
             BVHNode::Node { parent, child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
                 if let BVHNode::Leaf { shape, .. } = nodes[child_l] {
                     let shape_l_index = shape;
@@ -107,18 +107,19 @@ impl BVH {
 
                 parent_index = parent;
                 best_SA = child_l_aabb.surface_area() + child_r_aabb.surface_area();
+                (child_l, child_l_aabb, child_r, child_r_aabb)
             }
             BVHNode::Leaf { parent, .. } => {
                 return Some(parent);
             }
             BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
-        }
+        };
 
         // Stores the Rotation that would result in the surface area best_SA,
         // thus being the favored rotation that will be executed after considering all rotations.
         let mut best_rotation: Option<(usize, usize)> = None;
 
-        // TODO Get indices of all children and grandchildren
+        // TODO Get indices and AABBs of all grandchildren
 
         macro_rules! consider_rotation {
             ($a:expr, $b:expr) => {
