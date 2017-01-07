@@ -69,12 +69,12 @@ impl BVH {
     fn try_rotate<Shape: BHShape>(&mut self, node_index: usize, shapes: &[Shape]) -> Option<usize> {
         let mut nodes = &mut self.nodes;
 
-        let mut node_clone = nodes[node_index].clone();
+        let node_clone = nodes[node_index].clone();
 
         // Contains the surface area that would result from applying the currently favored rotation.
         // The rotation with the smallest SA will be applied in the end.
         // The value is calculated by child_l_aabb.surface_area() + child_r_aabb.surface_area()
-        let mut best_SA = 0f32;
+        let mut best_surface_area = 0f32;
 
         // TODO Re-implement without mutability
         let mut parent_index: usize = 0;
@@ -103,7 +103,7 @@ impl BVH {
 
         // If this node is not a grandparent, update the AABB,
         // queue the parent for refitting, and bail out.
-        // If it is a grandparent, calculate the current best_SA.
+        // If it is a grandparent, calculate the current best_surface_area.
         let (child_l, child_r) = match node_clone {
             BVHNode::Node { parent, child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
                 if let BVHNode::Leaf { shape, .. } = nodes[child_l] {
@@ -143,9 +143,15 @@ impl BVH {
                 let aabb_r = right_children.0.aabb.join(&right_children.1.aabb);
 
                 parent_index = parent;
-                best_SA = child_l_aabb.surface_area() + child_r_aabb.surface_area();
-                (NodeData{index: child_l, aabb: aabb_l},
-                 NodeData{index: child_r, aabb: aabb_r})
+                best_surface_area = child_l_aabb.surface_area() + child_r_aabb.surface_area();
+                (NodeData {
+                     index: child_l,
+                     aabb: aabb_l,
+                 },
+                 NodeData {
+                     index: child_r,
+                     aabb: aabb_r,
+                 })
             }
             BVHNode::Leaf { parent, .. } => {
                 return Some(parent);
@@ -153,17 +159,14 @@ impl BVH {
             BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
         };
 
-        // Stores the Rotation that would result in the surface area best_SA,
+        // Stores the Rotation that would result in the surface area best_surface_area,
         // thus being the favored rotation that will be executed after considering all rotations.
         let mut best_rotation: Option<(usize, usize)> = None;
 
         macro_rules! consider_rotation {
-            ($a:expr, $b:expr) => {
-                // TODO Calculate surface area that would result from rotating the given nodes.
-                let surface_area = 100f32;
-
-                if surface_area < best_SA {
-                    best_SA = surface_area;
+            ($a:expr, $b:expr, $sa:expr) => {
+                if $sa < best_surface_area {
+                    best_surface_area = $sa;
                     best_rotation = Some(($a.index, $b.index));
                 }
             };
@@ -183,17 +186,35 @@ impl BVH {
 
         // Child to grandchild rotations
         if let Some((child_rl, child_rr)) = right_children_nodes {
-            consider_rotation!(child_l, child_rl);
-            consider_rotation!(child_l, child_rr);
+            consider_rotation!(child_l,
+                               child_rl,
+                               child_rl.aabb.surface_area() +
+                               child_l.aabb.join(&child_rr.aabb).surface_area());
+            consider_rotation!(child_l,
+                               child_rr,
+                               child_rr.aabb.surface_area() +
+                               child_l.aabb.join(&child_rl.aabb).surface_area());
         }
         if let Some((child_ll, child_lr)) = left_children_nodes {
-            consider_rotation!(child_r, child_ll);
-            consider_rotation!(child_r, child_lr);
+            consider_rotation!(child_r,
+                               child_ll,
+                               child_ll.aabb.surface_area() +
+                               child_r.aabb.join(&child_lr.aabb).surface_area());
+            consider_rotation!(child_r,
+                               child_lr,
+                               child_lr.aabb.surface_area() +
+                               child_r.aabb.join(&child_ll.aabb).surface_area());
 
             // Grandchild to grandchild rotations
             if let Some((child_rl, child_rr)) = right_children_nodes {
-                consider_rotation!(child_ll, child_rl);
-                consider_rotation!(child_ll, child_rr);
+                consider_rotation!(child_ll,
+                                   child_rl,
+                                   child_rl.aabb.join(&child_lr.aabb).surface_area() +
+                                   child_ll.aabb.join(&child_rr.aabb).surface_area());
+                consider_rotation!(child_ll,
+                                   child_rr,
+                                   child_ll.aabb.join(&child_rl.aabb).surface_area() +
+                                   child_lr.aabb.join(&child_rr.aabb).surface_area());
             }
         }
 
