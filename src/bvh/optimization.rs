@@ -225,8 +225,18 @@ impl BVH {
         };
 
         if best_rotation == None {
-            // TODO Recalculate this node's AABBs (child_l_aabb, child_r_aabb)
+            // Update this node's AABBs (child_l_aabb, child_r_aabb)
             // according to the children nodes' AABBs.
+            let mut node = &mut nodes[node_index];
+            match node {
+                &mut BVHNode::Node { ref mut child_l_aabb,
+                                     ref mut child_r_aabb,
+                                     .. } => {
+                    *child_l_aabb = child_l.aabb;
+                    *child_r_aabb = child_r.aabb;
+                }
+                _ => unreachable!(),
+            }
 
             // Even with no rotation being useful for this node, a parent node's rotation
             // could be beneficial, so queue the parent sometimes.
