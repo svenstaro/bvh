@@ -1,5 +1,6 @@
 use bvh::*;
 use bounding_hierarchy::BHShape;
+use aabb::AABB;
 use std::collections::HashSet;
 
 // TODO Consider: Instead of getting the scene's shapes passed, let leaf nodes store an AABB
@@ -125,8 +126,6 @@ impl BVH {
         // thus being the favored rotation that will be executed after considering all rotations.
         let mut best_rotation: Option<(usize, usize)> = None;
 
-        // TODO Get indices and AABBs of all grandchildren
-
         macro_rules! consider_rotation {
             ($a:expr, $b:expr) => {
                 // TODO Calculate surface area that would result from rotating the given nodes.
@@ -140,14 +139,41 @@ impl BVH {
             };
         }
 
+        macro_rules! get_children_node_data {
+            ($node:expr) => ({
+                let node = &nodes[$node.index];
+                match *node {
+                    BVHNode::Node { child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
+                        Some((NodeData{ index: child_l, aabb: child_l_aabb},
+                            NodeData{ index: child_r, aabb: child_r_aabb}))
+                    }
+                    BVHNode::Leaf { .. } => {
+                        None
+                    }
+                    BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
+                }
+            });
+        }
+
+        // Get indices and AABBs of all grandchildren
+        let left_children_nodes = get_children_node_data!(child_l);
+        let right_children_nodes = get_children_node_data!(child_r);
+
         // Child to grandchild rotations
-        consider_rotation!(child_l, child_rl);
-        consider_rotation!(child_l, child_rr);
-        consider_rotation!(child_r, child_ll);
-        consider_rotation!(child_r, child_lr);
-        // Grandchild to grandchild rotations
-        consider_rotation!(child_ll, child_rl);
-        consider_rotation!(child_ll, child_rr);
+        if let Some((child_rl, child_rr)) = right_children_nodes {
+            consider_rotation!(child_l, child_rl);
+            consider_rotation!(child_l, child_rr);
+        }
+        if let Some((child_ll, child_lr)) = left_children_nodes {
+            consider_rotation!(child_r, child_ll);
+            consider_rotation!(child_r, child_lr);
+
+            // Grandchild to grandchild rotations
+            if let Some((child_rl, child_rr)) = right_children_nodes {
+                consider_rotation!(child_ll, child_rl);
+                consider_rotation!(child_ll, child_rr);
+            }
+        }
 
         let new_refit_node_index = if parent_index > 0 {
             Some(parent_index)
