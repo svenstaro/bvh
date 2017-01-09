@@ -341,6 +341,8 @@ impl BVH {
 #[cfg(test)]
 pub mod tests {
     use bvh::BVH;
+    use std::collections::HashSet;
+    use testbase::build_some_bh;
 
     #[test]
     /// Tests if the optimize function tries to change a fresh BVH even though it shouldn't
