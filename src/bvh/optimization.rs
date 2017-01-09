@@ -254,6 +254,8 @@ impl BVH {
 
     /// Switch two nodes by rewiring the involved indices (not by moving them in the nodes slice).
     fn rotate(nodes: &mut Vec<BVHNode>, node_a_index: usize, node_b_index: usize) {
+        // This function is not defined with a self parameter to make it easier to call
+        // without running into borrow checker issues.
         macro_rules! should_not_happen {
             () => ( panic!("While rotating BVH nodes, something unexpected happened."); );
             ($s:expr) => ( panic!("While rotating BVH nodes, something unexpected happened: {}", $s); );
