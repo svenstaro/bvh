@@ -307,23 +307,17 @@ impl Ray {
 
 #[cfg(test)]
 mod tests {
-    use EPSILON;
-    use ray::Ray;
-    use aabb::AABB;
-    use nalgebra::{Point3, Vector3, Cross, Dot};
-    use rand::{Rng, StdRng, SeedableRng};
     use std::f32::INFINITY;
     use std::cmp;
 
-    type TupleVec = (f32, f32, f32);
+    use nalgebra::{Cross, Dot};
+    use rand::{Rng, StdRng, SeedableRng};
 
-    fn tuple_to_point(tpl: &TupleVec) -> Point3<f32> {
-        Point3::new(tpl.0, tpl.1, tpl.2)
-    }
+    use EPSILON;
+    use aabb::AABB;
+    use ray::Ray;
 
-    fn tuple_to_vector(tpl: &TupleVec) -> Vector3<f32> {
-        Vector3::new(tpl.0, tpl.1, tpl.2)
-    }
+    use testbase::{TupleVec, tuple_to_point, tuple_to_vector};
 
     /// Generates a random `Ray` which points at at a random `AABB`.
     fn gen_ray_to_aabb(data: (TupleVec, TupleVec, TupleVec)) -> (Ray, AABB) {
