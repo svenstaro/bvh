@@ -128,6 +128,9 @@ impl BVH {
                     }
                 }
 
+                // TODO There are nodes with only one leaf node attached.
+                // The following code assumes this to be impossible.
+
                 let left_children = match get_children_node_data!(child_l) {
                     Some(x) => x,
                     _ => unreachable!(),
