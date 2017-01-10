@@ -101,6 +101,21 @@ impl BVH {
             });
         }
 
+        macro_rules! get_child_aabb {
+            ($node_index:expr) => ({
+                let node = &nodes[$node_index];
+                match *node {
+                    BVHNode::Node { child_l_aabb, child_r_aabb, .. } => {
+                        child_l_aabb.join(&child_r_aabb)
+                    }
+                    BVHNode::Leaf { shape, .. } => {
+                        shapes[shape].aabb()
+                    }
+                    BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
+                }
+            });
+        }
+
         // If this node is not a grandparent, update the AABB,
         // queue the parent for refitting, and bail out.
         // If it is a grandparent, calculate the current best_surface_area.
@@ -128,22 +143,10 @@ impl BVH {
                     }
                 }
 
-                // TODO There are nodes with only one leaf node attached.
-                // The following code assumes this to be impossible.
-
-                let left_children = match get_children_node_data!(child_l) {
-                    Some(x) => x,
-                    _ => unreachable!(),
-                };
-                let right_children = match get_children_node_data!(child_r) {
-                    Some(x) => x,
-                    _ => unreachable!(),
-                };
-
                 // Update the AABBs saved for the children
                 // since at least one of them changed
-                let aabb_l = left_children.0.aabb.join(&left_children.1.aabb);
-                let aabb_r = right_children.0.aabb.join(&right_children.1.aabb);
+                let aabb_l = get_child_aabb!(child_l);
+                let aabb_r = get_child_aabb!(child_r);
 
                 parent_index = parent;
                 best_surface_area = child_l_aabb.surface_area() + child_r_aabb.surface_area();
