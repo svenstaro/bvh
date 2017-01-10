@@ -127,7 +127,7 @@ impl BVH {
                         let shape_r_index = shape;
 
                         // Update the AABBs saved for the children
-                        // since at least one of them changed
+                        // since at least one of them changed.
                         let mut node = &mut nodes[node_index];
                         match node {
                             &mut BVHNode::Node { ref mut child_l_aabb,
@@ -143,8 +143,9 @@ impl BVH {
                     }
                 }
 
-                // Update the AABBs saved for the children
-                // since at least one of them changed
+                // Recalculate AABBs for the children since at least one of them changed.
+                // Don't update the AABBs yet because they're still subject to change
+                // during potential upcoming rotations.
                 let aabb_l = get_child_aabb!(child_l);
                 let aabb_r = get_child_aabb!(child_r);
 
