@@ -48,6 +48,7 @@ impl BVH {
                 // This node does not need to be checked again
                 refit_node_indices.remove(&sweep_node_index);
 
+                // TODO There might be multithreading potential here
                 let new_refit_node_index = self.try_rotate(*sweep_node_index, shapes);
 
                 // Instead of finding a useful tree rotation, we found another node
@@ -87,11 +88,11 @@ impl BVH {
 
         macro_rules! get_children_node_data {
             ($node_index:expr) => ({
-                let node = &nodes[$node_index];
-                match *node {
+                let node = nodes[$node_index].clone();
+                match node {
                     BVHNode::Node { child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
-                        Some((NodeData{ index: child_l, aabb: child_l_aabb},
-                            NodeData{ index: child_r, aabb: child_r_aabb}))
+                        Some((NodeData{ index: child_l, aabb: child_l_aabb },
+                            NodeData{ index: child_r, aabb: child_r_aabb }))
                     }
                     BVHNode::Leaf { .. } => {
                         None
@@ -101,7 +102,7 @@ impl BVH {
             });
         }
 
-        macro_rules! get_child_aabb {
+        macro_rules! get_node_aabb {
             ($node_index:expr) => ({
                 let node = &nodes[$node_index];
                 match *node {
@@ -146,8 +147,8 @@ impl BVH {
                 // Recalculate AABBs for the children since at least one of them changed.
                 // Don't update the AABBs yet because they're still subject to change
                 // during potential upcoming rotations.
-                let aabb_l = get_child_aabb!(child_l);
-                let aabb_r = get_child_aabb!(child_r);
+                let aabb_l = get_node_aabb!(child_l);
+                let aabb_r = get_node_aabb!(child_r);
 
                 parent_index = parent;
                 best_surface_area = child_l_aabb.surface_area() + child_r_aabb.surface_area();
