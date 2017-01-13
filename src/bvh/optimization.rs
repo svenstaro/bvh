@@ -2,6 +2,7 @@ use bvh::*;
 use bounding_hierarchy::BHShape;
 use aabb::AABB;
 use std::collections::HashSet;
+use rand::{thread_rng, Rng};
 
 // TODO Consider: Instead of getting the scene's shapes passed, let leaf nodes store an AABB
 // that is updated from the outside, perhaps by passing not only the indices of the changed
@@ -284,10 +285,17 @@ impl BVH {
             }
 
             // Even with no rotation being useful for this node, a parent node's rotation
-            // could be beneficial, so queue the parent sometimes.
-            // TODO Return None most of the time, randomly
-            // (see https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH_Node.cs#L307)
-            new_refit_node_index
+            // could be beneficial, so queue the parent *sometimes*.
+            // (See https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH_Node.cs#L307)
+            // TODO Evaluate whether or not this is a smart thing to do
+            let mut rng = thread_rng();
+            let x: u32 = rng.gen();
+            let chance = 1u32; // Chance of passing the parent in percent
+            if x % 100u32 < chance {
+                new_refit_node_index
+            } else {
+                None
+            }
         }
     }
 

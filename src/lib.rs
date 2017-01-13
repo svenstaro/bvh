@@ -75,11 +75,10 @@
 #[cfg(test)]
 extern crate test;
 #[cfg(test)]
-extern crate rand;
-#[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
 
+extern crate rand;
 pub extern crate nalgebra;
 
 /// A minimal floating value used as a lower bound.
