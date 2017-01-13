@@ -284,14 +284,17 @@ impl BVH {
                 _ => unreachable!(),
             }
 
+            /// Returns true randomly, with a chance given by the parameter
+            fn chance(chance: f32) -> bool {
+                let mut rng = thread_rng();
+                rng.next_f32() < chance
+            }
             // Even with no rotation being useful for this node, a parent node's rotation
             // could be beneficial, so queue the parent *sometimes*.
             // (See https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH_Node.cs#L307)
             // TODO Evaluate whether or not this is a smart thing to do
-            let mut rng = thread_rng();
-            let x: u32 = rng.gen();
-            let chance = 1u32; // Chance of passing the parent in percent
-            if x % 100u32 < chance {
+
+            if chance(0.01f32) {
                 new_refit_node_index
             } else {
                 None
