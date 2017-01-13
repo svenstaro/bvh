@@ -456,8 +456,10 @@ pub mod tests {
     }
 
     // TODO Add tests for:
-    // * correct parent
-    // * correct depth
-    // * correct BVH after optimizing
-    // * correct parent and depth after optimizing
+    // * Correct (as in error-free) BVH after optimizing
+
+    // TODO Add benchmarks for:
+    // * Optimizing an optimal bvh
+    // * Optimizing a bvh after randomizing 50% of the shapes
+    // * Optimizing a bvh after randomizing all shapes (to compare with a full rebuild)
 }
