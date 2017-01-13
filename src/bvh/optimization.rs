@@ -293,7 +293,6 @@ impl BVH {
             // could be beneficial, so queue the parent *sometimes*.
             // (See https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH_Node.cs#L307)
             // TODO Evaluate whether or not this is a smart thing to do
-
             if chance(0.01f32) {
                 new_refit_node_index
             } else {
@@ -304,7 +303,10 @@ impl BVH {
 
     /// Switch two nodes by rewiring the involved indices (not by moving them in the nodes slice).
     /// Also updates the AABBs of the parents.
-    fn rotate<Shape: BHShape>(nodes: &mut Vec<BVHNode>, node_a_index: usize, node_b_index: usize, shapes: &[Shape]) {
+    fn rotate<Shape: BHShape>(nodes: &mut Vec<BVHNode>,
+                              node_a_index: usize,
+                              node_b_index: usize,
+                              shapes: &[Shape]) {
         // This function is not defined with a self parameter to make it easier to call
         // without running into borrow checker issues.
         macro_rules! should_not_happen {
@@ -429,17 +431,19 @@ pub mod tests {
         // TODO Consider also comparing AABBs
         fn eq(&self, other: &BVHNode) -> bool {
             match *self {
-                BVHNode::Node{ parent, depth, child_l, child_r, .. } => {
-                    let (self_parent, self_depth, self_child_l, self_child_r) = (parent, depth, child_l, child_r);
-                    if let BVHNode::Node{ parent, depth, child_l, child_r, .. } = *other {
-                        (self_parent, self_depth, self_child_l, self_child_r) == (parent, depth, child_l, child_r)
+                BVHNode::Node { parent, depth, child_l, child_r, .. } => {
+                    let (self_parent, self_depth, self_child_l, self_child_r) =
+                        (parent, depth, child_l, child_r);
+                    if let BVHNode::Node { parent, depth, child_l, child_r, .. } = *other {
+                        (self_parent, self_depth, self_child_l, self_child_r) ==
+                        (parent, depth, child_l, child_r)
                     } else {
                         false
                     }
                 }
                 BVHNode::Leaf { parent, depth, shape } => {
                     let (self_parent, self_depth, self_shape) = (parent, depth, shape);
-                    if let BVHNode::Leaf{ parent, depth, shape } = *other {
+                    if let BVHNode::Leaf { parent, depth, shape } = *other {
                         (self_parent, self_depth, self_shape) == (parent, depth, shape)
                     } else {
                         false
