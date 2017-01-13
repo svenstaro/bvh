@@ -8,8 +8,6 @@ use rand::{thread_rng, Rng};
 // that is updated from the outside, perhaps by passing not only the indices of the changed
 // shapes, but also their new AABBs into optimize().
 
-// TODO Replace macros with (closure form) functions.
-
 impl BVH {
     /// Optimizes the `BVH` by batch-reorganizing updated nodes.
     /// Based on https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs
@@ -89,22 +87,6 @@ impl BVH {
             aabb: AABB,
         }
 
-        macro_rules! get_children_node_data {
-            ($node_index:expr) => ({
-                let node = nodes[$node_index].clone();
-                match node {
-                    BVHNode::Node { child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
-                        Some((NodeData{ index: child_l, aabb: child_l_aabb },
-                            NodeData{ index: child_r, aabb: child_r_aabb }))
-                    }
-                    BVHNode::Leaf { .. } => {
-                        None
-                    }
-                    BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
-                }
-            });
-        }
-
         // TODO Replace with non-embedded function for reuse.
         macro_rules! get_node_aabb {
             ($node_index:expr) => ({
@@ -176,68 +158,84 @@ impl BVH {
         let mut best_rotation: Option<(usize, usize)> = None;
         let mut perform_grandchild_rotation = false;
 
-        macro_rules! consider_rotation {
-            ($a:expr, $b:expr, $sa:expr) => {
-                if $sa < best_surface_area {
-                    best_surface_area = $sa;
-                    best_rotation = Some(($a.index, $b.index));
-                    perform_grandchild_rotation = false;
+        // Get the grandchildren's NodeData
+        let (left_children_nodes, right_children_nodes) = {
+            let get_children_node_data = |node_index: usize| {
+                let node = nodes[node_index].clone();
+                match node {
+                    BVHNode::Node { child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
+                        Some((NodeData{ index: child_l, aabb: child_l_aabb },
+                            NodeData{ index: child_r, aabb: child_r_aabb }))
+                    }
+                    BVHNode::Leaf { .. } => {
+                        None
+                    }
+                    BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
                 }
             };
-            (grandchildren, $a:expr, $b:expr, $sa:expr) => {
-                if $sa < best_surface_area {
-                    best_surface_area = $sa;
-                    best_rotation = Some(($a.index, $b.index));
-                    perform_grandchild_rotation = true;
+
+            // Get indices and AABBs of all grandchildren
+            let left_children_nodes = {
+                let node_data: NodeData = child_l;
+                let index = node_data.index;
+                get_children_node_data(index)
+            };
+            let right_children_nodes = {
+                let node_data: NodeData = child_r;
+                let index = node_data.index;
+                get_children_node_data(index)
+            };
+            (left_children_nodes, right_children_nodes)
+        };
+
+        // Consider all the possible rotations, choose the one with the lowest SAH cost
+        {
+            let mut consider_rotation = |a: NodeData, b: NodeData, sa: f32, grandchildren: bool| {
+                if sa < best_surface_area {
+                    best_surface_area = sa;
+                    best_rotation = Some((a.index, b.index));
+                    perform_grandchild_rotation = grandchildren;
                 }
             };
-        }
 
-        // Get indices and AABBs of all grandchildren
-        let left_children_nodes = {
-            let node_data: NodeData = child_l;
-            let index = node_data.index;
-            get_children_node_data!(index)
-        };
-        let right_children_nodes = {
-            let node_data: NodeData = child_r;
-            let index = node_data.index;
-            get_children_node_data!(index)
-        };
-
-        // Child to grandchild rotations
-        if let Some((child_rl, child_rr)) = right_children_nodes {
-            consider_rotation!(child_l,
-                               child_rl,
-                               child_rl.aabb.surface_area() +
-                               child_l.aabb.join(&child_rr.aabb).surface_area());
-            consider_rotation!(child_l,
-                               child_rr,
-                               child_rr.aabb.surface_area() +
-                               child_l.aabb.join(&child_rl.aabb).surface_area());
-        }
-        if let Some((child_ll, child_lr)) = left_children_nodes {
-            consider_rotation!(child_r,
-                               child_ll,
-                               child_ll.aabb.surface_area() +
-                               child_r.aabb.join(&child_lr.aabb).surface_area());
-            consider_rotation!(child_r,
-                               child_lr,
-                               child_lr.aabb.surface_area() +
-                               child_r.aabb.join(&child_ll.aabb).surface_area());
-
-            // Grandchild to grandchild rotations
+            // Child to grandchild rotations
             if let Some((child_rl, child_rr)) = right_children_nodes {
-                consider_rotation!(grandchildren,
-                                   child_ll,
-                                   child_rl,
-                                   child_rl.aabb.join(&child_lr.aabb).surface_area() +
-                                   child_ll.aabb.join(&child_rr.aabb).surface_area());
-                consider_rotation!(grandchildren,
-                                   child_ll,
-                                   child_rr,
-                                   child_ll.aabb.join(&child_rl.aabb).surface_area() +
-                                   child_lr.aabb.join(&child_rr.aabb).surface_area());
+                consider_rotation(child_l,
+                                  child_rl,
+                                  child_rl.aabb.surface_area() +
+                                  child_l.aabb.join(&child_rr.aabb).surface_area(),
+                                  false);
+                consider_rotation(child_l,
+                                  child_rr,
+                                  child_rr.aabb.surface_area() +
+                                  child_l.aabb.join(&child_rl.aabb).surface_area(),
+                                  false);
+            }
+            if let Some((child_ll, child_lr)) = left_children_nodes {
+                consider_rotation(child_r,
+                                  child_ll,
+                                  child_ll.aabb.surface_area() +
+                                  child_r.aabb.join(&child_lr.aabb).surface_area(),
+                                  false);
+                consider_rotation(child_r,
+                                  child_lr,
+                                  child_lr.aabb.surface_area() +
+                                  child_r.aabb.join(&child_ll.aabb).surface_area(),
+                                  false);
+
+                // Grandchild to grandchild rotations
+                if let Some((child_rl, child_rr)) = right_children_nodes {
+                    consider_rotation(child_ll,
+                                      child_rl,
+                                      child_rl.aabb.join(&child_lr.aabb).surface_area() +
+                                      child_ll.aabb.join(&child_rr.aabb).surface_area(),
+                                      true);
+                    consider_rotation(child_ll,
+                                      child_rr,
+                                      child_ll.aabb.join(&child_rl.aabb).surface_area() +
+                                      child_lr.aabb.join(&child_rr.aabb).surface_area(),
+                                      true);
+                }
             }
         }
 
