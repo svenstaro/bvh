@@ -410,17 +410,49 @@ impl BVH {
 
 #[cfg(test)]
 pub mod tests {
-    use bvh::BVH;
+    use bvh::{BVH, BVHNode};
     use std::collections::HashSet;
     use testbase::build_some_bh;
+
+    impl PartialEq for BVHNode {
+        // TODO Consider also comparing AABBs
+        fn eq(&self, other: &BVHNode) -> bool {
+            match *self {
+                BVHNode::Node{ parent, depth, child_l, child_r, .. } => {
+                    let (self_parent, self_depth, self_child_l, self_child_r) = (parent, depth, child_l, child_r);
+                    if let BVHNode::Node{ parent, depth, child_l, child_r, .. } = *other {
+                        (self_parent, self_depth, self_child_l, self_child_r) == (parent, depth, child_l, child_r)
+                    } else {
+                        false
+                    }
+                }
+                BVHNode::Leaf { parent, depth, shape } => {
+                    let (self_parent, self_depth, self_shape) = (parent, depth, shape);
+                    if let BVHNode::Leaf{ parent, depth, shape } = *other {
+                        (self_parent, self_depth, self_shape) == (parent, depth, shape)
+                    } else {
+                        false
+                    }
+                }
+                BVHNode::Dummy => panic!("Dummy node found during BVH optimization test!"),
+            }
+        }
+    }
 
     #[test]
     /// Tests if the optimize function tries to change a fresh BVH even though it shouldn't
     fn test_optimizing_new_bvh() {
         let (mut shapes, mut bvh) = build_some_bh::<BVH>();
 
+        let original_nodes = bvh.nodes.clone();
+
         let refit_shape_indices: HashSet<usize> = (0..shapes.len()).collect();
         bvh.optimize(&refit_shape_indices, &mut shapes);
+
+        let optimized_nodes = bvh.nodes.clone();
+        for i in 0..optimized_nodes.len() {
+            assert_eq!(optimized_nodes[i], original_nodes[i]);
+        }
     }
 
     // TODO Add tests for:
