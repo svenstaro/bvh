@@ -7,6 +7,8 @@ use std::collections::HashSet;
 // that is updated from the outside, perhaps by passing not only the indices of the changed
 // shapes, but also their new AABBs into optimize().
 
+// TODO Replace macros with (closure form) functions.
+
 impl BVH {
     /// Optimizes the `BVH` by batch-reorganizing updated nodes.
     /// Based on https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs
@@ -102,6 +104,7 @@ impl BVH {
             });
         }
 
+        // TODO Replace with non-embedded function for reuse.
         macro_rules! get_node_aabb {
             ($node_index:expr) => ({
                 let node = &nodes[$node_index];
@@ -170,12 +173,21 @@ impl BVH {
         // Stores the Rotation that would result in the surface area best_surface_area,
         // thus being the favored rotation that will be executed after considering all rotations.
         let mut best_rotation: Option<(usize, usize)> = None;
+        let mut perform_grandchild_rotation = false;
 
         macro_rules! consider_rotation {
             ($a:expr, $b:expr, $sa:expr) => {
                 if $sa < best_surface_area {
                     best_surface_area = $sa;
                     best_rotation = Some(($a.index, $b.index));
+                    perform_grandchild_rotation = false;
+                }
+            };
+            (grandchildren, $a:expr, $b:expr, $sa:expr) => {
+                if $sa < best_surface_area {
+                    best_surface_area = $sa;
+                    best_rotation = Some(($a.index, $b.index));
+                    perform_grandchild_rotation = true;
                 }
             };
         }
@@ -215,11 +227,13 @@ impl BVH {
 
             // Grandchild to grandchild rotations
             if let Some((child_rl, child_rr)) = right_children_nodes {
-                consider_rotation!(child_ll,
+                consider_rotation!(grandchildren,
+                                   child_ll,
                                    child_rl,
                                    child_rl.aabb.join(&child_lr.aabb).surface_area() +
                                    child_ll.aabb.join(&child_rr.aabb).surface_area());
-                consider_rotation!(child_ll,
+                consider_rotation!(grandchildren,
+                                   child_ll,
                                    child_rr,
                                    child_ll.aabb.join(&child_rl.aabb).surface_area() +
                                    child_lr.aabb.join(&child_rr.aabb).surface_area());
@@ -233,9 +247,26 @@ impl BVH {
         };
 
         if let Some(rotation) = best_rotation {
-            BVH::rotate(nodes, rotation.0, rotation.1);
+            BVH::rotate(nodes, rotation.0, rotation.1, shapes);
 
-            // TODO Update all changed node AABBs
+            if perform_grandchild_rotation {
+                // Update this node's AABBs (child_l_aabb, child_r_aabb)
+                // according to the children nodes' AABBs.
+
+                // The AABBs of the children have changed, so we need to get the new ones.
+                // The children are still the same though, so we can use the indices we already have.
+                let new_child_l_aabb = get_node_aabb!(child_l.index);
+                let new_child_r_aabb = get_node_aabb!(child_r.index);
+
+                let mut node = &mut nodes[node_index];
+                match node {
+                    &mut BVHNode::Node { ref mut child_l_aabb, ref mut child_r_aabb, .. } => {
+                        *child_l_aabb = new_child_l_aabb;
+                        *child_r_aabb = new_child_r_aabb;
+                    }
+                    _ => unreachable!(),
+                }
+            }
 
             // Return parent node's index for upcoming refitting,
             // since this node just changed its AABB
@@ -261,7 +292,8 @@ impl BVH {
     }
 
     /// Switch two nodes by rewiring the involved indices (not by moving them in the nodes slice).
-    fn rotate(nodes: &mut Vec<BVHNode>, node_a_index: usize, node_b_index: usize) {
+    /// Also updates the AABBs of the parents.
+    fn rotate<Shape: BHShape>(nodes: &mut Vec<BVHNode>, node_a_index: usize, node_b_index: usize, shapes: &[Shape]) {
         // This function is not defined with a self parameter to make it easier to call
         // without running into borrow checker issues.
         macro_rules! should_not_happen {
@@ -302,19 +334,45 @@ impl BVH {
         let node_b_is_left_child = get_is_left_child(nodes, node_b_index, node_b_parent_index);
 
         #[allow(dead_code)] // The compiler falsely detects dead code here
-        fn connect_nodes(nodes: &mut Vec<BVHNode>,
-                         child_index: usize,
-                         parent_index: usize,
-                         left_child: bool) {
-            // Set parent's child and get its depth
+        fn connect_nodes<Shape: BHShape>(nodes: &mut Vec<BVHNode>,
+                                         child_index: usize,
+                                         parent_index: usize,
+                                         left_child: bool,
+                                         shapes: &[Shape]) {
+            // TODO Replace with non-embedded function for reuse.
+            macro_rules! get_node_aabb {
+                 ($node_index:expr) => ({
+                     let node = &nodes[$node_index];
+                     match *node {
+                         BVHNode::Node { child_l_aabb, child_r_aabb, .. } => {
+                             child_l_aabb.join(&child_r_aabb)
+                         }
+                         BVHNode::Leaf { shape, .. } => {
+                             shapes[shape].aabb()
+                         }
+                         BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
+                     }
+                 });
+             }
+
+            let child_aabb = get_node_aabb!(child_index);
+
+            // Set parent's child and child_aabb; and get its depth
             let parent_depth = {
                 let mut parent = &mut nodes[parent_index];
                 match parent {
-                    &mut BVHNode::Node { ref mut child_l, ref mut child_r, depth, .. } => {
+                    &mut BVHNode::Node { ref mut child_l,
+                                         ref mut child_r,
+                                         ref mut child_l_aabb,
+                                         ref mut child_r_aabb,
+                                         depth,
+                                         .. } => {
                         if left_child {
                             *child_l = child_index;
+                            *child_l_aabb = child_aabb;
                         } else {
                             *child_r = child_index;
+                            *child_r_aabb = child_aabb;
                         }
                         depth
                     }
@@ -340,11 +398,13 @@ impl BVH {
         connect_nodes(nodes,
                       node_a_index,
                       node_b_parent_index,
-                      node_b_is_left_child);
+                      node_b_is_left_child,
+                      shapes);
         connect_nodes(nodes,
                       node_b_index,
                       node_a_parent_index,
-                      node_a_is_left_child);
+                      node_a_is_left_child,
+                      shapes);
     }
 }
 
