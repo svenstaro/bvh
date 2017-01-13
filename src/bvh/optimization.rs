@@ -470,6 +470,8 @@ pub mod tests {
 
     // TODO Add tests for:
     // * Correct (as in error-free) BVH after optimizing
+    // * Compare a BVH with updated shapes with a fresh BVH made with the same shapes:
+    //   * A BVH with two near and one far shape. Move one of the two close to the far one.
 
     // TODO Add benchmarks for:
     // * Optimizing an optimal bvh
