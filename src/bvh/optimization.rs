@@ -87,22 +87,6 @@ impl BVH {
             aabb: AABB,
         }
 
-        // TODO Replace with non-embedded function for reuse.
-        macro_rules! get_node_aabb {
-            ($node_index:expr) => ({
-                let node = &nodes[$node_index];
-                match *node {
-                    BVHNode::Node { child_l_aabb, child_r_aabb, .. } => {
-                        child_l_aabb.join(&child_r_aabb)
-                    }
-                    BVHNode::Leaf { shape, .. } => {
-                        shapes[shape].aabb()
-                    }
-                    BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
-                }
-            });
-        }
-
         // If this node is not a grandparent, update the AABB,
         // queue the parent for refitting, and bail out.
         // If it is a grandparent, calculate the current best_surface_area.
@@ -133,8 +117,8 @@ impl BVH {
                 // Recalculate AABBs for the children since at least one of them changed.
                 // Don't update the AABBs yet because they're still subject to change
                 // during potential upcoming rotations.
-                let aabb_l = get_node_aabb!(child_l);
-                let aabb_r = get_node_aabb!(child_r);
+                let aabb_l = BVH::get_node_aabb(&nodes[child_l].clone(), shapes);
+                let aabb_r = BVH::get_node_aabb(&nodes[child_r].clone(), shapes);
 
                 parent_index = parent;
                 best_surface_area = child_l_aabb.surface_area() + child_r_aabb.surface_area();
@@ -254,8 +238,8 @@ impl BVH {
 
                 // The AABBs of the children have changed, so we need to get the new ones.
                 // The children are still the same though, so we can use the indices we already have.
-                let new_child_l_aabb = get_node_aabb!(child_l.index);
-                let new_child_r_aabb = get_node_aabb!(child_r.index);
+                let new_child_l_aabb = BVH::get_node_aabb(&nodes[child_l.index].clone(), shapes);
+                let new_child_r_aabb = BVH::get_node_aabb(&nodes[child_r.index].clone(), shapes);
 
                 let mut node = &mut nodes[node_index];
                 match node {
@@ -350,23 +334,7 @@ impl BVH {
                                          parent_index: usize,
                                          left_child: bool,
                                          shapes: &[Shape]) {
-            // TODO Replace with non-embedded function for reuse.
-            macro_rules! get_node_aabb {
-                 ($node_index:expr) => ({
-                     let node = &nodes[$node_index];
-                     match *node {
-                         BVHNode::Node { child_l_aabb, child_r_aabb, .. } => {
-                             child_l_aabb.join(&child_r_aabb)
-                         }
-                         BVHNode::Leaf { shape, .. } => {
-                             shapes[shape].aabb()
-                         }
-                         BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
-                     }
-                 });
-             }
-
-            let child_aabb = get_node_aabb!(child_index);
+            let child_aabb = BVH::get_node_aabb(&nodes[child_index].clone(), shapes);
 
             // Set parent's child and child_aabb; and get its depth
             let parent_depth = {
@@ -417,6 +385,21 @@ impl BVH {
                       node_a_is_left_child,
                       shapes);
     }
+
+    /// Gets the `AABB` for a `BVHNode`.
+    /// Returns the shape's `AABB` for leaves, and the joined `AABB` of
+    /// the two children's `AABB`s for non-leaves.
+    fn get_node_aabb<Shape: BHShape>(node: &BVHNode, shapes: &[Shape]) -> AABB {
+         match *node {
+             BVHNode::Node { child_l_aabb, child_r_aabb, .. } => {
+                 child_l_aabb.join(&child_r_aabb)
+             }
+             BVHNode::Leaf { shape, .. } => {
+                 shapes[shape].aabb()
+             }
+             BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
+         }
+     }
 }
 
 #[cfg(test)]
