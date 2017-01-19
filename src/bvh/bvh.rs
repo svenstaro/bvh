@@ -233,14 +233,15 @@ impl BVHNode {
     /// [`BVH`]: struct.BVH.html
     /// [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
     ///
-    pub fn traverse_recursive(&self, nodes: &Vec<BVHNode>, ray: &Ray, indices: &mut Vec<usize>) {
-        match *self {
+    pub fn traverse_recursive(nodes: &Vec<BVHNode>, node_index: usize, ray: &Ray, indices: &mut Vec<usize>) {
+        let node = &nodes[node_index];
+        match *node {
             BVHNode::Node { ref child_l_aabb, child_l, ref child_r_aabb, child_r, .. } => {
                 if ray.intersects_aabb(child_l_aabb) {
-                    nodes[child_l].traverse_recursive(nodes, ray, indices);
+                    BVHNode::traverse_recursive(nodes, child_l, ray, indices);
                 }
                 if ray.intersects_aabb(child_r_aabb) {
-                    nodes[child_r].traverse_recursive(nodes, ray, indices);
+                    BVHNode::traverse_recursive(nodes, child_r, ray, indices);
                 }
             }
             BVHNode::Leaf { shape, .. } => {
@@ -363,7 +364,7 @@ impl BoundingHierarchy for BVH {
     /// ```
     fn traverse<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
         let mut indices = Vec::new();
-        self.nodes[0].traverse_recursive(&self.nodes, ray, &mut indices);
+        BVHNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
         let mut hit_shapes = Vec::new();
         for index in &indices {
             let shape = &shapes[*index];
