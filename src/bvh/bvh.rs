@@ -368,9 +368,7 @@ impl BoundingHierarchy for BVH {
         let mut hit_shapes = Vec::new();
         for index in &indices {
             let shape = &shapes[*index];
-            // if ray.intersects_aabb(&shape.aabb()) {
             hit_shapes.push(shape);
-            // }
         }
         hit_shapes
     }
