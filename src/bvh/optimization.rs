@@ -32,7 +32,6 @@ impl BVH {
                 let depth = match self.nodes[*refit_node_index] {
                     BVHNode::Node { depth, .. } => depth,
                     BVHNode::Leaf { depth, .. } => depth,
-                    BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
                 };
 
                 if depth > max_depth {
@@ -134,7 +133,6 @@ impl BVH {
             BVHNode::Leaf { parent, .. } => {
                 return Some(parent);
             }
-            BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
         };
 
         // Stores the Rotation that would result in the surface area best_surface_area,
@@ -148,13 +146,16 @@ impl BVH {
                 let node = nodes[node_index].clone();
                 match node {
                     BVHNode::Node { child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
-                        Some((NodeData{ index: child_l, aabb: child_l_aabb },
-                            NodeData{ index: child_r, aabb: child_r_aabb }))
+                        Some((NodeData {
+                                  index: child_l,
+                                  aabb: child_l_aabb,
+                              },
+                              NodeData {
+                                  index: child_r,
+                                  aabb: child_r_aabb,
+                              }))
                     }
-                    BVHNode::Leaf { .. } => {
-                        None
-                    }
-                    BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
+                    BVHNode::Leaf { .. } => None,
                 }
             };
 
@@ -174,13 +175,14 @@ impl BVH {
 
         // Consider all the possible rotations, choose the one with the lowest SAH cost
         {
-            let mut consider_rotation = |a: NodeData, b: NodeData, sa: f32, grandchildren: bool| {
-                if sa < best_surface_area {
-                    best_surface_area = sa;
-                    best_rotation = Some((a.index, b.index));
-                    perform_grandchild_rotation = grandchildren;
-                }
-            };
+            let mut consider_rotation =
+                |a: NodeData, b: NodeData, sa: f32, grandchildren: bool| {
+                    if sa < best_surface_area {
+                        best_surface_area = sa;
+                        best_rotation = Some((a.index, b.index));
+                        perform_grandchild_rotation = grandchildren;
+                    }
+                };
 
             // Child to grandchild rotations
             if let Some((child_rl, child_rr)) = right_children_nodes {
@@ -303,7 +305,6 @@ impl BVH {
             match *node {
                 BVHNode::Node { parent, .. } |
                 BVHNode::Leaf { parent, .. } => parent,
-                _ => should_not_happen!(),
             }
         }
 
@@ -368,7 +369,6 @@ impl BVH {
                         *parent = parent_index;
                         *depth = parent_depth + 1;
                     }
-                    _ => should_not_happen!(),
                 };
             }
         }
@@ -390,16 +390,11 @@ impl BVH {
     /// Returns the shape's `AABB` for leaves, and the joined `AABB` of
     /// the two children's `AABB`s for non-leaves.
     fn get_node_aabb<Shape: BHShape>(node: &BVHNode, shapes: &[Shape]) -> AABB {
-         match *node {
-             BVHNode::Node { child_l_aabb, child_r_aabb, .. } => {
-                 child_l_aabb.join(&child_r_aabb)
-             }
-             BVHNode::Leaf { shape, .. } => {
-                 shapes[shape].aabb()
-             }
-             BVHNode::Dummy => panic!("Dummy node found during BVH optimization!"),
-         }
-     }
+        match *node {
+            BVHNode::Node { child_l_aabb, child_r_aabb, .. } => child_l_aabb.join(&child_r_aabb),
+            BVHNode::Leaf { shape, .. } => shapes[shape].aabb(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -430,7 +425,6 @@ pub mod tests {
                         false
                     }
                 }
-                BVHNode::Dummy => panic!("Dummy node found during BVH optimization test!"),
             }
         }
     }

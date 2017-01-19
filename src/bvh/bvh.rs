@@ -53,11 +53,17 @@ pub enum BVHNode {
         /// Right subtree.
         child_r: usize,
     },
-    /// Dummy node for later replacement
-    Dummy,
 }
 
 impl BVHNode {
+    fn create_dummy() -> BVHNode {
+        BVHNode::Leaf {
+            parent: 0,
+            depth: 0,
+            shape: 0,
+        }
+    }
+
     /// Builds a [`BVHNode`] recursively using SAH partitioning.
     /// Returns the index of the node in the nodes vector.
     ///
@@ -204,7 +210,7 @@ impl BVHNode {
 
         let node_index = nodes.len();
 
-        nodes.push(BVHNode::Dummy);
+        nodes.push(BVHNode::create_dummy());
 
         let child_l = BVHNode::build(shapes, child_l_indices, nodes, node_index, depth + 1);
         let child_r = BVHNode::build(shapes, child_r_indices, nodes, node_index, depth + 1);
@@ -238,9 +244,6 @@ impl BVHNode {
             BVHNode::Leaf { shape, .. } => {
                 println!("{}shape\t{:?}", padding, shape);
             }
-            BVHNode::Dummy => {
-                println!("{}dummy node!", padding);
-            }
         }
     }
 
@@ -262,9 +265,6 @@ impl BVHNode {
             }
             BVHNode::Leaf { shape, .. } => {
                 indices.push(shape);
-            }
-            BVHNode::Dummy => {
-                panic!("Dummy node found during BVH traversal!");
             }
         }
     }

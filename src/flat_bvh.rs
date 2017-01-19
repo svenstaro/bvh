@@ -103,8 +103,6 @@ impl BVHNode {
 
                 next_shape
             }
-
-            BVHNode::Dummy => panic!("Found dummy node while flattening BVH."),
         }
     }
 }
