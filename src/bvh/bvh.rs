@@ -27,7 +27,7 @@ pub enum BVHNode {
         /// The node's parent.
         parent: usize,
 
-        /// The node's depth
+        /// The node's depth.
         depth: u32,
 
         /// The shape contained in this leaf.
@@ -38,7 +38,7 @@ pub enum BVHNode {
         /// The node's parent.
         parent: usize,
 
-        /// The node's depth
+        /// The node's depth.
         depth: u32,
 
         /// The convex hull of the shapes' `AABB`s in child_l.
