@@ -227,25 +227,6 @@ impl BVHNode {
         node_index
     }
 
-    /// Prints a textual representation of the recursive [`BVH`] structure.
-    ///
-    /// [`BVH`]: struct.BVH.html
-    ///
-    fn pretty_print(&self, nodes: &Vec<BVHNode>, depth: usize) {
-        let padding: String = repeat(" ").take(depth).collect();
-        match *self {
-            BVHNode::Node { child_l, child_r, .. } => {
-                println!("{}child_l", padding);
-                nodes[child_l].pretty_print(nodes, depth + 1);
-                println!("{}child_r", padding);
-                nodes[child_r].pretty_print(nodes, depth + 1);
-            }
-            BVHNode::Leaf { shape, .. } => {
-                println!("{}shape\t{:?}", padding, shape);
-            }
-        }
-    }
-
     /// Traverses the [`BVH`] recursively and insterts shapes which are hit with a
     /// high probability by `ray` into the [`Vec`] `indices`.
     ///
@@ -317,6 +298,23 @@ impl BVH {
         BVHNode::build(shapes, indices, &mut nodes, 0, 0);
         BVH { nodes: nodes }
     }
+
+    fn pretty_print(&self, node_index: usize) {
+        let node = &self.nodes[node_index];
+        match *node {
+            BVHNode::Node { child_l, child_r, depth, .. } => {
+                let padding: String = repeat(" ").take(depth as usize).collect();
+                println!("{}child_l", padding);
+                self.pretty_print(child_l);
+                println!("{}child_r", padding);
+                self.pretty_print(child_r);
+            }
+            BVHNode::Leaf { shape, depth, .. } => {
+                let padding: String = repeat(" ").take(depth as usize).collect();
+                println!("{}shape\t{:?}", padding, shape);
+            }
+        }
+    }
 }
 
 impl BoundingHierarchy for BVH {
@@ -381,7 +379,7 @@ impl BoundingHierarchy for BVH {
     /// [`BVH`]: struct.BVH.html
     ///
     fn pretty_print(&self) {
-        self.nodes[0].pretty_print(&self.nodes, 0);
+        self.pretty_print(0);
     }
 }
 
