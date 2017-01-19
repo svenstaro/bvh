@@ -146,15 +146,14 @@ impl BVHNode {
         if split_axis_size < EPSILON {
             // Spread the remaining shapes evenly across buckets,
             // instead of using a heuristic
-            let mut bucket_num = 0;
-            for idx in &indices {
+            for (counter, idx) in (&indices).iter().enumerate() {
                 let shape = &shapes[*idx];
                 let shape_aabb = shape.aabb();
 
+                let bucket_num = counter % NUM_BUCKETS;
+
                 buckets[bucket_num].add_aabb(&shape_aabb);
                 bucket_assignments[bucket_num].push(*idx);
-
-                bucket_num = (bucket_num + 1) % NUM_BUCKETS;
             }
         } else {
             // Assign each shape to a bucket
