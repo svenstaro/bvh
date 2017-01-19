@@ -388,7 +388,6 @@ pub mod tests {
     use testbase::{build_some_bh, traverse_some_bh, build_1200_triangles_bh,
                    build_12k_triangles_bh, build_120k_triangles_bh, intersect_1200_triangles_bh,
                    intersect_12k_triangles_bh, intersect_120k_triangles_bh};
-    use std::collections::HashSet;
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
