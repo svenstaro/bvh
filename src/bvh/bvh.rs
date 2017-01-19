@@ -226,11 +226,12 @@ impl BVHNode {
         node_index
     }
 
-    /// Traverses the [`BVH`] recursively and insterts shapes which are hit with a
-    /// high probability by `ray` into the [`Vec`] `indices`.
+    /// Traverses the [`BVH`] recursively and returns all shapes whose [`AABB`] is
+    /// intersected by the given [`Ray`].
     ///
+    /// [`AABB`]: ../aabb/struct.AABB.html
     /// [`BVH`]: struct.BVH.html
-    /// [`Vec`]: https://doc.rust-lang.org/std/vec/struct.Vec.html
+    /// [`Ray`]: ../ray/struct.Ray.html
     ///
     pub fn traverse_recursive(nodes: &Vec<BVHNode>, node_index: usize, ray: &Ray, indices: &mut Vec<usize>) {
         let node = &nodes[node_index];
