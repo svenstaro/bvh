@@ -1,7 +1,7 @@
-//! This module defines a [`BVH`] building procedure as well as a [`BVH`] flattening procedure
-//! so that the recursive structure can be easily used in compute shaders.
+//! This module defines [`BVH`] and [`BVHNode`] and functions for building and traversing it.
 //!
 //! [`BVH`]: struct.BVH.html
+//! [`BVHNode`]: struct.BVHNode.html
 //!
 
 use EPSILON;
@@ -11,11 +11,10 @@ use ray::Ray;
 use std::f32;
 use std::iter::repeat;
 
-/// Enum which describes the union type of a node in a [`BVH`].
-/// This structure does not allow for storing a root node's [`AABB`]. Therefore rays
-/// which do not hit the root [`AABB`] perform two [`AABB`] tests (left/right) instead of one.
-/// On the other hand this structure decreases the total number of indirections when traversing
-/// the BVH. Only those nodes are accessed, which are definetely hit.
+/// The BVHNode enum that describes a node in a [`BVH`].
+/// It's either a leaf node and references a shape (by holding its index)
+/// or a regular node that has two children nodes.
+/// The non-leaf node stores the [`AABB`]s of its children.
 ///
 /// [`AABB`]: ../aabb/struct.AABB.html
 /// [`BVH`]: struct.BVH.html
@@ -251,7 +250,7 @@ impl BVHNode {
     }
 }
 
-/// The [`BVH`] data structure. Only contains the root node of the [`BVH`] tree.
+/// The [`BVH`] data structure. Contains the list of [`BVHNode`]s.
 ///
 /// [`BVH`]: struct.BVH.html
 ///
