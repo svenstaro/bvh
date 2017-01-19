@@ -44,13 +44,13 @@ pub enum BVHNode {
         /// The convex hull of the shapes' `AABB`s in child_l.
         child_l_aabb: AABB,
 
-        /// Left subtree.
+        /// Index of the left subtree's root node.
         child_l: usize,
 
         /// The convex hull of the shapes' `AABB`s in child_r.
         child_r_aabb: AABB,
 
-        /// Right subtree.
+        /// Index of the right subtree's root node.
         child_r: usize,
     },
 }
