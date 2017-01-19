@@ -273,7 +273,6 @@ impl BVH {
     /// ```
     /// use bvh::aabb::{AABB, Bounded};
     /// use bvh::bvh::{BVH, BHShape};
-    /// use
     /// use bvh::nalgebra::{Point3, Vector3};
     /// # impl BHShape for AABB {
     /// #     fn set_bh_node_index(&mut self, index: usize) { }
