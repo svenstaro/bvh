@@ -33,7 +33,7 @@ impl BVH {
         // with the highest depth (sweep nodes) and try to rotate them all
         while refit_node_indices.len() > 0 {
             let mut max_depth = 0;
-            let mut sweep_node_indices: Vec<usize> = Vec::new();
+            let mut sweep_node_indices = Vec::new();
 
             // Find max_depth and sweep_node_indices in one iteration
             for refit_node_index in refit_node_indices.iter() {
