@@ -106,6 +106,7 @@ impl BVH {
                                 *child_l_aabb = shapes[shape_l_index].aabb();
                                 *child_r_aabb = shapes[shape_r_index].aabb();
                             }
+                            // We know that node must be a BVHNode::Node at this point
                             _ => unreachable!(),
                         }
 
@@ -249,6 +250,7 @@ impl BVH {
                         *child_l_aabb = new_child_l_aabb;
                         *child_r_aabb = new_child_r_aabb;
                     }
+                    // We know that node must be a BVHNode::Node at this point
                     _ => unreachable!(),
                 }
             }
@@ -265,6 +267,7 @@ impl BVH {
                     *child_l_aabb = child_l.aabb;
                     *child_r_aabb = child_r.aabb;
                 }
+                // We know that node must be a BVHNode::Node at this point
                 _ => unreachable!(),
             }
 
