@@ -27,10 +27,12 @@ pub struct UnitBox {
     pub id: i32,
     pub pos: Point3<f32>,
     node_index: usize,
-    pub has_good_bh_position: bool, // If the XBox's node in the BVH gets moved, we panic if this is true
+    // If the XBox's node in the BVH gets moved, we panic if this is true.
+    // For testing bvh optimization.
+    pub has_good_bh_position: bool,
 }
 
-/// `UnitBox`'s `AABB`s are unit `AABB`s centered on the given x-position.
+/// `UnitBox`'s `AABB`s are unit `AABB`s centered on the box's position.
 impl Bounded for UnitBox {
     fn aabb(&self) -> AABB {
         let min = self.pos + Vector3::new(-0.5, -0.5, -0.5);
