@@ -46,7 +46,7 @@ impl BVH {
             // Try to find a useful tree rotation with all nodes previously found
             for sweep_node_index in &sweep_node_indices {
                 // This node does not need to be checked again
-                refit_node_indices.remove(&sweep_node_index);
+                refit_node_indices.remove(sweep_node_index);
 
                 // TODO There might be multithreading potential here
                 let new_refit_node_index = self.try_rotate(*sweep_node_index, shapes);
