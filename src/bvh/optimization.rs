@@ -98,7 +98,7 @@ impl BVH {
         // queue the parent for refitting, and bail out.
         // If it is a grandparent, calculate the current best_surface_area.
         let (child_l, child_r) = match node_clone {
-            BVHNode::Node { parent, child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
+            BVHNode::Node { parent, child_l, child_r, .. } => {
                 if let BVHNode::Leaf { shape, .. } = nodes[child_l] {
                     let shape_l_index = shape;
                     if let BVHNode::Leaf { shape, .. } = nodes[child_r] {
@@ -129,7 +129,7 @@ impl BVH {
                 let aabb_r = BVH::get_node_aabb(&nodes[child_r].clone(), shapes);
 
                 parent_index = parent;
-                best_surface_area = child_l_aabb.surface_area() + child_r_aabb.surface_area();
+                best_surface_area = aabb_l.surface_area() + aabb_r.surface_area();
                 (NodeData {
                      index: child_l,
                      aabb: aabb_l,
