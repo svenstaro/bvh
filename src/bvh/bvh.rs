@@ -292,14 +292,14 @@ impl BVH {
     /// let mut shapes = create_bounded_shapes();
     /// let bvh = BVH::build(&mut shapes);
     /// ```
-    pub fn build<T: BHShape>(shapes: &mut [T]) -> BVH {
+    pub fn build<Shape: BHShape>(shapes: &mut [Shape]) -> BVH {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
         let mut nodes = Vec::new();
         BVHNode::build(shapes, indices, &mut nodes, 0, 0);
         BVH { nodes: nodes }
     }
 
-    fn traverse<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
+    fn traverse<'a, Shape: Bounded>(&'a self, ray: &Ray, shapes: &'a [Shape]) -> Vec<&Shape> {
         let mut indices = Vec::new();
         BVHNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
         let mut hit_shapes = Vec::new();
@@ -329,11 +329,11 @@ impl BVH {
 }
 
 impl BoundingHierarchy for BVH {
-    fn build<T: BHShape>(shapes: &mut [T]) -> BVH {
+    fn build<Shape: BHShape>(shapes: &mut [Shape]) -> BVH {
         BVH::build(shapes)
     }
 
-    fn traverse<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
+    fn traverse<'a, Shape: Bounded>(&'a self, ray: &Ray, shapes: &'a [Shape]) -> Vec<&Shape> {
         self.traverse(ray, shapes)
     }
 

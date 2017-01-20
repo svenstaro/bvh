@@ -47,7 +47,7 @@ pub trait BoundingHierarchy {
     ///
     /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
     ///
-    fn build<T: BHShape>(shapes: &mut [T]) -> Self;
+    fn build<Shape: BHShape>(shapes: &mut [Shape]) -> Self;
 
     /// Traverses the [`BoundingHierarchy`].
     /// Returns a subset of `shapes`, in which the [`AABB`]s of the elements were hit by `ray`.
@@ -89,7 +89,7 @@ pub trait BoundingHierarchy {
     /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
     /// [`AABB`]: ../aabb/struct.AABB.html
     ///
-    fn traverse<'a, T: BHShape>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T>;
+    fn traverse<'a, Shape: BHShape>(&'a self, ray: &Ray, shapes: &'a [Shape]) -> Vec<&Shape>;
 
     /// Prints the [`BoundingHierarchy`] in a tree-like visualization.
     ///
