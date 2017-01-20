@@ -299,6 +299,17 @@ impl BVH {
         BVH { nodes: nodes }
     }
 
+    fn traverse<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
+        let mut indices = Vec::new();
+        BVHNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
+        let mut hit_shapes = Vec::new();
+        for index in &indices {
+            let shape = &shapes[*index];
+            hit_shapes.push(shape);
+        }
+        hit_shapes
+    }
+
     fn pretty_print(&self, node_index: usize) {
         let node = &self.nodes[node_index];
         match *node {
@@ -319,21 +330,11 @@ impl BVH {
 
 impl BoundingHierarchy for BVH {
     fn build<T: BHShape>(shapes: &mut [T]) -> BVH {
-        let indices = (0..shapes.len()).collect::<Vec<usize>>();
-        let mut nodes = Vec::new();
-        BVHNode::build(shapes, indices, &mut nodes, 0, 0);
-        BVH { nodes: nodes }
+        BVH::build(shapes)
     }
 
     fn traverse<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
-        let mut indices = Vec::new();
-        BVHNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
-        let mut hit_shapes = Vec::new();
-        for index in &indices {
-            let shape = &shapes[*index];
-            hit_shapes.push(shape);
-        }
-        hit_shapes
+        self.traverse(ray, shapes)
     }
 
     fn pretty_print(&self) {
