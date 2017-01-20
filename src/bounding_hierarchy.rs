@@ -49,7 +49,7 @@ pub trait BoundingHierarchy {
     ///
     fn build<T: BHShape>(shapes: &mut [T]) -> Self;
 
-    /// Traverses the [`BoundingHierarchy`] recursively.
+    /// Traverses the [`BoundingHierarchy`].
     /// Returns a subset of `shapes`, in which the [`AABB`]s of the elements were hit by `ray`.
     ///
     /// # Examples
