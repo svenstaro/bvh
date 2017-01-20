@@ -1,3 +1,11 @@
+//! This module defines the optimization function for the [`BVH`].
+//! By passing the indices of shapes that have changed, the function determines possible
+//! tree rotations and optimizes the BVH using a SAH.
+//! Based on http://www.cs.utah.edu/~thiago/papers/rotations.pdf
+//!
+//! [`BVH`]: struct.BVH.html
+//!
+
 use bvh::*;
 use bounding_hierarchy::BHShape;
 use aabb::AABB;
