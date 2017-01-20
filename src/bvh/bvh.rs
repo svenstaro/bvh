@@ -325,42 +325,6 @@ impl BoundingHierarchy for BVH {
         BVH { nodes: nodes }
     }
 
-    /// Traverses the tree recursively. Returns a subset of `shapes`, in which the [`AABB`]s
-    /// of the elements were hit by the `ray`.
-    ///
-    /// [`AABB`]: ../aabb/struct.AABB.html
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use bvh::aabb::{AABB, Bounded};
-    /// use bvh::bounding_hierarchy::BoundingHierarchy;
-    /// use bvh::bvh::BVH;
-    /// use bvh::nalgebra::{Point3, Vector3};
-    /// use bvh::ray::Ray;
-    /// # impl BHShape for AABB {
-    /// #     fn set_bh_node_index(&mut self, index: usize) { }
-    /// #     fn bh_node_index(&self) -> usize { 0 }
-    /// # }
-    /// #
-    /// # fn create_bounded_shapes() -> Vec<AABB> {
-    /// #     let mut shapes = Vec::new();
-    /// #     let offset = Vector3::new(1.0, 1.0, 1.0);
-    /// #     for i in 0..1000u32 {
-    /// #         let position = Point3::new(i as f32, i as f32, i as f32);
-    /// #         shapes.push(AABB::with_bounds(position - offset, position + offset));
-    /// #     }
-    /// #     shapes
-    /// # }
-    ///
-    /// let mut shapes = create_bounded_shapes();
-    /// let bvh = BVH::build(&mut shapes);
-    ///
-    /// let origin = Point3::new(0.0,0.0,0.0);
-    /// let direction = Vector3::new(1.0,0.0,0.0);
-    /// let ray = Ray::new(origin, direction);
-    /// let hit_shapes = bvh.traverse(&ray, &shapes);
-    /// ```
     fn traverse<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
         let mut indices = Vec::new();
         BVHNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
@@ -372,10 +336,6 @@ impl BoundingHierarchy for BVH {
         hit_shapes
     }
 
-    /// Prints the [`BVH`] in a tree-like visualization.
-    ///
-    /// [`BVH`]: struct.BVH.html
-    ///
     fn pretty_print(&self) {
         self.pretty_print(0);
     }
