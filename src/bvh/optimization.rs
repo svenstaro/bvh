@@ -412,7 +412,8 @@ impl BVH {
 pub mod tests {
     use bvh::{BVH, BVHNode};
     use std::collections::HashSet;
-    use testbase::build_some_bh;
+    use nalgebra::Point3;
+    use testbase::{build_some_bh, UnitBox};
 
     impl PartialEq for BVHNode {
         // TODO Consider also comparing AABBs
@@ -440,6 +441,50 @@ pub mod tests {
         }
     }
 
+    /// Checks if all children of a node have the correct parent index,
+    /// and that there is no detached subtree.
+    // TODO Consider also testing AABBs
+    // TODO Consider moving into testbase and use more often than after optimization
+    fn assert_correct_bvh(bvh: &BVH) {
+        let nodes = &bvh.nodes;
+        // The counter for all nodes that are (grand)children of the root node
+        let mut node_count = 0usize;
+
+        fn assert_correct_subtree(nodes: &Vec<BVHNode>, index: usize, parent_index: usize, predicted_depth: u32, node_count: &mut usize) {
+            let node_clone = nodes[index].clone();
+            match node_clone {
+                BVHNode::Node{ parent, depth, child_l, child_r, .. } => {
+                    assert_eq!(parent, parent_index);
+                    assert_eq!(predicted_depth, depth);
+                    *node_count += 1;
+                    assert_correct_subtree(nodes, child_l, index, predicted_depth + 1, node_count);
+                    assert_correct_subtree(nodes, child_r, index, predicted_depth + 1, node_count);
+                }
+                BVHNode::Leaf{ parent, depth, .. } => {
+                    assert_eq!(parent, parent_index);
+                    assert_eq!(predicted_depth, depth);
+                    *node_count += 1;
+                }
+            }
+        }
+
+        assert_correct_subtree(nodes, 0, 0, 0, &mut node_count);
+
+        // Check if all nodes have been counted from the root node.
+        // If this assert fails, it means we have a detached subtree.
+        assert_eq!(node_count, nodes.len());
+    }
+
+    fn update_unit_boxes(shapes: &mut Vec<UnitBox>) -> HashSet<usize> {
+        shapes[0].pos = Point3::new(10.0, 1.0, 0.0);
+        shapes[1].pos = Point3::new(-10.0, -10.0, 10.0);
+        shapes[2].pos = Point3::new(-10.0, 10.0, 10.0);
+        shapes[3].pos = Point3::new(-10.0, 10.0, -10.0);
+        shapes[4].pos = Point3::new(2.0, 2.0, 2.0);
+
+        (0..5).collect()
+    }
+
     #[test]
     /// Tests if the optimize function tries to change a fresh BVH even though it shouldn't
     fn test_optimizing_new_bvh() {
@@ -448,12 +493,24 @@ pub mod tests {
         let original_nodes = bvh.nodes.clone();
 
         let refit_shape_indices: HashSet<usize> = (0..shapes.len()).collect();
-        bvh.optimize(&refit_shape_indices, &mut shapes);
+        bvh.optimize(&refit_shape_indices, &shapes);
 
         let optimized_nodes = bvh.nodes.clone();
         for i in 0..optimized_nodes.len() {
             assert_eq!(optimized_nodes[i], original_nodes[i]);
         }
+    }
+
+    #[test]
+    /// Tests whether or not a BVH is still correct (as in error-free)
+    /// after a few optimization calls
+    fn test_correctness_after_optimize() {
+        let (mut shapes, mut bvh) = build_some_bh::<BVH>();
+
+        let refit_shape_indices = update_unit_boxes(&mut shapes);
+        bvh.optimize(&refit_shape_indices, &shapes);
+
+        assert_correct_bvh(&bvh);
     }
 
     // TODO Add tests for:
