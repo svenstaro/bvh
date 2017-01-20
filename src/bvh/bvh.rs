@@ -299,7 +299,7 @@ impl BVH {
         BVH { nodes: nodes }
     }
 
-    fn traverse<'a, Shape: Bounded>(&'a self, ray: &Ray, shapes: &'a [Shape]) -> Vec<&Shape> {
+    pub fn traverse<'a, Shape: Bounded>(&'a self, ray: &Ray, shapes: &'a [Shape]) -> Vec<&Shape> {
         let mut indices = Vec::new();
         BVHNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
         let mut hit_shapes = Vec::new();
@@ -310,7 +310,7 @@ impl BVH {
         hit_shapes
     }
 
-    fn pretty_print(&self, node_index: usize) {
+    pub fn pretty_print(&self, node_index: usize) {
         let node = &self.nodes[node_index];
         match *node {
             BVHNode::Node { child_l, child_r, depth, .. } => {
