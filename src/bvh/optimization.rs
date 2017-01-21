@@ -454,15 +454,15 @@ pub mod tests {
             let node_clone = nodes[index].clone();
             match node_clone {
                 BVHNode::Node{ parent, depth, child_l, child_r, .. } => {
-                    assert_eq!(parent, parent_index);
-                    assert_eq!(predicted_depth, depth);
+                    assert_eq!(parent, parent_index, "Wrong parent index.");
+                    assert_eq!(predicted_depth, depth, "Wrong depth.");
                     *node_count += 1;
                     assert_correct_subtree(nodes, child_l, index, predicted_depth + 1, node_count);
                     assert_correct_subtree(nodes, child_r, index, predicted_depth + 1, node_count);
                 }
                 BVHNode::Leaf{ parent, depth, .. } => {
-                    assert_eq!(parent, parent_index);
-                    assert_eq!(predicted_depth, depth);
+                    assert_eq!(parent, parent_index, "Wrong parent index (leaf).");
+                    assert_eq!(predicted_depth, depth, "Wrong depth (leaf).");
                     *node_count += 1;
                 }
             }
@@ -472,7 +472,7 @@ pub mod tests {
 
         // Check if all nodes have been counted from the root node.
         // If this assert fails, it means we have a detached subtree.
-        assert_eq!(node_count, nodes.len());
+        assert_eq!(node_count, nodes.len(), "Detached subtree.");
     }
 
     fn update_unit_boxes(shapes: &mut Vec<UnitBox>) -> HashSet<usize> {
