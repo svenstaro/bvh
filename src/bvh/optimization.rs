@@ -371,17 +371,19 @@ impl BVH {
                 }
             };
 
-            // Set child's parent and depth
+            // Set child's parent
             {
                 let mut child = &mut nodes[child_index];
                 match child {
-                    &mut BVHNode::Node { ref mut parent, ref mut depth, .. } |
-                    &mut BVHNode::Leaf { ref mut parent, ref mut depth, .. } => {
+                    &mut BVHNode::Node { ref mut parent, .. } |
+                    &mut BVHNode::Leaf { ref mut parent, .. } => {
                         *parent = parent_index;
-                        *depth = parent_depth + 1;
                     }
                 };
             }
+
+            // Update the node's and the node's descendants' depth values
+            BVH::update_depth_recursively(nodes, child_index, parent_depth + 1);
         }
 
         // Perform the switch
@@ -404,6 +406,27 @@ impl BVH {
         match *node {
             BVHNode::Node { child_l_aabb, child_r_aabb, .. } => child_l_aabb.join(&child_r_aabb),
             BVHNode::Leaf { shape, .. } => shapes[shape].aabb(),
+        }
+    }
+
+    /// Updates the depth of a node, and sets the depth of its descendants accordingly
+    fn update_depth_recursively(nodes: &mut Vec<BVHNode>, node_index: usize, new_depth: u32) {
+        let children = {
+            let node = &mut nodes[node_index];
+            match node {
+                &mut BVHNode::Node { ref mut depth, child_l, child_r, .. } => {
+                    *depth = new_depth;
+                    Some((child_l, child_r))
+                }
+                &mut BVHNode::Leaf { ref mut depth, .. } => {
+                    *depth = new_depth;
+                    None
+                }
+            }
+        };
+        if let Some((child_l, child_r)) = children {
+            BVH::update_depth_recursively(nodes, child_l, new_depth + 1);
+            BVH::update_depth_recursively(nodes, child_r, new_depth + 1);
         }
     }
 }
