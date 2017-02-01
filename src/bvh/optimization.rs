@@ -536,9 +536,67 @@ pub mod tests {
         assert_correct_bvh(&bvh);
     }
 
-    // TODO Add tests for:
-    // * Compare a BVH with updated shapes with a fresh BVH made with the same shapes:
-    //   * A BVH with two near and one far shape. Move one of the two close to the far one.
+    #[test]
+    /// Test whether a simple update on a simple BVH yields the expected optimization result
+    fn test_optimize_simple_update() {
+        let mut shapes = Vec::new();
+
+        shapes.push(UnitBox::new(0, Point3::new(-50.0, 0.0, 0.0)));
+        shapes.push(UnitBox::new(1, Point3::new(-40.0, 0.0, 0.0)));
+        shapes.push(UnitBox::new(2, Point3::new(50.0, 0.0, 0.0)));
+
+        let mut bvh = BVH::build(&mut shapes);
+
+        {
+            let left = &shapes[0];
+            let moving = &shapes[1];
+
+            let nodes = &bvh.nodes;
+
+            match nodes[left.bh_node_index()] {
+                BVHNode::Leaf { parent, .. } => {
+                    let left_parent = parent;
+
+                    match nodes[moving.bh_node_index()] {
+                        BVHNode::Leaf { parent, .. } => {
+                            assert_eq!(parent, left_parent);
+                        }
+                        _ => panic!()
+                    }
+                }
+                _ => panic!()
+            };
+        }
+
+        {
+            let mut moving = &mut shapes[1];
+            moving.pos = Point3::new(40.0, 0.0, 0.0);
+        }
+
+        let mut refit_shape_indices: HashSet<usize> = (1..2).collect();
+        bvh.optimize(&refit_shape_indices, &shapes);
+
+        {
+            let moving = &shapes[1];
+            let right = &shapes[2];
+
+            let nodes = &bvh.nodes;
+
+            match nodes[right.bh_node_index()] {
+                BVHNode::Leaf { parent, .. } => {
+                    let right_parent = parent;
+
+                    match nodes[moving.bh_node_index()] {
+                        BVHNode::Leaf { parent, .. } => {
+                            assert_eq!(parent, right_parent);
+                        }
+                        _ => panic!()
+                    }
+                }
+                _ => panic!()
+            }
+        }
+    }
 
     // TODO Add benchmarks for:
     // * Optimizing an optimal bvh

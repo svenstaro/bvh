@@ -32,6 +32,17 @@ pub struct UnitBox {
     pub has_good_bh_position: bool,
 }
 
+impl UnitBox {
+    pub fn new(id: i32, pos: Point3<f32>) -> UnitBox {
+        UnitBox {
+            id: id,
+            pos: pos,
+            node_index: 0,
+            has_good_bh_position: false,
+        }
+    }
+}
+
 /// `UnitBox`'s `AABB`s are unit `AABB`s centered on the box's position.
 impl Bounded for UnitBox {
     fn aabb(&self) -> AABB {
@@ -62,12 +73,7 @@ pub fn generate_aligned_boxes() -> Vec<UnitBox> {
     // Create 21 boxes along the x-axis
     let mut shapes = Vec::new();
     for x in -10..11 {
-        shapes.push(UnitBox {
-            id: x,
-            pos: Point3::new(x as f32, 0.0, 0.0),
-            node_index: 0,
-            has_good_bh_position: false,
-        });
+        shapes.push(UnitBox::new(x, Point3::new(x as f32, 0.0, 0.0)));
     }
     shapes
 }
