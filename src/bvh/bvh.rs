@@ -359,11 +359,11 @@ impl BVH {
         fn print_node(nodes: &Vec<BVHNode>, node_index: usize) {
             let node = &nodes[node_index];
             match *node {
-                BVHNode::Node { child_l, child_r, depth, .. } => {
+                BVHNode::Node { child_l, child_r, depth, child_l_aabb, child_r_aabb, .. } => {
                     let padding: String = repeat(" ").take(depth as usize).collect();
-                    println!("{}child_l", padding);
+                    println!("{}child_l {:?}", padding, child_l_aabb);
                     print_node(nodes, child_l);
-                    println!("{}child_r", padding);
+                    println!("{}child_r {:?}", padding, child_r_aabb);
                     print_node(nodes, child_r);
                 }
                 BVHNode::Leaf { shape, depth, .. } => {
