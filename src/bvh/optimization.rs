@@ -37,6 +37,34 @@ impl BVHNode {
         }
     }
 
+    fn child_l(&self) -> usize {
+        match self {
+            &BVHNode::Node { child_l, .. } => child_l,
+            _ => panic!(),
+        }
+    }
+
+    fn child_r(&self) -> usize {
+        match self {
+            &BVHNode::Node { child_r, .. } => child_r,
+            _ => panic!(),
+        }
+    }
+
+    fn child_l_aabb(&self) -> AABB {
+        match self {
+            &BVHNode::Node { child_l_aabb, .. } => child_l_aabb,
+            _ => panic!(),
+        }
+    }
+
+    fn child_r_aabb(&self) -> AABB {
+        match self {
+            &BVHNode::Node { child_r_aabb, .. } => child_r_aabb,
+            _ => panic!(),
+        }
+    }
+
     /// Gets the `AABB` for a `BVHNode`.
     /// Returns the shape's `AABB` for leaves, and the joined `AABB` of
     /// the two children's `AABB`s for non-leaves.
@@ -60,6 +88,8 @@ impl BVH {
         let mut refit_node_indices: HashSet<OptimizationIndex> = refit_shape_indices.iter()
             .map(|x| OptimizationIndex::Refit(shapes[*x].bh_node_index()))
             .collect();
+
+        println!("{} nodes for refitting.", refit_node_indices.len());
 
         // As long as we have refit nodes left, take the list of refit nodes
         // with the highest depth (sweep nodes) and try to rotate them all
@@ -88,6 +118,10 @@ impl BVH {
                     sweep_node_indices.push(*refit_node_index);
                 }
             }
+
+            println!("{} sweep nodes, depth {}.",
+                     sweep_node_indices.len(),
+                     max_depth);
 
             // Try to find a useful tree rotation with all nodes previously found
             for sweep_node_index in &sweep_node_indices {
@@ -121,6 +155,7 @@ impl BVH {
                                   node_index: usize,
                                   shapes: &[Shape])
                                   -> Option<OptimizationIndex> {
+        print!("   [{}]\t", node_index);
         let mut nodes = &mut self.nodes;
 
         let node_clone = nodes[node_index].clone();
@@ -158,6 +193,8 @@ impl BVH {
                                                  .. } => {
                                 *child_l_aabb = shapes[shape_l_index].aabb();
                                 *child_r_aabb = shapes[shape_r_index].aabb();
+                                println!("Setting {:?} from {}", child_l_aabb, child_l);
+                                println!("\tand {:?} from {}.", child_r_aabb, child_r);
                             }
                             // We know that node must be a BVHNode::Node at this point
                             _ => unreachable!(),
@@ -184,10 +221,18 @@ impl BVH {
                      aabb: aabb_r,
                  })
             }
-            BVHNode::Leaf { parent, .. } => {
+            BVHNode::Leaf { parent, shape, .. } => {
+                println!("IAmA leaf node. Queueing parent ({}). {:?}.",
+                         parent,
+                         shapes[shape].aabb());
                 return Some(OptimizationIndex::Refit(parent));
             }
         };
+
+        match node_clone {
+            BVHNode::Node { .. } => println!("Trying to rotate."),
+            _ => unreachable!(),
+        }
 
         // Stores the Rotation that would result in the surface area best_surface_area,
         // thus being the favored rotation that will be executed after considering all rotations.
@@ -228,13 +273,13 @@ impl BVH {
 
         // Consider all the possible rotations, choose the one with the lowest SAH cost
         {
-            let mut consider_rotation =
-                |a: NodeData, b: NodeData, sa: f32| {
-                    if sa < best_surface_area {
-                        best_surface_area = sa;
-                        best_rotation = Some((a.index, b.index));
-                    }
-                };
+            let mut consider_rotation = |a: NodeData, b: NodeData, sa: f32| {
+                println!("        SA {} vs. current SA {}.", sa, best_surface_area);
+                if sa < best_surface_area {
+                    best_surface_area = sa;
+                    best_rotation = Some((a.index, b.index));
+                }
+            };
 
             // Child to grandchild rotations
             if let Some((child_rl, child_rr)) = right_children_nodes {
@@ -293,6 +338,8 @@ impl BVH {
                 &mut BVHNode::Node { ref mut child_l_aabb, ref mut child_r_aabb, .. } => {
                     *child_l_aabb = new_child_l_aabb;
                     *child_r_aabb = new_child_r_aabb;
+                    println!("\tSetting {:?} from {}", child_l_aabb, child_l.index);
+                    println!("\tand {:?} from {}.", child_r_aabb, child_r.index);
                 }
                 // We know that node must be a BVHNode::Node at this point
                 _ => unreachable!(),
@@ -300,12 +347,13 @@ impl BVH {
 
             // Return parent node's index for upcoming refitting,
             // since this node just changed its AABB
-            if parent_index > 0 {
+            if node_index > 0 {
                 Some(OptimizationIndex::Refit(parent_index))
             } else {
                 None
             }
         } else {
+            println!("    No useful rotation.");
             // Update this node's AABBs (child_l_aabb, child_r_aabb)
             // according to the children nodes' AABBs.
             let node = &mut nodes[node_index];
@@ -313,6 +361,8 @@ impl BVH {
                 &mut BVHNode::Node { ref mut child_l_aabb, ref mut child_r_aabb, .. } => {
                     *child_l_aabb = child_l.aabb;
                     *child_r_aabb = child_r.aabb;
+                    println!("\tSetting {:?} from {}", child_l_aabb, child_l.index);
+                    println!("\tand {:?} from {}.", child_r_aabb, child_r.index);
                 }
                 // We know that node must be a BVHNode::Node at this point
                 _ => unreachable!(),
@@ -324,7 +374,7 @@ impl BVH {
                 rng.next_f32() < chance
             }
 
-            if parent_index > 0 {
+            if node_index > 0 {
                 // Even with no rotation being useful for this node, a parent node's rotation
                 // could be beneficial, so queue the parent *sometimes*.
                 // (See https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH_Node.cs#L307)
@@ -350,14 +400,11 @@ impl BVH {
                               node_a_index: usize,
                               node_b_index: usize,
                               shapes: &[Shape]) {
+        println!("    ROTATING {} and {}", node_a_index, node_b_index);
 
         // Get parent indices
         let node_a_parent_index = nodes[node_a_index].parent();
         let node_b_parent_index = nodes[node_b_index].parent();
-
-        // Get depths
-        let node_a_depth = nodes[node_a_index].depth();
-        let node_b_depth = nodes[node_b_index].depth();
 
         // Get info about the nodes being a left or right child
         let node_a_is_left_child = BVH::node_is_left_child(nodes, node_a_index);
@@ -416,7 +463,7 @@ impl BVH {
                                      left_child: bool,
                                      shapes: &[Shape]) {
         let child_aabb = nodes[child_index].get_node_aabb(shapes);
-
+        println!("\tConnecting: {} < {}.", child_index, parent_index);
         // Set parent's child and child_aabb; and get its depth
         let parent_depth = {
             let parent = &mut nodes[parent_index];
@@ -434,6 +481,7 @@ impl BVH {
                         *child_r = child_index;
                         *child_r_aabb = child_aabb;
                     }
+                    println!("\t  {}'s new {:?}", parent_index, child_aabb);
                     depth
                 }
                 // Assuming that our BVH is correct, the parent cannot be a leaf
@@ -461,9 +509,9 @@ impl BVH {
 pub mod tests {
     use EPSILON;
     use bvh::{BVH, BVHNode};
-    use aabb::AABB;
+    use aabb::{AABB, Bounded};
     use std::collections::HashSet;
-    use nalgebra::Point3;
+    use nalgebra::{ApproxEq, Point3};
     use testbase::{build_some_bh, UnitBox};
     use bounding_hierarchy::BHShape;
     use std::f32;
@@ -495,9 +543,18 @@ pub mod tests {
     }
 
     fn aabb_is_in_aabb(outer: &AABB, inner: &AABB) -> bool {
-        println!("Checking whether {:?} is in {:?}.", inner, outer);
+        println!("Checking whether");
+        println!("    {:?}", inner);
+        println!("  is in");
+        println!("    {:?}.", outer);
+        println!("");
         outer.approx_contains_eps(&inner.min, EPSILON) &&
         outer.approx_contains_eps(&inner.max, EPSILON)
+    }
+
+    fn assert_aabb_approx_eq(a: &AABB, b: &AABB) {
+        assert_approx_eq_eps!(a.min, b.min, EPSILON);
+        assert_approx_eq_eps!(a.max, b.max, EPSILON);
     }
 
     /// Checks if all children of a node have the correct parent index,
@@ -520,7 +577,9 @@ pub mod tests {
                 &BVHNode::Node { parent, depth, child_l, child_r, child_l_aabb, child_r_aabb } => {
                     assert_eq!(parent, parent_index, "Wrong parent index.");
                     assert_eq!(expected_depth, depth, "Wrong depth.");
+                    print!("[{}<{}] ", child_l, index);
                     assert!(aabb_is_in_aabb(outer_aabb, &child_l_aabb));
+                    print!("[{}<{}] ", child_r, index);
                     assert!(aabb_is_in_aabb(outer_aabb, &child_r_aabb));
                     assert_correct_subtree(nodes,
                                            child_l,
@@ -659,6 +718,235 @@ pub mod tests {
                 _ => panic!(),
             }
         }
+    }
+
+    fn create_predictable_bvh() -> (Vec<UnitBox>, Vec<BVHNode>) {
+        let mut shapes = Vec::new();
+        shapes.push(UnitBox::new(0, Point3::new(0.0, 0.0, 0.0)));
+        shapes.push(UnitBox::new(1, Point3::new(2.0, 0.0, 0.0)));
+        shapes.push(UnitBox::new(2, Point3::new(4.0, 0.0, 0.0)));
+        shapes.push(UnitBox::new(3, Point3::new(6.0, 0.0, 0.0)));
+
+        let mut nodes = Vec::new();
+
+        // Root node
+        nodes.push(BVHNode::Node {
+            parent: 0,
+            depth: 0,
+            child_l_aabb: shapes[0].aabb().join(&shapes[1].aabb()),
+            child_l: 1,
+            child_r_aabb: shapes[2].aabb().join(&shapes[3].aabb()),
+            child_r: 2,
+        });
+
+        // Depth 1 nodes
+        nodes.push(BVHNode::Node {
+            parent: 0,
+            depth: 1,
+            child_l_aabb: shapes[0].aabb(),
+            child_l: 3,
+            child_r_aabb: shapes[1].aabb(),
+            child_r: 4,
+        });
+        nodes.push(BVHNode::Node {
+            parent: 0,
+            depth: 1,
+            child_l_aabb: shapes[2].aabb(),
+            child_l: 5,
+            child_r_aabb: shapes[3].aabb(),
+            child_r: 6,
+        });
+
+        // Depth 2 nodes (leaves)
+        nodes.push(BVHNode::Leaf {
+            parent: 1,
+            depth: 2,
+            shape: 0,
+        });
+        nodes.push(BVHNode::Leaf {
+            parent: 1,
+            depth: 2,
+            shape: 1,
+        });
+        nodes.push(BVHNode::Leaf {
+            parent: 2,
+            depth: 2,
+            shape: 2,
+        });
+        nodes.push(BVHNode::Leaf {
+            parent: 2,
+            depth: 2,
+            shape: 3,
+        });
+
+        (shapes, nodes)
+    }
+
+    #[test]
+    fn test_connect_grandchildren() {
+        let (shapes, mut nodes) = create_predictable_bvh();
+
+        // Switch two nodes
+        BVH::connect_nodes(&mut nodes, 3, 2, true, &shapes);
+        BVH::connect_nodes(&mut nodes, 5, 1, true, &shapes);
+
+        // Check if the resulting tree is as expected
+        assert_eq!(nodes[0].parent(), 0);
+        assert_eq!(nodes[0].child_l(), 1);
+        assert_eq!(nodes[0].child_r(), 2);
+
+        assert_eq!(nodes[1].parent(), 0);
+        assert_eq!(nodes[1].child_l(), 5);
+        assert_eq!(nodes[1].child_r(), 4);
+
+        assert_eq!(nodes[2].parent(), 0);
+        assert_eq!(nodes[2].child_l(), 3);
+        assert_eq!(nodes[2].child_r(), 6);
+
+        assert_eq!(nodes[3].parent(), 2);
+        assert_eq!(nodes[4].parent(), 1);
+        assert_eq!(nodes[5].parent(), 1);
+        assert_eq!(nodes[6].parent(), 2);
+
+        assert_aabb_approx_eq(&nodes[1].child_l_aabb(), &shapes[2].aabb());
+        assert_aabb_approx_eq(&nodes[1].child_r_aabb(), &shapes[1].aabb());
+        assert_aabb_approx_eq(&nodes[2].child_l_aabb(), &shapes[0].aabb());
+        assert_aabb_approx_eq(&nodes[2].child_r_aabb(), &shapes[3].aabb());
+    }
+
+    #[test]
+    fn test_connect_child_grandchild() {
+        let (shapes, mut nodes) = create_predictable_bvh();
+
+        // Switch two nodes
+        BVH::connect_nodes(&mut nodes, 1, 2, true, &shapes);
+        BVH::connect_nodes(&mut nodes, 5, 0, true, &shapes);
+
+        // Check if the resulting tree is as expected
+        assert_eq!(nodes[0].parent(), 0);
+        assert_eq!(nodes[0].child_l(), 5);
+        assert_eq!(nodes[0].child_r(), 2);
+
+        assert_eq!(nodes[1].parent(), 2);
+        assert_eq!(nodes[1].child_l(), 3);
+        assert_eq!(nodes[1].child_r(), 4);
+
+        assert_eq!(nodes[2].parent(), 0);
+        assert_eq!(nodes[2].child_l(), 1);
+        assert_eq!(nodes[2].child_r(), 6);
+
+        assert_eq!(nodes[3].parent(), 1);
+        assert_eq!(nodes[4].parent(), 1);
+        assert_eq!(nodes[5].parent(), 0);
+        assert_eq!(nodes[6].parent(), 2);
+
+        assert_aabb_approx_eq(&nodes[0].child_l_aabb(), &shapes[2].aabb());
+
+        assert_aabb_approx_eq(&nodes[2].child_r_aabb(), &shapes[3].aabb());
+
+        assert_aabb_approx_eq(&nodes[1].child_l_aabb(), &shapes[0].aabb());
+        assert_aabb_approx_eq(&nodes[1].child_r_aabb(), &shapes[1].aabb());
+    }
+
+    #[test]
+    fn test_rotate_grandchildren() {
+        let (shapes, mut nodes) = create_predictable_bvh();
+
+        // Switch two nodes
+        BVH::rotate(&mut nodes, 3, 5, &shapes);
+
+        // Check if the resulting tree is as expected
+        assert_eq!(nodes[0].parent(), 0);
+        assert_eq!(nodes[0].child_l(), 1);
+        assert_eq!(nodes[0].child_r(), 2);
+
+        assert_eq!(nodes[1].parent(), 0);
+        assert_eq!(nodes[1].child_l(), 5);
+        assert_eq!(nodes[1].child_r(), 4);
+
+        assert_eq!(nodes[2].parent(), 0);
+        assert_eq!(nodes[2].child_l(), 3);
+        assert_eq!(nodes[2].child_r(), 6);
+
+        assert_eq!(nodes[3].parent(), 2);
+        assert_eq!(nodes[4].parent(), 1);
+        assert_eq!(nodes[5].parent(), 1);
+        assert_eq!(nodes[6].parent(), 2);
+
+        assert_aabb_approx_eq(&nodes[1].child_l_aabb(), &shapes[2].aabb());
+        assert_aabb_approx_eq(&nodes[1].child_r_aabb(), &shapes[1].aabb());
+        assert_aabb_approx_eq(&nodes[2].child_l_aabb(), &shapes[0].aabb());
+        assert_aabb_approx_eq(&nodes[2].child_r_aabb(), &shapes[3].aabb());
+    }
+
+    #[test]
+    fn test_rotate_child_grandchild() {
+        let (shapes, mut nodes) = create_predictable_bvh();
+
+        // Switch two nodes
+        BVH::rotate(&mut nodes, 1, 5, &shapes);
+
+        // Check if the resulting tree is as expected
+        assert_eq!(nodes[0].parent(), 0);
+        assert_eq!(nodes[0].child_l(), 5);
+        assert_eq!(nodes[0].child_r(), 2);
+
+        assert_eq!(nodes[1].parent(), 2);
+        assert_eq!(nodes[1].child_l(), 3);
+        assert_eq!(nodes[1].child_r(), 4);
+
+        assert_eq!(nodes[2].parent(), 0);
+        assert_eq!(nodes[2].child_l(), 1);
+        assert_eq!(nodes[2].child_r(), 6);
+
+        assert_eq!(nodes[3].parent(), 1);
+        assert_eq!(nodes[4].parent(), 1);
+        assert_eq!(nodes[5].parent(), 0);
+        assert_eq!(nodes[6].parent(), 2);
+
+        assert_aabb_approx_eq(&nodes[0].child_l_aabb(), &shapes[2].aabb());
+
+        assert_aabb_approx_eq(&nodes[2].child_r_aabb(), &shapes[3].aabb());
+
+        assert_aabb_approx_eq(&nodes[1].child_l_aabb(), &shapes[0].aabb());
+        assert_aabb_approx_eq(&nodes[1].child_r_aabb(), &shapes[1].aabb());
+    }
+
+    #[test]
+    fn test_rotate_child_grandchild() {
+        let (shapes, mut nodes) = create_predictable_bvh();
+
+        shapes[2].pos = Point3::new(-20.0, 0.0, 0.0);
+
+        {
+            let mut bvh = BVH{ nodes: nodes };
+            bvh.try_rotate(0, &shapes);
+        }
+
+        // Check if the resulting tree is as expected
+        assert_eq!(nodes[0].parent(), 0);
+        assert_eq!(nodes[0].child_l(), 5);
+        assert_eq!(nodes[0].child_r(), 2);
+
+        assert_eq!(nodes[1].parent(), 2);
+        assert_eq!(nodes[1].child_l(), 3);
+        assert_eq!(nodes[1].child_r(), 4);
+
+        assert_eq!(nodes[2].parent(), 0);
+        assert_eq!(nodes[2].child_l(), 1);
+        assert_eq!(nodes[2].child_r(), 6);
+
+        assert_eq!(nodes[3].parent(), 1);
+        assert_eq!(nodes[4].parent(), 1);
+        assert_eq!(nodes[5].parent(), 0);
+        assert_eq!(nodes[6].parent(), 2);
+
+        assert_aabb_approx_eq(&nodes[0].child_l_aabb(), &shapes[2].aabb());
+
+        assert_aabb_approx_eq(&nodes[2].child_r_aabb(), &shapes[3].aabb());
+
+        assert_aabb_approx_eq(&nodes[1].child_l_aabb(), &shapes[0].aabb());
+        assert_aabb_approx_eq(&nodes[1].child_r_aabb(), &shapes[1].aabb());
     }
 
     // TODO Add benchmarks for:
