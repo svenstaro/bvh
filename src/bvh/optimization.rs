@@ -535,6 +535,7 @@ pub mod tests {
     use bvh::{BVH, BVHNode};
     use aabb::{AABB, Bounded};
     use std::collections::HashSet;
+    use std::rand::{task_rng, Rng};
     use nalgebra::{ApproxEq, Point3};
     use testbase::{build_some_bh, UnitBox};
     use bounding_hierarchy::BHShape;
@@ -977,8 +978,34 @@ pub mod tests {
         assert_aabb_approx_eq(&nodes[1].child_r_aabb(), &shapes[1].aabb());
     }
 
+    fn randomly_move_triangles(triangles: &mut Vec<Triangle>, amount: usize, seed: &mut u64) -> HashSet<usize> {
+        let mut indices : Vec<usize> = (0..triangles.len()).collect();
+        thread_rng().shuffle(&mut slice);
+        indices.truncate(amount);
+
+        for index in &indices {
+            let random_pos = next_point3(seed);
+            let b = triangles[index].b - triangles[index].a;
+            let c = triangles[index].b - triangles[index].a;
+            triangles[index] = Triangle::new(random_pos, random_pos + b, random_pos + c);
+        }
+
+        indices.into_iter().collect()
+    }
+
+    #[bench]
+    /// Benchmark optimizing a bvh after randomizing 50% of the shapes
+    fn bench_optimize_optimal_bvh_120k_triangles(b: &mut ::test::Bencher) {
+        let mut triangles = create_n_cubes(10_000);
+        let mut structure = BVH::build(&mut triangles);
+        let mut seed = 0;
+
+        b.iter(|| {
+            let updated = randomly_move_triangles(&mut triangles, 60_000, &mut seed);
+            structure.optimize(&updated, &triangles);
+        });
+    }
     // TODO Add benchmarks for:
-    // * Optimizing an optimal bvh
-    // * Optimizing a bvh after randomizing 50% of the shapes
+    // * Benchmark optimizing an optimal bvh
     // * Optimizing a bvh after randomizing all shapes (to compare with a full rebuild)
 }
