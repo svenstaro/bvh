@@ -131,7 +131,9 @@ impl BVH {
                 // TODO There might be multithreading potential here
                 let new_refit_node_index = match sweep_node_index {
                     &OptimizationIndex::Refit(index) => self.try_rotate(index, shapes),
-                    &OptimizationIndex::FixAABBs(index) => self.fix_aabbs(index),
+                    &OptimizationIndex::FixAABBs(index) => {
+                        BVH::fix_aabbs(&mut self.nodes, index, shapes)
+                    }
                 };
 
                 // Instead of finding a useful tree rotation, we found another node
@@ -205,7 +207,7 @@ impl BVH {
                 }
 
                 // Recalculate AABBs for the children since at least one of them changed.
-                // Don't update the AABBs yet because they're still subject to change
+                // Don't update the AABBs in the node yet because they're still subject to change
                 // during potential upcoming rotations.
                 let aabb_l = nodes[child_l].get_node_aabb(shapes);
                 let aabb_r = nodes[child_r].get_node_aabb(shapes);
@@ -241,9 +243,9 @@ impl BVH {
         // Get the grandchildren's NodeData
         let (left_children_nodes, right_children_nodes) = {
             let get_children_node_data = |node_index: usize| {
-                let node = nodes[node_index].clone();
+                let node = &nodes[node_index];
                 match node {
-                    BVHNode::Node { child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
+                    &BVHNode::Node { child_l, child_r, child_l_aabb, child_r_aabb, .. } => {
                         Some((NodeData {
                                   index: child_l,
                                   aabb: child_l_aabb,
@@ -253,21 +255,13 @@ impl BVH {
                                   aabb: child_r_aabb,
                               }))
                     }
-                    BVHNode::Leaf { .. } => None,
+                    &BVHNode::Leaf { .. } => None,
                 }
             };
 
             // Get indices and AABBs of all grandchildren
-            let left_children_nodes = {
-                let node_data: NodeData = child_l;
-                let index = node_data.index;
-                get_children_node_data(index)
-            };
-            let right_children_nodes = {
-                let node_data: NodeData = child_r;
-                let index = node_data.index;
-                get_children_node_data(index)
-            };
+            let left_children_nodes = get_children_node_data(child_l.index);
+            let right_children_nodes = get_children_node_data(child_r.index);
             (left_children_nodes, right_children_nodes)
         };
 
@@ -325,25 +319,8 @@ impl BVH {
         if let Some((rotation_node_a, rotation_node_b)) = best_rotation {
             BVH::rotate(nodes, rotation_node_a, rotation_node_b, shapes);
 
-            // Update this node's AABBs (child_l_aabb, child_r_aabb)
-            // according to the children nodes' AABBs.
-            let new_child_l_aabb = nodes[child_l.index].get_node_aabb(shapes);
-            let new_child_r_aabb = nodes[child_r.index].get_node_aabb(shapes);
-
-            // TODO update comment
-            // The AABBs of the children have changed, so we need to get the new ones.
-            // The children are still the same though, so we can use the indices we already have.
-            let node = &mut nodes[node_index];
-            match node {
-                &mut BVHNode::Node { ref mut child_l_aabb, ref mut child_r_aabb, .. } => {
-                    *child_l_aabb = new_child_l_aabb;
-                    *child_r_aabb = new_child_r_aabb;
-                    println!("\tSetting {:?} from {}", child_l_aabb, child_l.index);
-                    println!("\tand {:?} from {}.", child_r_aabb, child_r.index);
-                }
-                // We know that node must be a BVHNode::Node at this point
-                _ => unreachable!(),
-            }
+            // Update the children's children AABBs and the children AABBs of node
+            BVH::fix_children_and_own_aabbs(nodes, node_index, shapes);
 
             // Return parent node's index for upcoming refitting,
             // since this node just changed its AABB
@@ -356,17 +333,7 @@ impl BVH {
             println!("    No useful rotation.");
             // Update this node's AABBs (child_l_aabb, child_r_aabb)
             // according to the children nodes' AABBs.
-            let node = &mut nodes[node_index];
-            match node {
-                &mut BVHNode::Node { ref mut child_l_aabb, ref mut child_r_aabb, .. } => {
-                    *child_l_aabb = child_l.aabb;
-                    *child_r_aabb = child_r.aabb;
-                    println!("\tSetting {:?} from {}", child_l_aabb, child_l.index);
-                    println!("\tand {:?} from {}.", child_r_aabb, child_r.index);
-                }
-                // We know that node must be a BVHNode::Node at this point
-                _ => unreachable!(),
-            }
+            BVH::set_aabbs(nodes, node_index, child_l.aabb, child_r.aabb);
 
             /// Returns true randomly, with a chance given by the parameter
             fn chance(chance: f32) -> bool {
@@ -390,8 +357,65 @@ impl BVH {
         }
     }
 
-    fn fix_aabbs(&self, node_index: usize) -> Option<OptimizationIndex> {
-        unimplemented!();
+    /// Sets child_l_aabb and child_r_aabb of a BVHNode::Node to match its children,
+    /// right after updating the children themselves. Not recursive.
+    fn fix_children_and_own_aabbs<Shape: BHShape>(nodes: &mut Vec<BVHNode>,
+                                                  node_index: usize,
+                                                  shapes: &[Shape]) {
+        let (child_l, child_r) = {
+            let node = &nodes[node_index];
+            match node {
+                &BVHNode::Node { child_l, child_r, .. } => (child_l, child_r),
+                // node must be a BVHNode::Node for this function
+                _ => panic!(),
+            }
+        };
+
+        BVH::fix_aabbs(nodes, child_l, shapes);
+        BVH::fix_aabbs(nodes, child_r, shapes);
+
+        let child_l_aabb = nodes[child_l].get_node_aabb(shapes);
+        let child_r_aabb = nodes[child_r].get_node_aabb(shapes);
+
+        BVH::set_aabbs(nodes, node_index, child_l_aabb, child_r_aabb);
+    }
+
+    /// Sets child_l_aabb and child_r_aabb of a BVHNode::Node to match its children.
+    fn fix_aabbs<Shape: BHShape>(nodes: &mut Vec<BVHNode>,
+                                 node_index: usize,
+                                 shapes: &[Shape])
+                                 -> Option<OptimizationIndex> {
+        let (child_l, child_r, parent) = {
+            let node = &nodes[node_index];
+            match node {
+                &BVHNode::Node { child_l, child_r, parent, .. } => (child_l, child_r, parent),
+                // Don't do anything if the node is a leaf
+                _ => return None,
+            }
+        };
+
+        let child_l_aabb = nodes[child_l].get_node_aabb(shapes);
+        let child_r_aabb = nodes[child_r].get_node_aabb(shapes);
+
+        BVH::set_aabbs(nodes, node_index, child_l_aabb, child_r_aabb);
+
+        Some(OptimizationIndex::FixAABBs(parent))
+    }
+
+    /// Sets the children AABBs of a BVHNode::Node.
+    fn set_aabbs(nodes: &mut Vec<BVHNode>,
+                 node_index: usize,
+                 new_child_l_aabb: AABB,
+                 new_child_r_aabb: AABB) {
+        let node = &mut nodes[node_index];
+        match node {
+            &mut BVHNode::Node { ref mut child_l_aabb, ref mut child_r_aabb, .. } => {
+                *child_l_aabb = new_child_l_aabb;
+                *child_r_aabb = new_child_r_aabb;
+            }
+            // node must be a BVHNode::Node for this function
+            _ => panic!(),
+        }
     }
 
     /// Switch two nodes by rewiring the involved indices (not by moving them in the nodes slice).
@@ -913,15 +937,17 @@ pub mod tests {
     }
 
     #[test]
-    fn test_rotate_child_grandchild() {
-        let (shapes, mut nodes) = create_predictable_bvh();
+    fn test_try_rotate_child_grandchild() {
+        let (mut shapes, mut nodes) = create_predictable_bvh();
 
-        shapes[2].pos = Point3::new(-20.0, 0.0, 0.0);
+        shapes[2].pos = Point3::new(-40.0, 0.0, 0.0);
 
-        {
-            let mut bvh = BVH{ nodes: nodes };
-            bvh.try_rotate(0, &shapes);
-        }
+        let nodes = {
+            let mut bvh = BVH { nodes: nodes };
+            bvh.try_rotate(2, &shapes); // Try to rotate node 2 because node 5 changed
+            bvh.try_rotate(0, &shapes); // Try to rotate node 0 because rotating node 2 should not have yielded a result
+            bvh.nodes
+        };
 
         // Check if the resulting tree is as expected
         assert_eq!(nodes[0].parent(), 0);
@@ -942,6 +968,8 @@ pub mod tests {
         assert_eq!(nodes[6].parent(), 2);
 
         assert_aabb_approx_eq(&nodes[0].child_l_aabb(), &shapes[2].aabb());
+        let right_subtree_aabb = &shapes[0].aabb().join(&shapes[1].aabb()).join(&shapes[3].aabb());
+        assert_aabb_approx_eq(&nodes[0].child_r_aabb(), right_subtree_aabb);
 
         assert_aabb_approx_eq(&nodes[2].child_r_aabb(), &shapes[3].aabb());
 
