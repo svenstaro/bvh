@@ -15,6 +15,7 @@ use rand::{thread_rng, Rng};
 // TODO Consider: Instead of getting the scene's shapes passed, let leaf nodes store an AABB
 // that is updated from the outside, perhaps by passing not only the indices of the changed
 // shapes, but also their new AABBs into optimize().
+// TODO Consider stopping to update AABBs upwards the tree once an AABB didn't get changed.
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone)]
 enum OptimizationIndex {
@@ -85,6 +86,8 @@ impl BVH {
     pub fn optimize<Shape: BHShape>(&mut self,
                                     refit_shape_indices: &HashSet<usize>,
                                     shapes: &[Shape]) {
+        println!("{} shapes for refitting.", refit_shape_indices.len());
+
         let mut refit_node_indices: HashSet<OptimizationIndex> = refit_shape_indices.iter()
             .map(|x| OptimizationIndex::Refit(shapes[*x].bh_node_index()))
             .collect();
@@ -139,6 +142,7 @@ impl BVH {
                 // Instead of finding a useful tree rotation, we found another node
                 // that we should check, so we add its index to the refit_node_indices.
                 if let Some(index) = new_refit_node_index {
+                    assert!(max_depth > 0);
                     // TODO insert to the appropriate end of the list
                     refit_node_indices.insert(index);
                 }
@@ -346,11 +350,12 @@ impl BVH {
                 // could be beneficial, so queue the parent *sometimes*.
                 // (See https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH_Node.cs#L307)
                 // TODO Evaluate whether or not this is a smart thing to do
-                // if chance(0.01f32) {
-                Some(OptimizationIndex::Refit(parent_index))
-                // } else {
-                //     Some(OptimizationIndex::FixAABBs(parent_index))
-                // }
+                if chance(0.01f32) {
+                    Some(OptimizationIndex::Refit(parent_index))
+                } else {
+                    // Otherwise, we still have to fix the parent's AABBs
+                    Some(OptimizationIndex::FixAABBs(parent_index))
+                }
             } else {
                 None
             }
@@ -399,7 +404,11 @@ impl BVH {
 
         BVH::set_aabbs(nodes, node_index, child_l_aabb, child_r_aabb);
 
-        Some(OptimizationIndex::FixAABBs(parent))
+        if node_index > 0 {
+            Some(OptimizationIndex::FixAABBs(parent))
+        } else {
+            None
+        }
     }
 
     /// Sets the children AABBs of a BVHNode::Node.
@@ -535,9 +544,9 @@ pub mod tests {
     use bvh::{BVH, BVHNode};
     use aabb::{AABB, Bounded};
     use std::collections::HashSet;
-    use std::rand::{task_rng, Rng};
+    use rand::{thread_rng, Rng};
     use nalgebra::{ApproxEq, Point3};
-    use testbase::{build_some_bh, UnitBox};
+    use testbase::{build_some_bh, create_n_cubes, next_point3, Triangle, UnitBox};
     use bounding_hierarchy::BHShape;
     use std::f32;
 
@@ -978,16 +987,31 @@ pub mod tests {
         assert_aabb_approx_eq(&nodes[1].child_r_aabb(), &shapes[1].aabb());
     }
 
+    #[test]
+    /// Test optimizing a bvh after randomizing 50% of the shapes
+    fn test_optimize_bvh_120k_triangles_50p() {
+        let mut triangles = create_n_cubes(10_000);
+        let mut bvh = BVH::build(&mut triangles);
+        let mut seed = 0;
+
+        let updated = randomly_move_triangles(&mut triangles, 60_000, &mut seed);
+        bvh.optimize(&updated, &triangles);
+
+        assert_correct_bvh(&bvh);
+    }
+
     fn randomly_move_triangles(triangles: &mut Vec<Triangle>, amount: usize, seed: &mut u64) -> HashSet<usize> {
         let mut indices : Vec<usize> = (0..triangles.len()).collect();
-        thread_rng().shuffle(&mut slice);
+        thread_rng().shuffle(&mut indices);
         indices.truncate(amount);
 
         for index in &indices {
             let random_pos = next_point3(seed);
-            let b = triangles[index].b - triangles[index].a;
-            let c = triangles[index].b - triangles[index].a;
-            triangles[index] = Triangle::new(random_pos, random_pos + b, random_pos + c);
+            let b = triangles[*index].b - triangles[*index].a;
+            let c = triangles[*index].b - triangles[*index].a;
+            triangles[*index].a = random_pos;
+            triangles[*index].b = random_pos + b;
+            triangles[*index].c = random_pos + c;
         }
 
         indices.into_iter().collect()
@@ -995,16 +1019,17 @@ pub mod tests {
 
     #[bench]
     /// Benchmark optimizing a bvh after randomizing 50% of the shapes
-    fn bench_optimize_optimal_bvh_120k_triangles(b: &mut ::test::Bencher) {
+    fn bench_optimize_optimal_bvh_120k_triangles_50p(b: &mut ::test::Bencher) {
         let mut triangles = create_n_cubes(10_000);
-        let mut structure = BVH::build(&mut triangles);
+        let mut bvh = BVH::build(&mut triangles);
         let mut seed = 0;
 
         b.iter(|| {
             let updated = randomly_move_triangles(&mut triangles, 60_000, &mut seed);
-            structure.optimize(&updated, &triangles);
+            bvh.optimize(&updated, &triangles);
         });
     }
+
     // TODO Add benchmarks for:
     // * Benchmark optimizing an optimal bvh
     // * Optimizing a bvh after randomizing all shapes (to compare with a full rebuild)

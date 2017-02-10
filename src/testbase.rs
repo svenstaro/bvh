@@ -154,7 +154,7 @@ pub struct Triangle {
 }
 
 impl Triangle {
-    fn new(a: Point3<f32>, b: Point3<f32>, c: Point3<f32>) -> Triangle {
+    pub fn new(a: Point3<f32>, b: Point3<f32>, c: Point3<f32>) -> Triangle {
         Triangle {
             a: a,
             b: b,
@@ -218,7 +218,7 @@ fn splitmix64(x: &mut u64) -> u64 {
 }
 
 /// Generates a new Point3, mutates the seed.
-fn next_point3(seed: &mut u64) -> Point3<f32> {
+pub fn next_point3(seed: &mut u64) -> Point3<f32> {
     let u = splitmix64(seed);
     let a = ((u >> 32) & 0xFFFFFFFF) as i64 - 0x80000000;
     let b = (u & 0xFFFFFFFF) as i64 - 0x80000000;
