@@ -147,6 +147,11 @@ impl BVH {
             // Try to find a useful tree rotation with all nodes previously found
             for sweep_node_index in &sweep_node_indices {
                 // TODO There might be multithreading potential here
+                // In order to have threads working seperately without having to write on
+                // the nodes vector (which would lock other threads),
+                // write the results of a thread into a small data structure.
+                // Apply the changes to the nodes vector represented by the data structure
+                // in a quick, sequential loop after all threads finished their work.
                 let new_refit_node_index = match sweep_node_index {
                     &OptimizationIndex::Refit(index) => self.try_rotate(index, shapes),
                     &OptimizationIndex::FixAABBs(index) => {
