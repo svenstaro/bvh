@@ -140,7 +140,7 @@ impl BVH {
                 }
             }
 
-            println!("{} sweep nodes, depth {}.",
+            info!("{} sweep nodes, depth {}.",
                      sweep_node_indices.len(),
                      max_depth);
 
@@ -175,7 +175,7 @@ impl BVH {
                                   node_index: usize,
                                   shapes: &[Shape])
                                   -> Option<OptimizationIndex> {
-        print!("   [{}]\t", node_index);
+        info!("   [{}]\t", node_index);
         let mut nodes = &mut self.nodes;
 
         let node_clone = nodes[node_index].clone();
@@ -213,8 +213,8 @@ impl BVH {
                                                  .. } => {
                                 *child_l_aabb = shapes[shape_l_index].aabb();
                                 *child_r_aabb = shapes[shape_r_index].aabb();
-                                println!("Setting {:?} from {}", child_l_aabb, child_l);
-                                println!("\tand {:?} from {}.", child_r_aabb, child_r);
+                                info!("Setting {:?} from {}", child_l_aabb, child_l);
+                                info!("\tand {:?} from {}.", child_r_aabb, child_r);
                             }
                             // We know that node must be a BVHNode::Node at this point
                             _ => unreachable!(),
@@ -242,7 +242,7 @@ impl BVH {
                  })
             }
             BVHNode::Leaf { parent, shape, .. } => {
-                println!("IAmA leaf node. Queueing parent ({}). {:?}.",
+                info!("IAmA leaf node. Queueing parent ({}). {:?}.",
                          parent,
                          shapes[shape].aabb());
                 return Some(OptimizationIndex::Refit(parent));
@@ -250,7 +250,7 @@ impl BVH {
         };
 
         match node_clone {
-            BVHNode::Node { .. } => println!("Trying to rotate."),
+            BVHNode::Node { .. } => info!("Trying to rotate."),
             _ => unreachable!(),
         }
 
@@ -286,7 +286,7 @@ impl BVH {
         // Consider all the possible rotations, choose the one with the lowest SAH cost
         {
             let mut consider_rotation = |a: NodeData, b: NodeData, sa: f32| {
-                println!("        SA {} vs. current SA {}.", sa, best_surface_area);
+                info!("        SA {} vs. current SA {}.", sa, best_surface_area);
                 if sa < best_surface_area {
                     best_surface_area = sa;
                     best_rotation = Some((a.index, b.index));
@@ -348,7 +348,7 @@ impl BVH {
                 None
             }
         } else {
-            println!("    No useful rotation.");
+            info!("    No useful rotation.");
             // Update this node's AABBs (child_l_aabb, child_r_aabb)
             // according to the children nodes' AABBs.
             BVH::set_aabbs(nodes, node_index, child_l.aabb, child_r.aabb);
@@ -447,7 +447,7 @@ impl BVH {
                               node_a_index: usize,
                               node_b_index: usize,
                               shapes: &[Shape]) {
-        println!("    ROTATING {} and {}", node_a_index, node_b_index);
+        info!("    ROTATING {} and {}", node_a_index, node_b_index);
 
         // Get parent indices
         let node_a_parent_index = nodes[node_a_index].parent();
@@ -510,7 +510,7 @@ impl BVH {
                                      left_child: bool,
                                      shapes: &[Shape]) {
         let child_aabb = nodes[child_index].get_node_aabb(shapes);
-        println!("\tConnecting: {} < {}.", child_index, parent_index);
+        info!("\tConnecting: {} < {}.", child_index, parent_index);
         // Set parent's child and child_aabb; and get its depth
         let parent_depth = {
             let parent = &mut nodes[parent_index];
@@ -528,7 +528,7 @@ impl BVH {
                         *child_r = child_index;
                         *child_r_aabb = child_aabb;
                     }
-                    println!("\t  {}'s new {:?}", parent_index, child_aabb);
+                    info!("\t  {}'s new {:?}", parent_index, child_aabb);
                     depth
                 }
                 // Assuming that our BVH is correct, the parent cannot be a leaf
@@ -591,11 +591,11 @@ pub mod tests {
     }
 
     fn aabb_is_in_aabb(outer: &AABB, inner: &AABB) -> bool {
-        println!("Checking whether");
-        println!("    {:?}", inner);
-        println!("  is in");
-        println!("    {:?}.", outer);
-        println!("");
+        info!("Checking whether");
+        info!("    {:?}", inner);
+        info!("  is in");
+        info!("    {:?}.", outer);
+        info!("");
         outer.approx_contains_eps(&inner.min, EPSILON) &&
         outer.approx_contains_eps(&inner.max, EPSILON)
     }
@@ -625,9 +625,9 @@ pub mod tests {
                 &BVHNode::Node { parent, depth, child_l, child_r, child_l_aabb, child_r_aabb } => {
                     assert_eq!(parent, parent_index, "Wrong parent index.");
                     assert_eq!(expected_depth, depth, "Wrong depth.");
-                    print!("[{}<{}] ", child_l, index);
+                    info!("[{}<{}] ", child_l, index);
                     assert!(aabb_is_in_aabb(outer_aabb, &child_l_aabb));
-                    print!("[{}<{}] ", child_r, index);
+                    info!("[{}<{}] ", child_r, index);
                     assert!(aabb_is_in_aabb(outer_aabb, &child_r_aabb));
                     assert_correct_subtree(nodes,
                                            child_l,
@@ -1036,13 +1036,38 @@ pub mod tests {
 
     #[bench]
     /// Benchmark optimizing a bvh after randomizing 50% of the shapes
-    fn bench_optimize_optimal_bvh_120k_triangles_50p(b: &mut ::test::Bencher) {
+    fn bench_randomize_120k_triangles_50p(b: &mut ::test::Bencher) {
         let mut triangles = create_n_cubes(10_000);
         let mut bvh = BVH::build(&mut triangles);
         let mut seed = 0;
 
         b.iter(|| {
             let updated = randomly_move_triangles(&mut triangles, 60_000, &mut seed);
+        });
+    }
+
+    #[bench]
+    /// Benchmark optimizing a bvh after randomizing 50% of the shapes
+    fn bench_optimize_bvh_120k_triangles_50p(b: &mut ::test::Bencher) {
+        let mut triangles = create_n_cubes(10_000);
+        let mut bvh = BVH::build(&mut triangles);
+        let mut seed = 0;
+
+        b.iter(|| {
+            let updated = randomly_move_triangles(&mut triangles, 60_000, &mut seed);
+            bvh.optimize(&updated, &triangles);
+        });
+    }
+
+    #[bench]
+    /// Benchmark optimizing a bvh after randomizing 50% of the shapes
+    fn bench_optimize_bvh_120k_triangles_single(b: &mut ::test::Bencher) {
+        let mut triangles = create_n_cubes(10_000);
+        let mut bvh = BVH::build(&mut triangles);
+        let mut seed = 0;
+
+        b.iter(|| {
+            let updated = randomly_move_triangles(&mut triangles, 1, &mut seed);
             bvh.optimize(&updated, &triangles);
         });
     }

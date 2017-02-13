@@ -72,6 +72,8 @@
 
 #![feature(test)]
 
+#[macro_use]
+extern crate log;
 #[cfg(test)]
 extern crate test;
 #[cfg(test)]
