@@ -23,6 +23,15 @@ enum OptimizationIndex {
     FixAABBs(usize),
 }
 
+impl OptimizationIndex {
+    fn index(&self) -> usize {
+        match self {
+            &OptimizationIndex::Refit(index) |
+            &OptimizationIndex::FixAABBs(index) => index,
+        }
+    }
+}
+
 impl BVHNode {
     fn parent(&self) -> usize {
         match self {
@@ -86,39 +95,48 @@ impl BVH {
     pub fn optimize<Shape: BHShape>(&mut self,
                                     refit_shape_indices: &HashSet<usize>,
                                     shapes: &[Shape]) {
-        let mut refit_node_indices: HashSet<OptimizationIndex> = refit_shape_indices.iter()
-            .map(|x| OptimizationIndex::Refit(shapes[*x].bh_node_index()))
-            .collect();
+        // refit_node_indices will contain the indices of the leaf nodes
+        // that reference the given shapes, sorted low-depth first.
+        let mut refit_node_indices: Vec<OptimizationIndex> = {
+            let mut raw_indices: Vec<usize> = refit_shape_indices.iter()
+                .map(|x| shapes[*x].bh_node_index())
+                .collect();
 
-        assert_eq!(refit_node_indices.len(),
-                   refit_shape_indices.len(),
-                   "Node Indices have not been set up correctly.");
+            assert_eq!(raw_indices.len(),
+                       refit_shape_indices.len(),
+                       "Node Indices have not been set up correctly.");
+
+            // Sorts the Vector to have the lower depth nodes first
+            raw_indices.sort_by(|a, b| {
+                let depth_a = self.nodes[*a].depth();
+                let depth_b = self.nodes[*b].depth();
+                depth_a.cmp(&depth_b)
+            });
+
+            raw_indices.iter()
+                .map(|x| OptimizationIndex::Refit(*x))
+                .collect()
+        };
 
         // As long as we have refit nodes left, take the list of refit nodes
         // with the highest depth (sweep nodes) and try to rotate them all
         while refit_node_indices.len() > 0 {
-            let mut max_depth = 0;
             let mut sweep_node_indices = Vec::new();
-
-            // TODO Find sweep nodes by sorting the list once (high-depth-first) before starting
-            // Find max_depth and sweep_node_indices in one iteration
-            for refit_node_index in refit_node_indices.iter() {
-                let index = match refit_node_index {
-                    &OptimizationIndex::Refit(index) |
-                    &OptimizationIndex::FixAABBs(index) => index,
-                };
-
-                let depth = match self.nodes[index] {
-                    BVHNode::Node { depth, .. } => depth,
-                    BVHNode::Leaf { depth, .. } => depth,
-                };
-
-                if depth > max_depth {
-                    max_depth = depth;
-                    sweep_node_indices.clear();
-                    sweep_node_indices.push(*refit_node_index);
-                } else if depth == max_depth {
-                    sweep_node_indices.push(*refit_node_index);
+            let mut max_depth = {
+                let take_index = refit_node_indices.pop().unwrap();
+                let take_node = self.nodes[take_index.index()];
+                sweep_node_indices.push(take_index);
+                take_node.depth()
+            };
+            while refit_node_indices.len() > 0 {
+                let take_index = refit_node_indices.pop().unwrap();
+                let take_node = self.nodes[take_index.index()];
+                let depth = take_node.depth();
+                if depth == max_depth {
+                    sweep_node_indices.push(take_index);
+                } else {
+                    refit_node_indices.push(take_index);
+                    break;
                 }
             }
 
@@ -128,9 +146,6 @@ impl BVH {
 
             // Try to find a useful tree rotation with all nodes previously found
             for sweep_node_index in &sweep_node_indices {
-                // This node does not need to be checked again
-                refit_node_indices.remove(sweep_node_index);
-
                 // TODO There might be multithreading potential here
                 let new_refit_node_index = match sweep_node_index {
                     &OptimizationIndex::Refit(index) => self.try_rotate(index, shapes),
@@ -143,8 +158,7 @@ impl BVH {
                 // that we should check, so we add its index to the refit_node_indices.
                 if let Some(index) = new_refit_node_index {
                     assert!(max_depth > 0);
-                    // TODO insert to the appropriate end of the list
-                    refit_node_indices.insert(index);
+                    refit_node_indices.push(index);
                 }
             }
         }
