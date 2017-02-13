@@ -86,13 +86,13 @@ impl BVH {
     pub fn optimize<Shape: BHShape>(&mut self,
                                     refit_shape_indices: &HashSet<usize>,
                                     shapes: &[Shape]) {
-        println!("{} shapes for refitting.", refit_shape_indices.len());
-
         let mut refit_node_indices: HashSet<OptimizationIndex> = refit_shape_indices.iter()
             .map(|x| OptimizationIndex::Refit(shapes[*x].bh_node_index()))
             .collect();
 
-        println!("{} nodes for refitting.", refit_node_indices.len());
+        assert_eq!(refit_node_indices.len(),
+                   refit_shape_indices.len(),
+                   "Node Indices have not been set up correctly.");
 
         // As long as we have refit nodes left, take the list of refit nodes
         // with the highest depth (sweep nodes) and try to rotate them all
@@ -1000,8 +1000,11 @@ pub mod tests {
         assert_correct_bvh(&bvh);
     }
 
-    fn randomly_move_triangles(triangles: &mut Vec<Triangle>, amount: usize, seed: &mut u64) -> HashSet<usize> {
-        let mut indices : Vec<usize> = (0..triangles.len()).collect();
+    fn randomly_move_triangles(triangles: &mut Vec<Triangle>,
+                               amount: usize,
+                               seed: &mut u64)
+                               -> HashSet<usize> {
+        let mut indices: Vec<usize> = (0..triangles.len()).collect();
         thread_rng().shuffle(&mut indices);
         indices.truncate(amount);
 
