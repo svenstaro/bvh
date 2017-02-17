@@ -236,7 +236,10 @@ impl BVHNode {
     /// [`BVH`]: struct.BVH.html
     /// [`Ray`]: ../ray/struct.Ray.html
     ///
-    pub fn traverse_recursive(nodes: &Vec<BVHNode>, node_index: usize, ray: &Ray, indices: &mut Vec<usize>) {
+    pub fn traverse_recursive(nodes: &Vec<BVHNode>,
+                              node_index: usize,
+                              ray: &Ray,
+                              indices: &mut Vec<usize>) {
         let node = &nodes[node_index];
         match *node {
             BVHNode::Node { ref child_l_aabb, child_l, ref child_r_aabb, child_r, .. } => {

@@ -113,8 +113,8 @@ impl BVH {
             }
 
             info!("{} sweep nodes, depth {}.",
-                     sweep_node_indices.len(),
-                     max_depth);
+                  sweep_node_indices.len(),
+                  max_depth);
 
             // Try to find a useful tree rotation with all nodes previously found
             for sweep_node_index in &sweep_node_indices {
@@ -221,8 +221,8 @@ impl BVH {
             }
             BVHNode::Leaf { parent, shape, .. } => {
                 info!("IAmA leaf node. Queueing parent ({}). {:?}.",
-                         parent,
-                         shapes[shape].aabb());
+                      parent,
+                      shapes[shape].aabb());
                 return Some(OptimizationIndex::Refit(parent));
             }
         };
