@@ -56,6 +56,8 @@ pub enum BVHNode {
 }
 
 impl BVHNode {
+    /// The build function sometimes needs to add nodes while their data is not available yet.
+    /// A dummy cerated by this function serves the purpose of being changed later on.
     fn create_dummy() -> BVHNode {
         BVHNode::Leaf {
             parent: 0,
