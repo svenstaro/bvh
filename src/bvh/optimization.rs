@@ -47,34 +47,6 @@ impl BVHNode {
         }
     }
 
-    fn child_l(&self) -> usize {
-        match self {
-            &BVHNode::Node { child_l, .. } => child_l,
-            _ => panic!(),
-        }
-    }
-
-    fn child_r(&self) -> usize {
-        match self {
-            &BVHNode::Node { child_r, .. } => child_r,
-            _ => panic!(),
-        }
-    }
-
-    fn child_l_aabb(&self) -> AABB {
-        match self {
-            &BVHNode::Node { child_l_aabb, .. } => child_l_aabb,
-            _ => panic!(),
-        }
-    }
-
-    fn child_r_aabb(&self) -> AABB {
-        match self {
-            &BVHNode::Node { child_r_aabb, .. } => child_r_aabb,
-            _ => panic!(),
-        }
-    }
-
     /// Gets the `AABB` for a `BVHNode`.
     /// Returns the shape's `AABB` for leaves, and the joined `AABB` of
     /// the two children's `AABB`s for non-leaves.
@@ -122,7 +94,7 @@ impl BVH {
         // with the highest depth (sweep nodes) and try to rotate them all
         while refit_node_indices.len() > 0 {
             let mut sweep_node_indices = Vec::new();
-            let mut max_depth = {
+            let max_depth = {
                 let take_index = refit_node_indices.pop().unwrap();
                 let take_node = self.nodes[take_index.index()];
                 sweep_node_indices.push(take_index);
@@ -176,6 +148,10 @@ impl BVH {
     ///
     /// Returns Some(index_of_node) if a new node was found that should be used for optimization.
     ///
+    // Since the value of best_surface_area is read and set in a closure form,
+    // there is a false alarm about unused_assignments.
+    // https://github.com/rust-lang/rust/issues/28570
+    #[allow(unused_assignments)]
     fn try_rotate<Shape: BHShape>(&mut self,
                                   node_index: usize,
                                   shapes: &[Shape])
@@ -190,9 +166,6 @@ impl BVH {
         // The value is calculated by child_l_aabb.surface_area() + child_r_aabb.surface_area()
         let mut best_surface_area = 0f32;
 
-        // TODO Re-implement without mutability
-        let mut parent_index: usize = 0;
-
         #[derive(Debug, Copy, Clone)]
         struct NodeData {
             index: usize,
@@ -202,7 +175,7 @@ impl BVH {
         // If this node is not a grandparent, update the AABB,
         // queue the parent for refitting, and bail out.
         // If it is a grandparent, calculate the current best_surface_area.
-        let (child_l, child_r) = match node_clone {
+        let (child_l, child_r, parent_index) = match node_clone {
             BVHNode::Node { parent, child_l, child_r, .. } => {
                 if let BVHNode::Leaf { shape, .. } = nodes[child_l] {
                     let shape_l_index = shape;
@@ -235,7 +208,6 @@ impl BVH {
                 let aabb_l = nodes[child_l].get_node_aabb(shapes);
                 let aabb_r = nodes[child_r].get_node_aabb(shapes);
 
-                parent_index = parent;
                 best_surface_area = aabb_l.surface_area() + aabb_r.surface_area();
                 (NodeData {
                      index: child_l,
@@ -244,7 +216,8 @@ impl BVH {
                  NodeData {
                      index: child_r,
                      aabb: aabb_r,
-                 })
+                 },
+                 parent)
             }
             BVHNode::Leaf { parent, shape, .. } => {
                 info!("IAmA leaf node. Queueing parent ({}). {:?}.",
@@ -568,6 +541,36 @@ pub mod tests {
     use testbase::{build_some_bh, create_n_cubes, next_point3, Triangle, UnitBox};
     use bounding_hierarchy::BHShape;
     use std::f32;
+
+    impl BVHNode {
+        fn child_l(&self) -> usize {
+            match self {
+                &BVHNode::Node { child_l, .. } => child_l,
+                _ => panic!(),
+            }
+        }
+
+        fn child_r(&self) -> usize {
+            match self {
+                &BVHNode::Node { child_r, .. } => child_r,
+                _ => panic!(),
+            }
+        }
+
+        fn child_l_aabb(&self) -> AABB {
+            match self {
+                &BVHNode::Node { child_l_aabb, .. } => child_l_aabb,
+                _ => panic!(),
+            }
+        }
+
+        fn child_r_aabb(&self) -> AABB {
+            match self {
+                &BVHNode::Node { child_r_aabb, .. } => child_r_aabb,
+                _ => panic!(),
+            }
+        }
+    }
 
     impl PartialEq for BVHNode {
         // TODO Consider also comparing AABBs
