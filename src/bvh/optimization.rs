@@ -683,7 +683,7 @@ pub mod tests {
     #[test]
     /// Tests if the optimize function tries to change a fresh BVH even though it shouldn't
     fn test_optimizing_new_bvh() {
-        let (mut shapes, mut bvh) = build_some_bh::<BVH>();
+        let (shapes, mut bvh) = build_some_bh::<BVH>();
 
         let original_nodes = bvh.nodes.clone();
 
@@ -747,7 +747,7 @@ pub mod tests {
             moving.pos = Point3::new(40.0, 0.0, 0.0);
         }
 
-        let mut refit_shape_indices: HashSet<usize> = (1..2).collect();
+        let refit_shape_indices: HashSet<usize> = (1..2).collect();
         bvh.optimize(&refit_shape_indices, &shapes);
 
         bvh.pretty_print();
@@ -970,7 +970,7 @@ pub mod tests {
 
     #[test]
     fn test_try_rotate_child_grandchild() {
-        let (mut shapes, mut nodes) = create_predictable_bvh();
+        let (mut shapes, nodes) = create_predictable_bvh();
 
         shapes[2].pos = Point3::new(-40.0, 0.0, 0.0);
 
@@ -1046,11 +1046,10 @@ pub mod tests {
     /// Benchmark optimizing a bvh after randomizing 50% of the shapes
     fn bench_randomize_120k_triangles_50p(b: &mut ::test::Bencher) {
         let mut triangles = create_n_cubes(10_000);
-        let mut bvh = BVH::build(&mut triangles);
         let mut seed = 0;
 
         b.iter(|| {
-            let updated = randomly_move_triangles(&mut triangles, 60_000, &mut seed);
+            randomly_move_triangles(&mut triangles, 60_000, &mut seed);
         });
     }
 

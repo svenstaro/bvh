@@ -27,9 +27,6 @@ pub struct UnitBox {
     pub id: i32,
     pub pos: Point3<f32>,
     node_index: usize,
-    // If the XBox's node in the BVH gets moved, we panic if this is true.
-    // For testing bvh optimization.
-    pub has_good_bh_position: bool,
 }
 
 impl UnitBox {
@@ -38,7 +35,6 @@ impl UnitBox {
             id: id,
             pos: pos,
             node_index: 0,
-            has_good_bh_position: false,
         }
     }
 }
@@ -55,11 +51,6 @@ impl Bounded for UnitBox {
 impl BHShape for UnitBox {
     fn set_bh_node_index(&mut self, index: usize) {
         self.node_index = index;
-        if self.has_good_bh_position {
-            panic!("An UnitBox's BVHNode has been moved even though it shouldn't have.");
-        } else {
-            self.has_good_bh_position = true;
-        }
     }
 
     fn bh_node_index(&self) -> usize {
@@ -150,7 +141,6 @@ pub struct Triangle {
     pub c: Point3<f32>,
     aabb: AABB,
     node_index: usize,
-    has_good_bh_position: bool,
 }
 
 impl Triangle {
@@ -161,7 +151,6 @@ impl Triangle {
             c: c,
             aabb: AABB::empty().grow(&a).grow(&b).grow(&c),
             node_index: 0,
-            has_good_bh_position: false,
         }
     }
 }
