@@ -94,12 +94,12 @@ impl BVHNode {
         // If there is only one element left, don't split anymore
         if indices.len() == 1 {
             let shape_index = indices[0];
+            let node_index = nodes.len();
             nodes.push(BVHNode::Leaf {
                 parent: parent,
                 depth: depth,
                 shape: shape_index,
             });
-            let node_index = nodes.len() - 1;
             // Let the shape know the index of the node that represents it
             shapes[shape_index].set_bh_node_index(node_index);
             return node_index;
