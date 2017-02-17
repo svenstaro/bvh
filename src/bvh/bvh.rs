@@ -11,13 +11,14 @@ use ray::Ray;
 use std::f32;
 use std::iter::repeat;
 
-/// The BVHNode enum that describes a node in a [`BVH`].
+/// The [`BVHNode`] enum that describes a node in a [`BVH`].
 /// It's either a leaf node and references a shape (by holding its index)
-/// or a regular node that has two children nodes.
+/// or a regular node that has two child nodes.
 /// The non-leaf node stores the [`AABB`]s of its children.
 ///
 /// [`AABB`]: ../aabb/struct.AABB.html
 /// [`BVH`]: struct.BVH.html
+/// [`BVH`]: struct.BVHNode.html
 ///
 #[derive(Debug, Copy, Clone)]
 pub enum BVHNode {
