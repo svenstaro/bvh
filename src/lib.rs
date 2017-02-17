@@ -81,6 +81,7 @@ extern crate test;
 extern crate quickcheck;
 
 extern crate rand;
+#[allow(unused_imports)] // The nalgebra macros are only used in tests
 #[macro_use]
 pub extern crate nalgebra;
 

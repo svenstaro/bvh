@@ -138,18 +138,45 @@ impl BVH {
     /// use bvh::nalgebra::{Point3, Vector3};
     /// use bvh::ray::Ray;
     /// # use bvh::bounding_hierarchy::BHShape;
-    /// #
-    /// # impl BHShape for AABB {
-    /// #     fn set_bh_node_index(&mut self, index: usize) { }
-    /// #     fn bh_node_index(&self) -> usize { 0 }
+    /// # pub struct UnitBox {
+    /// #     pub id: i32,
+    /// #     pub pos: Point3<f32>,
+    /// #     node_index: usize,
     /// # }
     /// #
-    /// # fn create_bounded_shapes() -> Vec<AABB> {
+    /// # impl UnitBox {
+    /// #     pub fn new(id: i32, pos: Point3<f32>) -> UnitBox {
+    /// #         UnitBox {
+    /// #             id: id,
+    /// #             pos: pos,
+    /// #             node_index: 0,
+    /// #         }
+    /// #     }
+    /// # }
+    /// #
+    /// # impl Bounded for UnitBox {
+    /// #     fn aabb(&self) -> AABB {
+    /// #         let min = self.pos + Vector3::new(-0.5, -0.5, -0.5);
+    /// #         let max = self.pos + Vector3::new(0.5, 0.5, 0.5);
+    /// #         AABB::with_bounds(min, max)
+    /// #     }
+    /// # }
+    /// #
+    /// # impl BHShape for UnitBox {
+    /// #     fn set_bh_node_index(&mut self, index: usize) {
+    /// #         self.node_index = index;
+    /// #     }
+    /// #
+    /// #     fn bh_node_index(&self) -> usize {
+    /// #         self.node_index
+    /// #     }
+    /// # }
+    /// #
+    /// # fn create_bhshapes() -> Vec<UnitBox> {
     /// #     let mut shapes = Vec::new();
-    /// #     let offset = Vector3::new(1.0, 1.0, 1.0);
-    /// #     for i in 0..1000u32 {
+    /// #     for i in 0..1000 {
     /// #         let position = Point3::new(i as f32, i as f32, i as f32);
-    /// #         shapes.push(AABB::with_bounds(position - offset, position + offset));
+    /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
     /// #     shapes
     /// # }
@@ -170,7 +197,7 @@ impl BVH {
     ///     }
     /// };
     ///
-    /// let mut shapes = create_bounded_shapes();
+    /// let mut shapes = create_bhshapes();
     /// let bvh = BVH::build(&mut shapes);
     /// let custom_flat_bvh = bvh.flatten_custom(&custom_constructor);
     /// ```
@@ -194,27 +221,51 @@ impl BVH {
     /// use bvh::nalgebra::{Point3, Vector3};
     /// use bvh::ray::Ray;
     /// # use bvh::bounding_hierarchy::BHShape;
-    /// #
-    /// # impl BHShape for AABB {
-    /// #     fn set_bh_node_index(&mut self, index: usize) { }
-    /// #     fn bh_node_index(&self) -> usize { 0 }
+    /// # pub struct UnitBox {
+    /// #     pub id: i32,
+    /// #     pub pos: Point3<f32>,
+    /// #     node_index: usize,
     /// # }
     /// #
-    /// # fn create_bounded_shapes() -> Vec<AABB> {
+    /// # impl UnitBox {
+    /// #     pub fn new(id: i32, pos: Point3<f32>) -> UnitBox {
+    /// #         UnitBox {
+    /// #             id: id,
+    /// #             pos: pos,
+    /// #             node_index: 0,
+    /// #         }
+    /// #     }
+    /// # }
+    /// #
+    /// # impl Bounded for UnitBox {
+    /// #     fn aabb(&self) -> AABB {
+    /// #         let min = self.pos + Vector3::new(-0.5, -0.5, -0.5);
+    /// #         let max = self.pos + Vector3::new(0.5, 0.5, 0.5);
+    /// #         AABB::with_bounds(min, max)
+    /// #     }
+    /// # }
+    /// #
+    /// # impl BHShape for UnitBox {
+    /// #     fn set_bh_node_index(&mut self, index: usize) {
+    /// #         self.node_index = index;
+    /// #     }
+    /// #
+    /// #     fn bh_node_index(&self) -> usize {
+    /// #         self.node_index
+    /// #     }
+    /// # }
+    /// #
+    /// # fn create_bhshapes() -> Vec<UnitBox> {
     /// #     let mut shapes = Vec::new();
-    /// #     let offset = Vector3::new(1.0, 1.0, 1.0);
-    /// #     for i in 0..1000u32 {
+    /// #     for i in 0..1000 {
     /// #         let position = Point3::new(i as f32, i as f32, i as f32);
-    /// #         shapes.push(AABB::with_bounds(position - offset, position + offset));
+    /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
     /// #     shapes
     /// # }
     ///
-    /// let origin = Point3::new(0.0,0.0,0.0);
-    /// let direction = Vector3::new(1.0,0.0,0.0);
-    /// let ray = Ray::new(origin, direction);
-    /// let shapes = create_bounded_shapes();
-    /// let bvh = BVH::build(&shapes);
+    /// let mut shapes = create_bhshapes();
+    /// let bvh = BVH::build(&mut shapes);
     /// let flat_bvh = bvh.flatten();
     /// ```
     pub fn flatten(&self) -> FlatBVH {
@@ -253,18 +304,45 @@ impl BoundingHierarchy for FlatBVH {
     /// use bvh::nalgebra::{Point3, Vector3};
     /// use bvh::ray::Ray;
     /// # use bvh::bounding_hierarchy::BHShape;
-    /// #
-    /// # impl BHShape for AABB {
-    /// #     fn set_bh_node_index(&mut self, index: usize) { }
-    /// #     fn bh_node_index(&self) -> usize { 0 }
+    /// # pub struct UnitBox {
+    /// #     pub id: i32,
+    /// #     pub pos: Point3<f32>,
+    /// #     node_index: usize,
     /// # }
     /// #
-    /// # fn create_bounded_shapes() -> Vec<AABB> {
+    /// # impl UnitBox {
+    /// #     pub fn new(id: i32, pos: Point3<f32>) -> UnitBox {
+    /// #         UnitBox {
+    /// #             id: id,
+    /// #             pos: pos,
+    /// #             node_index: 0,
+    /// #         }
+    /// #     }
+    /// # }
+    /// #
+    /// # impl Bounded for UnitBox {
+    /// #     fn aabb(&self) -> AABB {
+    /// #         let min = self.pos + Vector3::new(-0.5, -0.5, -0.5);
+    /// #         let max = self.pos + Vector3::new(0.5, 0.5, 0.5);
+    /// #         AABB::with_bounds(min, max)
+    /// #     }
+    /// # }
+    /// #
+    /// # impl BHShape for UnitBox {
+    /// #     fn set_bh_node_index(&mut self, index: usize) {
+    /// #         self.node_index = index;
+    /// #     }
+    /// #
+    /// #     fn bh_node_index(&self) -> usize {
+    /// #         self.node_index
+    /// #     }
+    /// # }
+    /// #
+    /// # fn create_bhshapes() -> Vec<UnitBox> {
     /// #     let mut shapes = Vec::new();
-    /// #     let offset = Vector3::new(1.0, 1.0, 1.0);
-    /// #     for i in 0..1000u32 {
+    /// #     for i in 0..1000 {
     /// #         let position = Point3::new(i as f32, i as f32, i as f32);
-    /// #         shapes.push(AABB::with_bounds(position - offset, position + offset));
+    /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
     /// #     shapes
     /// # }
@@ -272,8 +350,8 @@ impl BoundingHierarchy for FlatBVH {
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
     /// let ray = Ray::new(origin, direction);
-    /// let shapes = create_bounded_shapes();
-    /// let flat_bvh = FlatBVH::build(&shapes);
+    /// let mut shapes = create_bhshapes();
+    /// let flat_bvh = FlatBVH::build(&mut shapes);
     /// let hit_shapes = flat_bvh.traverse(&ray, &shapes);
     /// ```
     fn traverse<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
