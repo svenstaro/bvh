@@ -184,8 +184,9 @@ impl BVHNode {
         let mut child_l_aabb = AABB::empty();
         let mut child_r_aabb = AABB::empty();
         for i in 0..(NUM_BUCKETS - 1) {
-            let child_l = buckets.iter().take(i + 1).fold(Bucket::empty(), join_bucket);
-            let child_r = buckets.iter().skip(i + 1).fold(Bucket::empty(), join_bucket);
+            let (l_buckets, r_buckets) = buckets.split_at(i + 1);
+            let child_l = l_buckets.iter().fold(Bucket::empty(), join_bucket);
+            let child_r = r_buckets.iter().fold(Bucket::empty(), join_bucket);
 
             let cost = (child_l.size as f32 * child_l.aabb.surface_area() +
                         child_r.size as f32 * child_r.aabb.surface_area()) /
@@ -199,18 +200,20 @@ impl BVHNode {
             }
         }
 
+        fn join_vectors(vectors: &mut [Vec<usize>]) -> Vec<usize> {
+            let mut result = Vec::new();
+            for mut vector in vectors.iter_mut() {
+                result.append(&mut vector);
+            }
+            result
+        }
+
         // Join together all index buckets, and proceed recursively
-        let mut child_l_indices = Vec::new();
-        for mut indices in bucket_assignments.iter_mut().take(min_bucket + 1) {
-            child_l_indices.append(&mut indices);
-        }
-        let mut child_r_indices = Vec::new();
-        for mut indices in bucket_assignments.iter_mut().skip(min_bucket + 1) {
-            child_r_indices.append(&mut indices);
-        }
+        let (l_assignments, r_assignments) = bucket_assignments.split_at_mut(min_bucket + 1);
+        let child_l_indices = join_vectors(l_assignments);
+        let child_r_indices = join_vectors(r_assignments);
 
         let node_index = nodes.len();
-
         nodes.push(BVHNode::create_dummy());
 
         let child_l = BVHNode::build(shapes, child_l_indices, nodes, node_index, depth + 1);
@@ -341,9 +344,9 @@ impl BoundingHierarchy for BVH {
 #[cfg(test)]
 pub mod tests {
     use bvh::BVH;
-    use testbase::{build_some_bh, traverse_some_bh, build_1200_triangles_bh,
-                   build_12k_triangles_bh, build_120k_triangles_bh, intersect_1200_triangles_bh,
-                   intersect_12k_triangles_bh, intersect_120k_triangles_bh};
+    use testbase::{build_some_bh, traverse_some_bh, build_1200_triangles_bh, build_12k_triangles_bh,
+                   build_120k_triangles_bh, intersect_1200_triangles_bh, intersect_12k_triangles_bh,
+                   intersect_120k_triangles_bh};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
