@@ -279,7 +279,8 @@ impl BVH {
     ///
     pub fn build<Shape: BHShape>(shapes: &mut [Shape]) -> BVH {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
-        let mut nodes = Vec::new();
+        let expected_node_count = shapes.len() * 2;
+        let mut nodes = Vec::with_capacity(expected_node_count);
         BVHNode::build(shapes, indices, &mut nodes, 0, 0);
         BVH { nodes: nodes }
     }
