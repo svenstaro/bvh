@@ -147,7 +147,7 @@ pub trait BoundingHierarchy {
 
     /// Prints the [`BoundingHierarchy`] in a tree-like visualization.
     ///
-    /// [`BoundingHierarchy`]: ../bounding_hierarchy/trait.BoundingHierarchy.html
+    /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
     ///
     fn pretty_print(&self) {}
 }
