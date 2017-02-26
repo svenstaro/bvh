@@ -86,19 +86,19 @@ impl BVHNode {
         where F: Fn(&AABB, u32, u32, u32) -> FNodeType
     {
         match *self {
-            BVHNode::Node { ref child_l_aabb, child_l, ref child_r_aabb, child_r, .. } => {
-                let index_after_child_l = nodes[child_l]
+            BVHNode::Node { ref child_l_aabb, child_l_index, ref child_r_aabb, child_r_index, .. } => {
+                let index_after_child_l = nodes[child_l_index]
                     .create_flat_branch(nodes, child_l_aabb, vec, next_free, constructor);
-                nodes[child_r]
+                nodes[child_r_index]
                     .create_flat_branch(nodes, child_r_aabb, vec, index_after_child_l, constructor)
             }
-            BVHNode::Leaf { shape, .. } => {
+            BVHNode::Leaf { shape_index, .. } => {
                 let mut next_shape = next_free;
                 next_shape += 1;
                 let leaf_node = constructor(&AABB::empty(),
                                             u32::max_value(),
                                             next_shape as u32,
-                                            shape as u32);
+                                            shape_index as u32);
                 vec.push(leaf_node);
 
                 next_shape
@@ -188,12 +188,12 @@ impl BVH {
     ///     shape_index: u32,
     /// }
     ///
-    /// let custom_constructor = |aabb: &AABB, entry, exit, shape| {
+    /// let custom_constructor = |aabb: &AABB, entry, exit, shape_index| {
     ///     CustomStruct {
     ///         aabb: *aabb,
     ///         entry_index: entry,
     ///         exit_index: exit,
-    ///         shape_index: shape,
+    ///         shape_index: shape_index,
     ///     }
     /// };
     ///
