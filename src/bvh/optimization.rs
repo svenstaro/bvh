@@ -531,7 +531,7 @@ pub mod tests {
     use aabb::{AABB, Bounded};
     use std::collections::HashSet;
     use rand::{Rng, SeedableRng, StdRng};
-    use nalgebra::{ApproxEq, Point3};
+    use nalgebra::Point3;
     use testbase::{build_some_bh, create_n_cubes, next_point3, Triangle, UnitBox};
     use bounding_hierarchy::BHShape;
     use std::f32;
@@ -571,10 +571,8 @@ pub mod tests {
                                parent_index,
                                "Wrong parent index (Node).");
                     assert_eq!(expected_depth, depth, "Wrong depth (Node).");
-                    info!("[{}<{}] ", child_l_index, node_index);
-                    assert!(aabb_is_in_aabb(expected_outer_aabb, &child_l_aabb));
-                    info!("[{}<{}] ", child_r_index, node_index);
-                    assert!(aabb_is_in_aabb(expected_outer_aabb, &child_r_aabb));
+                    assert!(expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, EPSILON));
+                    assert!(expected_outer_aabb.approx_contains_aabb_eps(&child_r_aabb, EPSILON));
                     self.assert_consistent_subtree(child_l_index,
                                                    node_index,
                                                    &child_l_aabb,
@@ -646,32 +644,6 @@ pub mod tests {
         }
     }
 
-    fn aabb_is_in_aabb(outer: &AABB, inner: &AABB) -> bool {
-        info!("Checking whether");
-        info!("    {:?}", inner);
-        info!("  is in");
-        info!("    {:?}.", outer);
-        info!("");
-        outer.approx_contains_eps(&inner.min, EPSILON) &&
-        outer.approx_contains_eps(&inner.max, EPSILON)
-    }
-
-    fn assert_aabb_approx_eq(a: &AABB, b: &AABB) {
-        assert_approx_eq_eps!(a.min, b.min, EPSILON);
-        assert_approx_eq_eps!(a.max, b.max, EPSILON);
-    }
-
-    fn update_unit_boxes(shapes: &mut Vec<UnitBox>) -> HashSet<usize> {
-        shapes[0].pos = Point3::new(10.0, 1.0, 2.0);
-        shapes[1].pos = Point3::new(-10.0, -10.0, 10.0);
-        shapes[2].pos = Point3::new(-10.0, 10.0, 10.0);
-        shapes[3].pos = Point3::new(-10.0, 10.0, -10.0);
-        shapes[4].pos = Point3::new(11.0, 1.0, 2.0);
-        shapes[5].pos = Point3::new(11.0, 2.0, 2.0);
-
-        (0..6).collect()
-    }
-
     #[test]
     /// Tests if `optimize` does not modify a fresh `BVH`.
     fn test_optimizing_new_bvh() {
@@ -689,10 +661,17 @@ pub mod tests {
     }
 
     #[test]
-    /// Tests whether a BVH is still correct (as in error-free) after a few optimization calls.
-    fn test_correctness_after_optimize() {
+    /// Tests whether a BVH is still consistent after a few optimization calls.
+    fn test_consistent_after_optimize() {
         let (mut shapes, mut bvh) = build_some_bh::<BVH>();
-        let refit_shape_indices = update_unit_boxes(&mut shapes);
+        shapes[0].pos = Point3::new(10.0, 1.0, 2.0);
+        shapes[1].pos = Point3::new(-10.0, -10.0, 10.0);
+        shapes[2].pos = Point3::new(-10.0, 10.0, 10.0);
+        shapes[3].pos = Point3::new(-10.0, 10.0, -10.0);
+        shapes[4].pos = Point3::new(11.0, 1.0, 2.0);
+        shapes[5].pos = Point3::new(11.0, 2.0, 2.0);
+
+        let refit_shape_indices = (0..6).collect();
         bvh.optimize(&refit_shape_indices, &shapes);
         bvh.assert_consistent();
     }
@@ -744,6 +723,7 @@ pub mod tests {
         }
     }
 
+    /// Creates a small `BVH` with 4 shapes and 7 nodes.
     fn create_predictable_bvh() -> (Vec<UnitBox>, BVH) {
         let mut shapes = Vec::new();
         shapes.push(UnitBox::new(0, Point3::new(0.0, 0.0, 0.0)));
@@ -753,7 +733,7 @@ pub mod tests {
 
         let mut nodes = Vec::new();
 
-        // Root node
+        // Root node.
         nodes.push(BVHNode::Node {
             parent_index: 0,
             depth: 0,
@@ -763,7 +743,7 @@ pub mod tests {
             child_r_index: 2,
         });
 
-        // Depth 1 nodes
+        // Depth 1 nodes.
         nodes.push(BVHNode::Node {
             parent_index: 0,
             depth: 1,
@@ -781,7 +761,7 @@ pub mod tests {
             child_r_index: 6,
         });
 
-        // Depth 2 nodes (leaves)
+        // Depth 2 nodes (leaves).
         nodes.push(BVHNode::Leaf {
             parent_index: 1,
             depth: 2,
@@ -814,7 +794,7 @@ pub mod tests {
         bvh.connect_nodes(3, 2, true, &shapes);
         bvh.connect_nodes(5, 1, true, &shapes);
 
-        // Check if the resulting tree is as expected
+        // Check if the resulting tree is as expected.
         let BVH { nodes } = bvh;
 
         assert_eq!(nodes[0].parent(), 0);
@@ -834,10 +814,10 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 1);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert_aabb_approx_eq(&nodes[1].child_l_aabb(), &shapes[2].aabb());
-        assert_aabb_approx_eq(&nodes[1].child_r_aabb(), &shapes[1].aabb());
-        assert_aabb_approx_eq(&nodes[2].child_l_aabb(), &shapes[0].aabb());
-        assert_aabb_approx_eq(&nodes[2].child_r_aabb(), &shapes[3].aabb());
+        assert!(nodes[1].child_l_aabb().relative_eq(&shapes[2].aabb(), EPSILON));
+        assert!(nodes[1].child_r_aabb().relative_eq(&shapes[1].aabb(), EPSILON));
+        assert!(nodes[2].child_l_aabb().relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[2].child_r_aabb().relative_eq(&shapes[3].aabb(), EPSILON));
     }
 
     #[test]
@@ -848,7 +828,7 @@ pub mod tests {
         bvh.connect_nodes(1, 2, true, &shapes);
         bvh.connect_nodes(5, 0, true, &shapes);
 
-        // Check if the resulting tree is as expected
+        // Check if the resulting tree is as expected.
         let BVH { nodes } = bvh;
 
         assert_eq!(nodes[0].parent(), 0);
@@ -868,12 +848,10 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 0);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert_aabb_approx_eq(&nodes[0].child_l_aabb(), &shapes[2].aabb());
-
-        assert_aabb_approx_eq(&nodes[2].child_r_aabb(), &shapes[3].aabb());
-
-        assert_aabb_approx_eq(&nodes[1].child_l_aabb(), &shapes[0].aabb());
-        assert_aabb_approx_eq(&nodes[1].child_r_aabb(), &shapes[1].aabb());
+        assert!(nodes[0].child_l_aabb().relative_eq(&shapes[2].aabb(), EPSILON));
+        assert!(nodes[2].child_r_aabb().relative_eq(&shapes[3].aabb(), EPSILON));
+        assert!(nodes[1].child_l_aabb().relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[1].child_r_aabb().relative_eq(&shapes[1].aabb(), EPSILON));
     }
 
     #[test]
@@ -903,10 +881,10 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 1);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert_aabb_approx_eq(&nodes[1].child_l_aabb(), &shapes[2].aabb());
-        assert_aabb_approx_eq(&nodes[1].child_r_aabb(), &shapes[1].aabb());
-        assert_aabb_approx_eq(&nodes[2].child_l_aabb(), &shapes[0].aabb());
-        assert_aabb_approx_eq(&nodes[2].child_r_aabb(), &shapes[3].aabb());
+        assert!(nodes[1].child_l_aabb().relative_eq(&shapes[2].aabb(), EPSILON));
+        assert!(nodes[1].child_r_aabb().relative_eq(&shapes[1].aabb(), EPSILON));
+        assert!(nodes[2].child_l_aabb().relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[2].child_r_aabb().relative_eq(&shapes[3].aabb(), EPSILON));
     }
 
     #[test]
@@ -936,12 +914,10 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 0);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert_aabb_approx_eq(&nodes[0].child_l_aabb(), &shapes[2].aabb());
-
-        assert_aabb_approx_eq(&nodes[2].child_r_aabb(), &shapes[3].aabb());
-
-        assert_aabb_approx_eq(&nodes[1].child_l_aabb(), &shapes[0].aabb());
-        assert_aabb_approx_eq(&nodes[1].child_r_aabb(), &shapes[1].aabb());
+        assert!(nodes[0].child_l_aabb().relative_eq(&shapes[2].aabb(), EPSILON));
+        assert!(nodes[2].child_r_aabb().relative_eq(&shapes[3].aabb(), EPSILON));
+        assert!(nodes[1].child_l_aabb().relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[1].child_r_aabb().relative_eq(&shapes[1].aabb(), EPSILON));
     }
 
     #[test]
@@ -957,7 +933,7 @@ pub mod tests {
         // Try to rotate node 0 because rotating node 2 should not have yielded a result.
         bvh.try_rotate(0, &shapes);
 
-        // Check if the resulting tree is as expected
+        // Check if the resulting tree is as expected.
         let BVH { nodes } = bvh;
 
         assert_eq!(nodes[0].parent(), 0);
@@ -977,16 +953,17 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 0);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert_aabb_approx_eq(&nodes[0].child_l_aabb(), &shapes[2].aabb());
+        assert!(nodes[0].child_l_aabb().relative_eq(&shapes[2].aabb(), EPSILON));
         let right_subtree_aabb = &shapes[0].aabb().join(&shapes[1].aabb()).join(&shapes[3].aabb());
-        assert_aabb_approx_eq(&nodes[0].child_r_aabb(), right_subtree_aabb);
+        assert!(nodes[0].child_r_aabb().relative_eq(&right_subtree_aabb, EPSILON));
 
-        assert_aabb_approx_eq(&nodes[2].child_r_aabb(), &shapes[3].aabb());
-
-        assert_aabb_approx_eq(&nodes[1].child_l_aabb(), &shapes[0].aabb());
-        assert_aabb_approx_eq(&nodes[1].child_r_aabb(), &shapes[1].aabb());
+        assert!(nodes[2].child_r_aabb().relative_eq(&shapes[3].aabb(), EPSILON));
+        assert!(nodes[1].child_l_aabb().relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[1].child_r_aabb().relative_eq(&shapes[1].aabb(), EPSILON));
     }
 
+    /// Given an array of `Triangle`s, moves `amount` triangles around using the random `seed`.
+    /// Returns a `HashSet` of indices of modified triangles.
     fn randomly_move_triangles(triangles: &mut Vec<Triangle>,
                                amount: usize,
                                seed: &mut u64)
@@ -1009,7 +986,7 @@ pub mod tests {
     }
 
     #[test]
-    /// Test optimizing a bvh after randomizing 50% of the shapes
+    /// Test optimizing `BVH` after randomizing 50% of the shapes.
     fn test_optimize_bvh_120k_triangles_50p() {
         let mut triangles = create_n_cubes(10_000);
         let mut bvh = BVH::build(&mut triangles);
@@ -1022,7 +999,7 @@ pub mod tests {
     }
 
     #[bench]
-    /// Benchmark optimizing a bvh after randomizing 50% of the shapes
+    /// Benchmark optimizing a `BVH` after randomizing 50% of the shapes.
     fn bench_randomize_120k_triangles_50p(b: &mut ::test::Bencher) {
         let mut triangles = create_n_cubes(10_000);
         let mut seed = 0;
@@ -1031,7 +1008,7 @@ pub mod tests {
     }
 
     #[bench]
-    /// Benchmark optimizing a bvh after randomizing 50% of the shapes
+    /// Benchmark optimizing a `BVH` after randomizing 50% of the shapes.
     fn bench_optimize_bvh_120k_triangles_50p(b: &mut ::test::Bencher) {
         let mut triangles = create_n_cubes(10_000);
         let mut bvh = BVH::build(&mut triangles);
@@ -1044,7 +1021,7 @@ pub mod tests {
     }
 
     #[bench]
-    /// Benchmark optimizing a bvh after randomizing 50% of the shapes
+    /// Benchmark optimizing a `BVH` after randomizing one shape.
     fn bench_optimize_bvh_120k_triangles_single(b: &mut ::test::Bencher) {
         let mut triangles = create_n_cubes(10_000);
         let mut bvh = BVH::build(&mut triangles);

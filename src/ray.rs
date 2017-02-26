@@ -2,7 +2,7 @@
 //! for axis aligned bounding boxes and triangles.
 
 use aabb::AABB;
-use nalgebra::{Vector3, Point3, Norm, Cross, Dot};
+use nalgebra::{Vector3, Point3};
 use std::f32::INFINITY;
 use EPSILON;
 
@@ -310,7 +310,6 @@ mod tests {
     use std::f32::INFINITY;
     use std::cmp;
 
-    use nalgebra::{Cross, Dot};
     use rand::{Rng, StdRng, SeedableRng};
 
     use EPSILON;

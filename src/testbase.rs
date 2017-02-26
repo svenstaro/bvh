@@ -229,7 +229,7 @@ pub fn create_n_cubes(n: u64) -> Vec<Triangle> {
 /// Creates a `Ray` from the random `seed`. Mutates the `seed`.
 pub fn create_ray(seed: &mut u64) -> Ray {
     let origin = next_point3(seed);
-    let direction = next_point3(seed).to_vector();
+    let direction = next_point3(seed).coords;
     Ray::new(origin, direction)
 }
 

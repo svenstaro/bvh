@@ -155,6 +155,52 @@ impl AABB {
         (p.z - self.min.z) > -epsilon && (p.z - self.max.z) < epsilon
     }
 
+    /// Returns true if the `other` [`AABB`] is approximately inside this [`AABB`]
+    /// with respect to some `epsilon`.
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::EPSILON;
+    /// use bvh::aabb::AABB;
+    /// use bvh::nalgebra::Point3;
+    ///
+    /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
+    /// let point_barely_inside = Point3::new(1.00_000_01, 1.00_000_01, 1.00_000_01);
+    /// let center = aabb.center();
+    /// let inner_aabb = AABB::with_bounds(center, point_barely_inside);
+    ///
+    /// assert!(aabb.approx_contains_aabb_eps(&inner_aabb, EPSILON));
+    /// ```
+    ///
+    /// [`AABB`]: struct.AABB.html
+    pub fn approx_contains_aabb_eps(&self, other: &AABB, epsilon: f32) -> bool {
+        self.approx_contains_eps(&other.min, epsilon) &&
+        self.approx_contains_eps(&other.max, epsilon)
+    }
+
+    /// Returns true if the `other` [`AABB`] is approximately equal to this [`AABB`]
+    /// with respect to some `epsilon`.
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::EPSILON;
+    /// use bvh::aabb::AABB;
+    /// use bvh::nalgebra::Point3;
+    ///
+    /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
+    /// let point_barely_inside_min = Point3::new(-1.00_000_01, -1.00_000_01, -1.00_000_01);
+    /// let point_barely_inside_max = Point3::new(1.00_000_01, 1.00_000_01, 1.00_000_01);
+    /// let other = AABB::with_bounds(point_barely_inside_min, point_barely_inside_max);
+    ///
+    /// assert!(aabb.relative_eq(&other, EPSILON));
+    /// ```
+    ///
+    /// [`AABB`]: struct.AABB.html
+    pub fn relative_eq(&self, other: &AABB, epsilon: f32) -> bool {
+        relative_eq!(self.min, other.min, epsilon = epsilon) &&
+        relative_eq!(self.max, other.max, epsilon = epsilon)
+    }
+
     /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and `other`.
     /// The result is the convex hull of the both [`AABB`]s.
     ///
