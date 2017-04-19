@@ -80,6 +80,14 @@ impl BVHNode {
         }
     }
 
+    /// Returns the `AABB` of the right child node.
+    pub fn child_l_aabb(&self) -> AABB {
+        match self {
+            &BVHNode::Node { child_l_aabb, .. } => child_l_aabb,
+            _ => panic!(),
+        }
+    }
+
     /// Returns a mutable reference to the `AABB` of the left child node.
     pub fn child_l_aabb_mut(&mut self) -> &mut AABB {
         match self {
@@ -93,6 +101,14 @@ impl BVHNode {
         match self {
             &BVHNode::Node { child_r_index, .. } => child_r_index,
             _ => panic!("Tried to get the right child of a leaf node."),
+        }
+    }
+
+    /// Returns the `AABB` of the right child node.
+    pub fn child_r_aabb(&self) -> AABB {
+        match self {
+            &BVHNode::Node { child_r_aabb, .. } => child_r_aabb,
+            _ => panic!(),
         }
     }
 

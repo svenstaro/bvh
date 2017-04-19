@@ -45,35 +45,33 @@ impl BVH {
         // that reference the given shapes, sorted by their depth
         // in increasing order.
         let mut refit_node_indices: Vec<_> = {
-            let mut raw_indices: Vec<_> = refit_shape_indices.iter()
+            let mut raw_indices = refit_shape_indices
+                .iter()
                 .map(|x| shapes[*x].bh_node_index())
-                .collect();
-
-            assert_eq!(raw_indices.len(),
-                       refit_shape_indices.len(),
-                       "Node Indices have not been set up correctly.");
+                .collect::<Vec<_>>();
 
             // Sorts the Vector to have the greatest depth nodes last.
             raw_indices.sort_by(|a, b| {
-                let depth_a = self.nodes[*a].depth();
-                let depth_b = self.nodes[*b].depth();
-                depth_a.cmp(&depth_b)
-            });
+                                    let depth_a = self.nodes[*a].depth();
+                                    let depth_b = self.nodes[*b].depth();
+                                    depth_a.cmp(&depth_b)
+                                });
 
-            raw_indices.iter()
+            raw_indices
+                .iter()
                 .map(|x| OptimizationIndex::Refit(*x))
                 .collect()
         };
 
         // As long as we have refit nodes left, take the list of refit nodes
         // with the greatest depth (sweep nodes) and try to rotate them all.
-        while refit_node_indices.len() > 0 {
+        while !refit_node_indices.is_empty() {
             let mut sweep_node_indices = Vec::new();
             let max_depth = {
                 let last_node_index = refit_node_indices.last().unwrap();
                 self.nodes[last_node_index.index()].depth()
             };
-            while refit_node_indices.len() > 0 {
+            while !refit_node_indices.is_empty() {
                 let last_node_depth = {
                     let last_node_index = refit_node_indices.last().unwrap();
                     self.nodes[last_node_index.index()].depth()
@@ -107,9 +105,9 @@ impl BVH {
                 // that we should check, so we add its index to the refit_node_indices.
                 if let Some(index) = new_refit_node_index {
                     assert!({
-                        let new_node_depth = self.nodes[index.index()].depth();
-                        new_node_depth == max_depth - 1
-                    });
+                                let new_node_depth = self.nodes[index.index()].depth();
+                                new_node_depth == max_depth - 1
+                            });
                     refit_node_indices.push(index);
                 }
             }
@@ -132,22 +130,34 @@ impl BVH {
 
         let node_clone = self.nodes[node_index].clone();
         match node_clone {
-            BVHNode::Leaf { parent_index, shape_index, .. } => {
+            BVHNode::Leaf {
+                parent_index,
+                shape_index,
+                ..
+            } => {
                 // The current node is a leaf.
-                info!("IAmA leaf node. Queueing parent ({}). {:?}.",
+                info!("Leaf node. Queueing parent ({}). {:?}.",
                       parent_index,
                       shapes[shape_index].aabb());
                 return Some(OptimizationIndex::Refit(parent_index));
             }
-            BVHNode::Node { parent_index, child_l_index, child_r_index, .. } => {
+            BVHNode::Node {
+                parent_index,
+                child_l_index,
+                child_r_index,
+                ..
+            } => {
                 // The current node is a parent.
                 if let (&BVHNode::Leaf { shape_index: shape_l_index, .. },
                         &BVHNode::Leaf { shape_index: shape_r_index, .. }) =
                     (&self.nodes[child_l_index], &self.nodes[child_r_index]) {
                     // The current node is a final parent. Update its `AABB`s, because at least
                     // one of its children was updated and queue its parent for refitting.
-                    if let &mut BVHNode::Node { ref mut child_l_aabb, ref mut child_r_aabb, .. } =
-                        &mut self.nodes[node_index] {
+                    if let &mut BVHNode::Node {
+                                    ref mut child_l_aabb,
+                                    ref mut child_r_aabb,
+                                    ..
+                                } = &mut self.nodes[node_index] {
                         *child_l_aabb = shapes[shape_l_index].aabb();
                         *child_r_aabb = shapes[shape_r_index].aabb();
                         info!("Setting {:?} from {}", child_l_aabb, child_l_index);
@@ -179,13 +189,16 @@ impl BVH {
                                   node_index: usize,
                                   shapes: &[Shape])
                                   -> Option<OptimizationIndex> {
-        let (parent_index, child_l_index, child_r_index) =
-            if let &BVHNode::Node { parent_index, child_l_index, child_r_index, .. } =
-                &self.nodes[node_index] {
-                (parent_index, child_l_index, child_r_index)
-            } else {
-                unreachable!()
-            };
+        let (parent_index, child_l_index, child_r_index) = if let &BVHNode::Node {
+                                                                       parent_index,
+                                                                       child_l_index,
+                                                                       child_r_index,
+                                                                       ..
+                                                                   } = &self.nodes[node_index] {
+            (parent_index, child_l_index, child_r_index)
+        } else {
+            unreachable!()
+        };
 
         // Recalculate AABBs for the children since at least one of them changed.
         // Don't update the AABBs in the node yet because they're still subject to change
@@ -207,7 +220,13 @@ impl BVH {
         // Get the grandchildren's NodeData
         let get_children_node_data = |node: &BVHNode| -> Option<(NodeData, NodeData)> {
             match node {
-                &BVHNode::Node { child_l_index, child_l_aabb, child_r_index, child_r_aabb, .. } => {
+                &BVHNode::Node {
+                     child_l_index,
+                     child_l_aabb,
+                     child_r_index,
+                     child_r_aabb,
+                     ..
+                 } => {
                     Some((NodeData {
                               index: child_l_index,
                               aabb: child_l_aabb,
@@ -230,10 +249,10 @@ impl BVH {
         // Consider all the possible rotations, choose the one with the lowest SAH cost.
         let mut best_rotation: Option<(usize, usize)> = None;
         {
-            let mut consider_rotation = |new_rotation: (usize, usize), sa: f32| {
-                info!("        SA {} vs. current SA {}.", sa, best_surface_area);
-                if sa < best_surface_area {
-                    best_surface_area = sa;
+            let mut consider_rotation = |new_rotation: (usize, usize), surface_area: f32| {
+                info!("        SA {} vs. current SA {}.", surface_area, best_surface_area);
+                if surface_area < best_surface_area {
+                    best_surface_area = surface_area;
                     best_rotation = Some(new_rotation);
                 }
             };
@@ -304,7 +323,8 @@ impl BVH {
                 rng.next_f32() < chance
             }
 
-            if node_index > 0 {
+            // Only execute the following block, if `node_index` does not reference the root node.
+            if node_index != 0 {
                 // Even with no rotation being useful for this node, a parent node's rotation
                 // could be beneficial, so queue the parent *sometimes*.
                 // For reference see:
@@ -328,9 +348,11 @@ impl BVH {
         let (child_l, child_r) = {
             let node = &self.nodes[node_index];
             match node {
-                &BVHNode::Node { child_l_index, child_r_index, .. } => {
-                    (child_l_index, child_r_index)
-                }
+                &BVHNode::Node {
+                     child_l_index,
+                     child_r_index,
+                     ..
+                 } => (child_l_index, child_r_index),
                 // node must be a BVHNode::Node for this function
                 _ => panic!(),
             }
@@ -350,7 +372,12 @@ impl BVH {
                                  shapes: &[Shape])
                                  -> Option<OptimizationIndex> {
         match &self.nodes[node_index] {
-            &BVHNode::Node { parent_index, child_l_index, child_r_index, .. } => {
+            &BVHNode::Node {
+                 parent_index,
+                 child_l_index,
+                 child_r_index,
+                 ..
+             } => {
                 *self.nodes[node_index].child_l_aabb_mut() = self.nodes[child_l_index]
                     .get_node_aabb(shapes);
                 *self.nodes[node_index].child_r_aabb_mut() = self.nodes[child_r_index]
@@ -400,7 +427,12 @@ impl BVH {
         let children = {
             let node = &mut self.nodes[node_index];
             match node {
-                &mut BVHNode::Node { ref mut depth, child_l_index, child_r_index, .. } => {
+                &mut BVHNode::Node {
+                         ref mut depth,
+                         child_l_index,
+                         child_r_index,
+                         ..
+                     } => {
                     *depth = new_depth;
                     Some((child_l_index, child_r_index))
                 }
@@ -434,12 +466,14 @@ impl BVH {
         // Set parent's child and child_aabb; and get its depth
         let parent_depth = {
             match &mut self.nodes[parent_index] {
-                &mut BVHNode::Node { ref mut child_l_index,
-                                     ref mut child_r_index,
-                                     ref mut child_l_aabb,
-                                     ref mut child_r_aabb,
-                                     depth,
-                                     .. } => {
+                &mut BVHNode::Node {
+                         ref mut child_l_index,
+                         ref mut child_r_index,
+                         ref mut child_l_aabb,
+                         ref mut child_r_aabb,
+                         depth,
+                         ..
+                     } => {
                     if left_child {
                         *child_l_index = child_index;
                         *child_l_aabb = child_aabb;
@@ -475,22 +509,6 @@ pub mod tests {
     use bounding_hierarchy::BHShape;
     use std::f32;
 
-    impl BVHNode {
-        fn child_l_aabb(&self) -> AABB {
-            match self {
-                &BVHNode::Node { child_l_aabb, .. } => child_l_aabb,
-                _ => panic!(),
-            }
-        }
-
-        fn child_r_aabb(&self) -> AABB {
-            match self {
-                &BVHNode::Node { child_r_aabb, .. } => child_r_aabb,
-                _ => panic!(),
-            }
-        }
-    }
-
     impl BVH {
         fn assert_consistent_subtree(&self,
                                      node_index: usize,
@@ -500,12 +518,14 @@ pub mod tests {
                                      node_count: &mut usize) {
             *node_count += 1;
             match &self.nodes[node_index] {
-                &BVHNode::Node { parent_index,
-                                 depth,
-                                 child_l_index,
-                                 child_l_aabb,
-                                 child_r_index,
-                                 child_r_aabb } => {
+                &BVHNode::Node {
+                     parent_index,
+                     depth,
+                     child_l_index,
+                     child_l_aabb,
+                     child_r_index,
+                     child_r_aabb,
+                 } => {
                     assert_eq!(expected_parent_index,
                                parent_index,
                                "Wrong parent index (Node).");
@@ -523,7 +543,11 @@ pub mod tests {
                                                    expected_depth + 1,
                                                    node_count);
                 }
-                &BVHNode::Leaf { parent_index, depth, .. } => {
+                &BVHNode::Leaf {
+                     parent_index,
+                     depth,
+                     ..
+                 } => {
                     assert_eq!(expected_parent_index,
                                parent_index,
                                "Wrong parent index (Leaf).");
@@ -555,26 +579,34 @@ pub mod tests {
         // TODO Consider also comparing AABBs
         fn eq(&self, other: &BVHNode) -> bool {
             match (self, other) {
-                (&BVHNode::Node { parent_index: self_parent_index,
-                                  depth: self_depth,
-                                  child_l_index: self_child_l_index,
-                                  child_r_index: self_child_r_index,
-                                  .. },
-                 &BVHNode::Node { parent_index: other_parent_index,
-                                  depth: other_depth,
-                                  child_l_index: other_child_l_index,
-                                  child_r_index: other_child_r_index,
-                                  .. }) => {
+                (&BVHNode::Node {
+                      parent_index: self_parent_index,
+                      depth: self_depth,
+                      child_l_index: self_child_l_index,
+                      child_r_index: self_child_r_index,
+                      ..
+                  },
+                 &BVHNode::Node {
+                      parent_index: other_parent_index,
+                      depth: other_depth,
+                      child_l_index: other_child_l_index,
+                      child_r_index: other_child_r_index,
+                      ..
+                  }) => {
                     self_parent_index == other_parent_index && self_depth == other_depth &&
                     self_child_l_index == other_child_l_index &&
                     self_child_r_index == other_child_r_index
                 }
-                (&BVHNode::Leaf { parent_index: self_parent_index,
-                                  depth: self_depth,
-                                  shape_index: self_shape_index },
-                 &BVHNode::Leaf { parent_index: other_parent_index,
-                                  depth: other_depth,
-                                  shape_index: other_shape_index }) => {
+                (&BVHNode::Leaf {
+                      parent_index: self_parent_index,
+                      depth: self_depth,
+                      shape_index: self_shape_index,
+                  },
+                 &BVHNode::Leaf {
+                      parent_index: other_parent_index,
+                      depth: other_depth,
+                      shape_index: other_shape_index,
+                  }) => {
                     self_parent_index == other_parent_index && self_depth == other_depth &&
                     self_shape_index == other_shape_index
                 }
@@ -674,53 +706,53 @@ pub mod tests {
 
         // Root node.
         nodes.push(BVHNode::Node {
-            parent_index: 0,
-            depth: 0,
-            child_l_aabb: shapes[0].aabb().join(&shapes[1].aabb()),
-            child_l_index: 1,
-            child_r_aabb: shapes[2].aabb().join(&shapes[3].aabb()),
-            child_r_index: 2,
-        });
+                       parent_index: 0,
+                       depth: 0,
+                       child_l_aabb: shapes[0].aabb().join(&shapes[1].aabb()),
+                       child_l_index: 1,
+                       child_r_aabb: shapes[2].aabb().join(&shapes[3].aabb()),
+                       child_r_index: 2,
+                   });
 
         // Depth 1 nodes.
         nodes.push(BVHNode::Node {
-            parent_index: 0,
-            depth: 1,
-            child_l_aabb: shapes[0].aabb(),
-            child_l_index: 3,
-            child_r_aabb: shapes[1].aabb(),
-            child_r_index: 4,
-        });
+                       parent_index: 0,
+                       depth: 1,
+                       child_l_aabb: shapes[0].aabb(),
+                       child_l_index: 3,
+                       child_r_aabb: shapes[1].aabb(),
+                       child_r_index: 4,
+                   });
         nodes.push(BVHNode::Node {
-            parent_index: 0,
-            depth: 1,
-            child_l_aabb: shapes[2].aabb(),
-            child_l_index: 5,
-            child_r_aabb: shapes[3].aabb(),
-            child_r_index: 6,
-        });
+                       parent_index: 0,
+                       depth: 1,
+                       child_l_aabb: shapes[2].aabb(),
+                       child_l_index: 5,
+                       child_r_aabb: shapes[3].aabb(),
+                       child_r_index: 6,
+                   });
 
         // Depth 2 nodes (leaves).
         nodes.push(BVHNode::Leaf {
-            parent_index: 1,
-            depth: 2,
-            shape_index: 0,
-        });
+                       parent_index: 1,
+                       depth: 2,
+                       shape_index: 0,
+                   });
         nodes.push(BVHNode::Leaf {
-            parent_index: 1,
-            depth: 2,
-            shape_index: 1,
-        });
+                       parent_index: 1,
+                       depth: 2,
+                       shape_index: 1,
+                   });
         nodes.push(BVHNode::Leaf {
-            parent_index: 2,
-            depth: 2,
-            shape_index: 2,
-        });
+                       parent_index: 2,
+                       depth: 2,
+                       shape_index: 2,
+                   });
         nodes.push(BVHNode::Leaf {
-            parent_index: 2,
-            depth: 2,
-            shape_index: 3,
-        });
+                       parent_index: 2,
+                       depth: 2,
+                       shape_index: 3,
+                   });
 
         (shapes, BVH { nodes: nodes })
     }
@@ -753,10 +785,18 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 1);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert!(nodes[1].child_l_aabb().relative_eq(&shapes[2].aabb(), EPSILON));
-        assert!(nodes[1].child_r_aabb().relative_eq(&shapes[1].aabb(), EPSILON));
-        assert!(nodes[2].child_l_aabb().relative_eq(&shapes[0].aabb(), EPSILON));
-        assert!(nodes[2].child_r_aabb().relative_eq(&shapes[3].aabb(), EPSILON));
+        assert!(nodes[1]
+                    .child_l_aabb()
+                    .relative_eq(&shapes[2].aabb(), EPSILON));
+        assert!(nodes[1]
+                    .child_r_aabb()
+                    .relative_eq(&shapes[1].aabb(), EPSILON));
+        assert!(nodes[2]
+                    .child_l_aabb()
+                    .relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[2]
+                    .child_r_aabb()
+                    .relative_eq(&shapes[3].aabb(), EPSILON));
     }
 
     #[test]
@@ -787,10 +827,18 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 0);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert!(nodes[0].child_l_aabb().relative_eq(&shapes[2].aabb(), EPSILON));
-        assert!(nodes[2].child_r_aabb().relative_eq(&shapes[3].aabb(), EPSILON));
-        assert!(nodes[1].child_l_aabb().relative_eq(&shapes[0].aabb(), EPSILON));
-        assert!(nodes[1].child_r_aabb().relative_eq(&shapes[1].aabb(), EPSILON));
+        assert!(nodes[0]
+                    .child_l_aabb()
+                    .relative_eq(&shapes[2].aabb(), EPSILON));
+        assert!(nodes[2]
+                    .child_r_aabb()
+                    .relative_eq(&shapes[3].aabb(), EPSILON));
+        assert!(nodes[1]
+                    .child_l_aabb()
+                    .relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[1]
+                    .child_r_aabb()
+                    .relative_eq(&shapes[1].aabb(), EPSILON));
     }
 
     #[test]
@@ -820,10 +868,18 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 1);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert!(nodes[1].child_l_aabb().relative_eq(&shapes[2].aabb(), EPSILON));
-        assert!(nodes[1].child_r_aabb().relative_eq(&shapes[1].aabb(), EPSILON));
-        assert!(nodes[2].child_l_aabb().relative_eq(&shapes[0].aabb(), EPSILON));
-        assert!(nodes[2].child_r_aabb().relative_eq(&shapes[3].aabb(), EPSILON));
+        assert!(nodes[1]
+                    .child_l_aabb()
+                    .relative_eq(&shapes[2].aabb(), EPSILON));
+        assert!(nodes[1]
+                    .child_r_aabb()
+                    .relative_eq(&shapes[1].aabb(), EPSILON));
+        assert!(nodes[2]
+                    .child_l_aabb()
+                    .relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[2]
+                    .child_r_aabb()
+                    .relative_eq(&shapes[3].aabb(), EPSILON));
     }
 
     #[test]
@@ -853,10 +909,18 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 0);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert!(nodes[0].child_l_aabb().relative_eq(&shapes[2].aabb(), EPSILON));
-        assert!(nodes[2].child_r_aabb().relative_eq(&shapes[3].aabb(), EPSILON));
-        assert!(nodes[1].child_l_aabb().relative_eq(&shapes[0].aabb(), EPSILON));
-        assert!(nodes[1].child_r_aabb().relative_eq(&shapes[1].aabb(), EPSILON));
+        assert!(nodes[0]
+                    .child_l_aabb()
+                    .relative_eq(&shapes[2].aabb(), EPSILON));
+        assert!(nodes[2]
+                    .child_r_aabb()
+                    .relative_eq(&shapes[3].aabb(), EPSILON));
+        assert!(nodes[1]
+                    .child_l_aabb()
+                    .relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[1]
+                    .child_r_aabb()
+                    .relative_eq(&shapes[1].aabb(), EPSILON));
     }
 
     #[test]
@@ -892,13 +956,26 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 0);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert!(nodes[0].child_l_aabb().relative_eq(&shapes[2].aabb(), EPSILON));
-        let right_subtree_aabb = &shapes[0].aabb().join(&shapes[1].aabb()).join(&shapes[3].aabb());
-        assert!(nodes[0].child_r_aabb().relative_eq(&right_subtree_aabb, EPSILON));
+        assert!(nodes[0]
+                    .child_l_aabb()
+                    .relative_eq(&shapes[2].aabb(), EPSILON));
+        let right_subtree_aabb = &shapes[0]
+                                      .aabb()
+                                      .join(&shapes[1].aabb())
+                                      .join(&shapes[3].aabb());
+        assert!(nodes[0]
+                    .child_r_aabb()
+                    .relative_eq(&right_subtree_aabb, EPSILON));
 
-        assert!(nodes[2].child_r_aabb().relative_eq(&shapes[3].aabb(), EPSILON));
-        assert!(nodes[1].child_l_aabb().relative_eq(&shapes[0].aabb(), EPSILON));
-        assert!(nodes[1].child_r_aabb().relative_eq(&shapes[1].aabb(), EPSILON));
+        assert!(nodes[2]
+                    .child_r_aabb()
+                    .relative_eq(&shapes[3].aabb(), EPSILON));
+        assert!(nodes[1]
+                    .child_l_aabb()
+                    .relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[1]
+                    .child_r_aabb()
+                    .relative_eq(&shapes[1].aabb(), EPSILON));
     }
 
     /// Given an array of `Triangle`s, moves `amount` triangles around using the random `seed`.
@@ -954,9 +1031,9 @@ pub mod tests {
         let mut seed = 0;
 
         b.iter(|| {
-            let updated = randomly_move_triangles(&mut triangles, 60_000, &mut seed);
-            bvh.optimize(&updated, &triangles);
-        });
+                   let updated = randomly_move_triangles(&mut triangles, 60_000, &mut seed);
+                   bvh.optimize(&updated, &triangles);
+               });
     }
 
     #[bench]
@@ -967,9 +1044,9 @@ pub mod tests {
         let mut seed = 0;
 
         b.iter(|| {
-            let updated = randomly_move_triangles(&mut triangles, 1, &mut seed);
-            bvh.optimize(&updated, &triangles);
-        });
+                   let updated = randomly_move_triangles(&mut triangles, 1, &mut seed);
+                   bvh.optimize(&updated, &triangles);
+               });
     }
 
     // TODO Add benchmarks for:
