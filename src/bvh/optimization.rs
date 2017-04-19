@@ -575,46 +575,6 @@ pub mod tests {
         }
     }
 
-    impl PartialEq for BVHNode {
-        // TODO Consider also comparing AABBs
-        fn eq(&self, other: &BVHNode) -> bool {
-            match (self, other) {
-                (&BVHNode::Node {
-                      parent_index: self_parent_index,
-                      depth: self_depth,
-                      child_l_index: self_child_l_index,
-                      child_r_index: self_child_r_index,
-                      ..
-                  },
-                 &BVHNode::Node {
-                      parent_index: other_parent_index,
-                      depth: other_depth,
-                      child_l_index: other_child_l_index,
-                      child_r_index: other_child_r_index,
-                      ..
-                  }) => {
-                    self_parent_index == other_parent_index && self_depth == other_depth &&
-                    self_child_l_index == other_child_l_index &&
-                    self_child_r_index == other_child_r_index
-                }
-                (&BVHNode::Leaf {
-                      parent_index: self_parent_index,
-                      depth: self_depth,
-                      shape_index: self_shape_index,
-                  },
-                 &BVHNode::Leaf {
-                      parent_index: other_parent_index,
-                      depth: other_depth,
-                      shape_index: other_shape_index,
-                  }) => {
-                    self_parent_index == other_parent_index && self_depth == other_depth &&
-                    self_shape_index == other_shape_index
-                }
-                _ => false,
-            }
-        }
-    }
-
     #[test]
     /// Tests if `optimize` does not modify a fresh `BVH`.
     fn test_optimizing_new_bvh() {

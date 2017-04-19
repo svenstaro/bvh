@@ -55,6 +55,46 @@ pub enum BVHNode {
     },
 }
 
+impl PartialEq for BVHNode {
+    // TODO Consider also comparing AABBs
+    fn eq(&self, other: &BVHNode) -> bool {
+        match (self, other) {
+            (&BVHNode::Node {
+                  parent_index: self_parent_index,
+                  depth: self_depth,
+                  child_l_index: self_child_l_index,
+                  child_r_index: self_child_r_index,
+                  ..
+              },
+             &BVHNode::Node {
+                  parent_index: other_parent_index,
+                  depth: other_depth,
+                  child_l_index: other_child_l_index,
+                  child_r_index: other_child_r_index,
+                  ..
+              }) => {
+                self_parent_index == other_parent_index && self_depth == other_depth &&
+                self_child_l_index == other_child_l_index &&
+                self_child_r_index == other_child_r_index
+            }
+            (&BVHNode::Leaf {
+                  parent_index: self_parent_index,
+                  depth: self_depth,
+                  shape_index: self_shape_index,
+              },
+             &BVHNode::Leaf {
+                  parent_index: other_parent_index,
+                  depth: other_depth,
+                  shape_index: other_shape_index,
+              }) => {
+                self_parent_index == other_parent_index && self_depth == other_depth &&
+                self_shape_index == other_shape_index
+            }
+            _ => false,
+        }
+    }
+}
+
 impl BVHNode {
     /// Returns the index of the parent node.
     pub fn parent(&self) -> usize {
@@ -133,7 +173,11 @@ impl BVHNode {
     /// the two children's `AABB`s for non-leaves.
     pub fn get_node_aabb<Shape: BHShape>(&self, shapes: &[Shape]) -> AABB {
         match self {
-            &BVHNode::Node { child_l_aabb, child_r_aabb, .. } => child_l_aabb.join(&child_r_aabb),
+            &BVHNode::Node {
+                 child_l_aabb,
+                 child_r_aabb,
+                 ..
+             } => child_l_aabb.join(&child_r_aabb),
             &BVHNode::Leaf { shape_index, .. } => shapes[shape_index].aabb(),
         }
     }
@@ -178,10 +222,10 @@ impl BVHNode {
             let shape_index = indices[0];
             let node_index = nodes.len();
             nodes.push(BVHNode::Leaf {
-                parent_index: parent_index,
-                depth: depth,
-                shape_index: shape_index,
-            });
+                           parent_index: parent_index,
+                           depth: depth,
+                           shape_index: shape_index,
+                       });
             // Let the shape know the index of the node that represents it
             shapes[shape_index].set_bh_node_index(node_index);
             return node_index;
@@ -326,11 +370,13 @@ impl BVHNode {
                               ray: &Ray,
                               indices: &mut Vec<usize>) {
         match &nodes[node_index] {
-            &BVHNode::Node { ref child_l_aabb,
-                             child_l_index,
-                             ref child_r_aabb,
-                             child_r_index,
-                             .. } => {
+            &BVHNode::Node {
+                 ref child_l_aabb,
+                 child_l_index,
+                 ref child_r_aabb,
+                 child_r_index,
+                 ..
+             } => {
                 if ray.intersects_aabb(child_l_aabb) {
                     BVHNode::traverse_recursive(nodes, child_l_index, ray, indices);
                 }
@@ -379,7 +425,10 @@ impl BVH {
     pub fn traverse<'a, Shape: Bounded>(&'a self, ray: &Ray, shapes: &'a [Shape]) -> Vec<&Shape> {
         let mut indices = Vec::new();
         BVHNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
-        indices.iter().map(|index| &shapes[*index]).collect::<Vec<_>>()
+        indices
+            .iter()
+            .map(|index| &shapes[*index])
+            .collect::<Vec<_>>()
     }
 
     /// Prints the [`BVH`] in a tree-like visualization.
@@ -390,7 +439,14 @@ impl BVH {
         let nodes = &self.nodes;
         fn print_node(nodes: &Vec<BVHNode>, node_index: usize) {
             match &nodes[node_index] {
-                &BVHNode::Node { child_l_index, child_r_index, depth, child_l_aabb, child_r_aabb, .. } => {
+                &BVHNode::Node {
+                     child_l_index,
+                     child_r_index,
+                     depth,
+                     child_l_aabb,
+                     child_r_aabb,
+                     ..
+                 } => {
                     let padding: String = repeat(" ").take(depth as usize).collect();
                     println!("{}child_l {:?}", padding, child_l_aabb);
                     print_node(nodes, child_l_index);
@@ -424,9 +480,9 @@ impl BoundingHierarchy for BVH {
 #[cfg(test)]
 pub mod tests {
     use bvh::BVH;
-    use testbase::{build_some_bh, traverse_some_bh, build_1200_triangles_bh, build_12k_triangles_bh,
-                   build_120k_triangles_bh, intersect_1200_triangles_bh, intersect_12k_triangles_bh,
-                   intersect_120k_triangles_bh};
+    use testbase::{build_some_bh, traverse_some_bh, build_1200_triangles_bh,
+                   build_12k_triangles_bh, build_120k_triangles_bh, intersect_1200_triangles_bh,
+                   intersect_12k_triangles_bh, intersect_120k_triangles_bh};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
