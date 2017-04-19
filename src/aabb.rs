@@ -113,9 +113,9 @@ impl AABB {
     /// use bvh::aabb::AABB;
     /// use bvh::nalgebra::Point3;
     ///
-    /// let aabb = AABB::with_bounds(Point3::new(-1.0,-1.0,-1.0), Point3::new(1.0,1.0,1.0));
-    /// let point_inside = Point3::new(0.125,-0.25,0.5);
-    /// let point_outside = Point3::new(1.0,-2.0,4.0);
+    /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
+    /// let point_inside = Point3::new(0.125, -0.25, 0.5);
+    /// let point_outside = Point3::new(1.0, -2.0, 4.0);
     ///
     /// assert!(aabb.contains(&point_inside));
     /// assert!(!aabb.contains(&point_outside));
@@ -138,11 +138,11 @@ impl AABB {
     /// use bvh::aabb::AABB;
     /// use bvh::nalgebra::Point3;
     ///
-    /// let aabb = AABB::with_bounds(Point3::new(-1.0,-1.0,-1.0), Point3::new(1.0,1.0,1.0));
-    /// let point_barely_inside = Point3::new(1.0000001,-1.0000001,1.000000001);
-    /// let point_outside = Point3::new(1.0,-2.0,4.0);
+    /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
+    /// let point_barely_outside = Point3::new(1.000_000_1, -1.000_000_1, 1.000_000_001);
+    /// let point_outside = Point3::new(1.0, -2.0, 4.0);
     ///
-    /// assert!(aabb.approx_contains_eps(&point_barely_inside, EPSILON));
+    /// assert!(aabb.approx_contains_eps(&point_barely_outside, EPSILON));
     /// assert!(!aabb.approx_contains_eps(&point_outside, EPSILON));
     /// ```
     ///
@@ -165,9 +165,9 @@ impl AABB {
     /// use bvh::nalgebra::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
-    /// let point_barely_inside = Point3::new(1.00_000_01, 1.00_000_01, 1.00_000_01);
+    /// let point_barely_outside = Point3::new(1.000_000_1, 1.000_000_1, 1.000_000_1);
     /// let center = aabb.center();
-    /// let inner_aabb = AABB::with_bounds(center, point_barely_inside);
+    /// let inner_aabb = AABB::with_bounds(center, point_barely_outside);
     ///
     /// assert!(aabb.approx_contains_aabb_eps(&inner_aabb, EPSILON));
     /// ```
@@ -188,9 +188,9 @@ impl AABB {
     /// use bvh::nalgebra::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
-    /// let point_barely_inside_min = Point3::new(-1.00_000_01, -1.00_000_01, -1.00_000_01);
-    /// let point_barely_inside_max = Point3::new(1.00_000_01, 1.00_000_01, 1.00_000_01);
-    /// let other = AABB::with_bounds(point_barely_inside_min, point_barely_inside_max);
+    /// let point_barely_outside_min = Point3::new(-1.000_000_1, -1.000_000_1, -1.000_000_1);
+    /// let point_barely_outside_max = Point3::new(1.000_000_1, 1.000_000_1, 1.000_000_1);
+    /// let other = AABB::with_bounds(point_barely_outside_min, point_barely_outside_max);
     ///
     /// assert!(aabb.relative_eq(&other, EPSILON));
     /// ```
@@ -209,13 +209,13 @@ impl AABB {
     /// use bvh::aabb::AABB;
     /// use bvh::nalgebra::Point3;
     ///
-    /// let aabb1 = AABB::with_bounds(Point3::new(-101.0,0.0,0.0), Point3::new(-100.0,1.0,1.0));
-    /// let aabb2 = AABB::with_bounds(Point3::new(100.0,0.0,0.0), Point3::new(101.0,1.0,1.0));
+    /// let aabb1 = AABB::with_bounds(Point3::new(-101.0, 0.0, 0.0), Point3::new(-100.0, 1.0, 1.0));
+    /// let aabb2 = AABB::with_bounds(Point3::new(100.0, 0.0, 0.0), Point3::new(101.0, 1.0, 1.0));
     /// let joint = aabb1.join(&aabb2);
     ///
-    /// let point_inside_aabb1 = Point3::new(-100.5,0.5,0.5);
-    /// let point_inside_aabb2 = Point3::new(100.5,0.5,0.5);
-    /// let point_inside_joint = Point3::new(0.0,0.5,0.5);
+    /// let point_inside_aabb1 = Point3::new(-100.5, 0.5, 0.5);
+    /// let point_inside_aabb2 = Point3::new(100.5, 0.5, 0.5);
+    /// let point_inside_joint = Point3::new(0.0, 0.5, 0.5);
     ///
     /// # assert!(aabb1.contains(&point_inside_aabb1));
     /// # assert!(!aabb1.contains(&point_inside_aabb2));
@@ -249,9 +249,9 @@ impl AABB {
     /// use bvh::aabb::AABB;
     /// use bvh::nalgebra::Point3;
     ///
-    /// let point1 = Point3::new(0.0,0.0,0.0);
-    /// let point2 = Point3::new(1.0,1.0,1.0);
-    /// let point3 = Point3::new(2.0,2.0,2.0);
+    /// let point1 = Point3::new(0.0, 0.0, 0.0);
+    /// let point2 = Point3::new(1.0, 1.0, 1.0);
+    /// let point3 = Point3::new(2.0, 2.0, 2.0);
     ///
     /// let aabb = AABB::empty();
     /// assert!(!aabb.contains(&point1));

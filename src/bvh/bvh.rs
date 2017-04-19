@@ -56,6 +56,72 @@ pub enum BVHNode {
 }
 
 impl BVHNode {
+    /// Returns the index of the parent node.
+    pub fn parent(&self) -> usize {
+        match self {
+            &BVHNode::Node { parent_index, .. } |
+            &BVHNode::Leaf { parent_index, .. } => parent_index,
+        }
+    }
+
+    /// Returns a mutable reference to the parent node index.
+    pub fn parent_mut(&mut self) -> &mut usize {
+        match self {
+            &mut BVHNode::Node { ref mut parent_index, .. } |
+            &mut BVHNode::Leaf { ref mut parent_index, .. } => parent_index,
+        }
+    }
+
+    /// Returns the index of the left child node.
+    pub fn child_l(&self) -> usize {
+        match self {
+            &BVHNode::Node { child_l_index, .. } => child_l_index,
+            _ => panic!("Tried to get the left child of a leaf node."),
+        }
+    }
+
+    /// Returns a mutable reference to the `AABB` of the left child node.
+    pub fn child_l_aabb_mut(&mut self) -> &mut AABB {
+        match self {
+            &mut BVHNode::Node { ref mut child_l_aabb, .. } => child_l_aabb,
+            _ => panic!("Tried to get the left child's `AABB` of a leaf node."),
+        }
+    }
+
+    /// Returns the index of the right child node.
+    pub fn child_r(&self) -> usize {
+        match self {
+            &BVHNode::Node { child_r_index, .. } => child_r_index,
+            _ => panic!("Tried to get the right child of a leaf node."),
+        }
+    }
+
+    /// Returns a mutable reference to the `AABB` of the right child node.
+    pub fn child_r_aabb_mut(&mut self) -> &mut AABB {
+        match self {
+            &mut BVHNode::Node { ref mut child_r_aabb, .. } => child_r_aabb,
+            _ => panic!("Tried to get the right child's `AABB` of a leaf node."),
+        }
+    }
+
+    /// Returns the depth of the node. The root node has depth `0`.
+    pub fn depth(&self) -> u32 {
+        match self {
+            &BVHNode::Node { depth, .. } |
+            &BVHNode::Leaf { depth, .. } => depth,
+        }
+    }
+
+    /// Gets the `AABB` for a `BVHNode`.
+    /// Returns the shape's `AABB` for leaves, and the joined `AABB` of
+    /// the two children's `AABB`s for non-leaves.
+    pub fn get_node_aabb<Shape: BHShape>(&self, shapes: &[Shape]) -> AABB {
+        match self {
+            &BVHNode::Node { child_l_aabb, child_r_aabb, .. } => child_l_aabb.join(&child_r_aabb),
+            &BVHNode::Leaf { shape_index, .. } => shapes[shape_index].aabb(),
+        }
+    }
+
     /// The build function sometimes needs to add nodes while their data is not available yet.
     /// A dummy cerated by this function serves the purpose of being changed later on.
     fn create_dummy() -> BVHNode {
@@ -297,12 +363,7 @@ impl BVH {
     pub fn traverse<'a, Shape: Bounded>(&'a self, ray: &Ray, shapes: &'a [Shape]) -> Vec<&Shape> {
         let mut indices = Vec::new();
         BVHNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
-        let mut hit_shapes = Vec::new();
-        for index in &indices {
-            let shape = &shapes[*index];
-            hit_shapes.push(shape);
-        }
-        hit_shapes
+        indices.iter().map(|index| &shapes[*index]).collect::<Vec<_>>()
     }
 
     /// Prints the [`BVH`] in a tree-like visualization.

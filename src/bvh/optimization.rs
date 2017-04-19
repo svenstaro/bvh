@@ -15,7 +15,7 @@ use rand::{thread_rng, Rng};
 // TODO Consider: Instead of getting the scene's shapes passed, let leaf nodes store an AABB
 // that is updated from the outside, perhaps by passing not only the indices of the changed
 // shapes, but also their new AABBs into optimize().
-// TODO Consider stopping to update AABBs upwards the tree once an AABB didn't get changed.
+// TODO Consider: Stop updating AABBs upwards the tree once an AABB didn't get changed.
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone)]
 enum OptimizationIndex {
@@ -28,67 +28,6 @@ impl OptimizationIndex {
         match self {
             &OptimizationIndex::Refit(index) |
             &OptimizationIndex::FixAABBs(index) => index,
-        }
-    }
-}
-
-impl BVHNode {
-    fn parent(&self) -> usize {
-        match self {
-            &BVHNode::Node { parent_index, .. } |
-            &BVHNode::Leaf { parent_index, .. } => parent_index,
-        }
-    }
-
-    fn parent_mut(&mut self) -> &mut usize {
-        match self {
-            &mut BVHNode::Node { ref mut parent_index, .. } |
-            &mut BVHNode::Leaf { ref mut parent_index, .. } => parent_index,
-        }
-    }
-
-    fn child_l(&self) -> usize {
-        match self {
-            &BVHNode::Node { child_l_index, .. } => child_l_index,
-            _ => panic!("Tried to get the left child of a leaf node."),
-        }
-    }
-
-    fn child_l_aabb_mut(&mut self) -> &mut AABB {
-        match self {
-            &mut BVHNode::Node { ref mut child_l_aabb, .. } => child_l_aabb,
-            _ => panic!("Tried to get the left child's `AABB` of a leaf node."),
-        }
-    }
-
-    fn child_r(&self) -> usize {
-        match self {
-            &BVHNode::Node { child_r_index, .. } => child_r_index,
-            _ => panic!("Tried to get the right child of a leaf node."),
-        }
-    }
-
-    fn child_r_aabb_mut(&mut self) -> &mut AABB {
-        match self {
-            &mut BVHNode::Node { ref mut child_r_aabb, .. } => child_r_aabb,
-            _ => panic!("Tried to get the right child's `AABB` of a leaf node."),
-        }
-    }
-
-    fn depth(&self) -> u32 {
-        match self {
-            &BVHNode::Node { depth, .. } |
-            &BVHNode::Leaf { depth, .. } => depth,
-        }
-    }
-
-    /// Gets the `AABB` for a `BVHNode`.
-    /// Returns the shape's `AABB` for leaves, and the joined `AABB` of
-    /// the two children's `AABB`s for non-leaves.
-    fn get_node_aabb<Shape: BHShape>(&self, shapes: &[Shape]) -> AABB {
-        match self {
-            &BVHNode::Node { child_l_aabb, child_r_aabb, .. } => child_l_aabb.join(&child_r_aabb),
-            &BVHNode::Leaf { shape_index, .. } => shapes[shape_index].aabb(),
         }
     }
 }
