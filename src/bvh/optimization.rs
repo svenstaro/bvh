@@ -32,6 +32,38 @@ impl OptimizationIndex {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+struct NodeData {
+    index: usize,
+    aabb: AABB,
+}
+
+impl BVHNode {
+    // Get the grandchildren's NodeData.
+    fn get_children_node_data(&self) -> Option<(NodeData, NodeData)> {
+        match self {
+            &BVHNode::Node {
+                 child_l_index,
+                 child_l_aabb,
+                 child_r_index,
+                 child_r_aabb,
+                 ..
+             } => {
+                Some((NodeData {
+                          index: child_l_index,
+                          aabb: child_l_aabb,
+                      },
+                      NodeData {
+                          index: child_r_index,
+                          aabb: child_r_aabb,
+                      }))
+            }
+            &BVHNode::Leaf { .. } => None,
+        }
+    }
+}
+
+
 impl BVH {
     /// Optimizes the `BVH` by batch-reorganizing updated nodes.
     /// Based on https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs
@@ -173,6 +205,62 @@ impl BVH {
         }
     }
 
+    fn find_better_rotation(&self,
+                            child_l_index: usize,
+                            child_l_aabb: &AABB,
+                            child_r_index: usize,
+                            child_r_aabb: &AABB)
+                            -> Option<(usize, usize)> {
+        // Get indices and `AABB`s of all grandchildren.
+        let left_children_nodes = self.nodes[child_l_index].get_children_node_data();
+        let right_children_nodes = self.nodes[child_r_index].get_children_node_data();
+
+        // Contains the surface area that would result from applying the currently favored rotation.
+        // The rotation with the smallest surface area will be applied in the end.
+        // The value is calculated by `child_l_aabb.surface_area() + child_r_aabb.surface_area()`.
+        let mut best_surface_area = child_l_aabb.surface_area() + child_r_aabb.surface_area();
+
+        // Stores the rotation that would result in the surface area `best_surface_area`,
+        // thus being the favored rotation that will be executed after considering all rotations.
+        let mut best_rotation: Option<(usize, usize)> = None;
+        {
+            let mut consider_rotation = |new_rotation: (usize, usize), surface_area: f32| if
+                surface_area < best_surface_area {
+                best_surface_area = surface_area;
+                best_rotation = Some(new_rotation);
+            };
+
+            // Child to grandchild rotations
+            if let Some((child_rl, child_rr)) = right_children_nodes {
+                let surface_area_l_rl = child_rl.aabb.surface_area() +
+                                        child_l_aabb.join(&child_rr.aabb).surface_area();
+                consider_rotation((child_l_index, child_rl.index), surface_area_l_rl);
+                let surface_area_l_rr = child_rr.aabb.surface_area() +
+                                        child_l_aabb.join(&child_rl.aabb).surface_area();
+                consider_rotation((child_l_index, child_rr.index), surface_area_l_rr);
+            }
+            if let Some((child_ll, child_lr)) = left_children_nodes {
+                let surface_area_r_ll = child_ll.aabb.surface_area() +
+                                        child_r_aabb.join(&child_lr.aabb).surface_area();
+                consider_rotation((child_r_index, child_ll.index), surface_area_r_ll);
+                let surface_area_r_lr = child_lr.aabb.surface_area() +
+                                        child_r_aabb.join(&child_ll.aabb).surface_area();
+                consider_rotation((child_r_index, child_lr.index), surface_area_r_lr);
+
+                // Grandchild to grandchild rotations
+                if let Some((child_rl, child_rr)) = right_children_nodes {
+                    let surface_area_ll_rl = child_rl.aabb.join(&child_lr.aabb).surface_area() +
+                                             child_ll.aabb.join(&child_rr.aabb).surface_area();
+                    consider_rotation((child_ll.index, child_rl.index), surface_area_ll_rl);
+                    let surface_area_ll_rr = child_ll.aabb.join(&child_rl.aabb).surface_area() +
+                                             child_lr.aabb.join(&child_rr.aabb).surface_area();
+                    consider_rotation((child_ll.index, child_rr.index), surface_area_ll_rr);
+                }
+            }
+        }
+        best_rotation
+    }
+
     /// Checks if there is a way to rotate a child and a grandchild (or two grandchildren) of
     /// the given node (specified by `node_index`) that would improve the `BVH`.
     /// If there is, the best rotation found is performed.
@@ -200,113 +288,23 @@ impl BVH {
             unreachable!()
         };
 
-        // Recalculate AABBs for the children since at least one of them changed.
-        // Don't update the AABBs in the node yet because they're still subject to change
-        // during potential upcoming rotations.
+        // Recalculate `AABB`s for the children since at least one of them changed.  Don't update
+        // the `AABB`s in the node yet because they're still subject to change during potential
+        // upcoming rotations.
         let child_l_aabb = self.nodes[child_l_index].get_node_aabb(shapes);
         let child_r_aabb = self.nodes[child_r_index].get_node_aabb(shapes);
 
-        // Contains the surface area that would result from applying the currently favored rotation.
-        // The rotation with the smallest SA will be applied in the end.
-        // The value is calculated by `child_l_aabb.surface_area() + child_r_aabb.surface_area()`.
-        let mut best_surface_area = child_l_aabb.surface_area() + child_r_aabb.surface_area();
-
-        #[derive(Debug, Copy, Clone)]
-        struct NodeData {
-            index: usize,
-            aabb: AABB,
-        }
-
-        // Get the grandchildren's NodeData
-        let get_children_node_data = |node: &BVHNode| -> Option<(NodeData, NodeData)> {
-            match node {
-                &BVHNode::Node {
-                     child_l_index,
-                     child_l_aabb,
-                     child_r_index,
-                     child_r_aabb,
-                     ..
-                 } => {
-                    Some((NodeData {
-                              index: child_l_index,
-                              aabb: child_l_aabb,
-                          },
-                          NodeData {
-                              index: child_r_index,
-                              aabb: child_r_aabb,
-                          }))
-                }
-                &BVHNode::Leaf { .. } => None,
-            }
-        };
-
-        // Get indices and AABBs of all grandchildren
-        let left_children_nodes = get_children_node_data(&self.nodes[child_l_index]);
-        let right_children_nodes = get_children_node_data(&self.nodes[child_r_index]);
-
-        // Stores the Rotation that would result in the surface area best_surface_area,
-        // thus being the favored rotation that will be executed after considering all rotations.
-        // Consider all the possible rotations, choose the one with the lowest SAH cost.
-        let mut best_rotation: Option<(usize, usize)> = None;
-        {
-            let mut consider_rotation = |new_rotation: (usize, usize), surface_area: f32| {
-                info!("        SA {} vs. current SA {}.", surface_area, best_surface_area);
-                if surface_area < best_surface_area {
-                    best_surface_area = surface_area;
-                    best_rotation = Some(new_rotation);
-                }
-            };
-
-            // Child to grandchild rotations
-            if let Some((child_rl, child_rr)) = right_children_nodes {
-                {
-                    let sa = child_rl.aabb.surface_area() +
-                             child_l_aabb.join(&child_rr.aabb).surface_area();
-                    consider_rotation((child_l_index, child_rl.index), sa);
-                }
-                {
-                    let sa = child_rr.aabb.surface_area() +
-                             child_l_aabb.join(&child_rl.aabb).surface_area();
-                    consider_rotation((child_l_index, child_rr.index), sa);
-                }
-            }
-            if let Some((child_ll, child_lr)) = left_children_nodes {
-                {
-                    let sa = child_ll.aabb.surface_area() +
-                             child_r_aabb.join(&child_lr.aabb).surface_area();
-                    consider_rotation((child_r_index, child_ll.index), sa);
-                }
-                {
-                    let sa = child_lr.aabb.surface_area() +
-                             child_r_aabb.join(&child_ll.aabb).surface_area();
-                    consider_rotation((child_r_index, child_lr.index), sa);
-                }
-
-                // Grandchild to grandchild rotations
-                if let Some((child_rl, child_rr)) = right_children_nodes {
-                    {
-                        let sa = child_rl.aabb.join(&child_lr.aabb).surface_area() +
-                                 child_ll.aabb.join(&child_rr.aabb).surface_area();
-                        consider_rotation((child_ll.index, child_rl.index), sa);
-                    }
-                    {
-                        let sa = child_ll.aabb.join(&child_rl.aabb).surface_area() +
-                                 child_lr.aabb.join(&child_rr.aabb).surface_area();
-                        consider_rotation((child_ll.index, child_rr.index), sa);
-                    }
-                }
-            }
-        }
+        let best_rotation =
+            self.find_better_rotation(child_l_index, &child_l_aabb, child_r_index, &child_r_aabb);
 
         if let Some((rotation_node_a, rotation_node_b)) = best_rotation {
             self.rotate(rotation_node_a, rotation_node_b, shapes);
 
-            // Update the children's children AABBs and the children AABBs of node
+            // Update the children's children `AABB`s and the children `AABB`s of node.
             self.fix_children_and_own_aabbs(node_index, shapes);
 
-            // Return parent node's index for upcoming refitting,
-            // since this node just changed its AABB
-            if node_index > 0 {
+            // Return parent node's index for upcoming refitting, since this node just changed its `AABB`.
+            if node_index != 0 {
                 Some(OptimizationIndex::Refit(parent_index))
             } else {
                 None
@@ -317,7 +315,7 @@ impl BVH {
             *self.nodes[node_index].child_l_aabb_mut() = child_l_aabb;
             *self.nodes[node_index].child_r_aabb_mut() = child_r_aabb;
 
-            /// Returns true randomly, with a chance given by the parameter
+            /// Returns true randomly, with a chance given by the parameter.
             fn chance(chance: f32) -> bool {
                 let mut rng = thread_rng();
                 rng.next_f32() < chance
