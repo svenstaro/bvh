@@ -13,8 +13,10 @@ keywords = ["bvh", "bounding", "volume", "sah", "aabb"]
 license = "MIT"
 
 [dependencies]
-nalgebra = "0.10.1"
+approx = "0.1.1"
+nalgebra = "0.11.1"
+rand = "0.3.14"
+log = "*"
 
 [dev-dependencies]
 quickcheck = "0.3.1"
-rand = "0.3.14"

@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use nalgebra::{Point3, Vector3};
 
 use aabb::{AABB, Bounded};
-use bounding_hierarchy::BoundingHierarchy;
+use bounding_hierarchy::{BoundingHierarchy, BHShape};
 use ray::Ray;
 
 /// A vector represented as a tuple
@@ -26,14 +26,35 @@ pub fn tuple_to_vector(tpl: &TupleVec) -> Vector3<f32> {
 pub struct UnitBox {
     pub id: i32,
     pub pos: Point3<f32>,
+    node_index: usize,
 }
 
-/// `UnitBox`'s `AABB`s are unit `AABB`s centered on the given x-position.
+impl UnitBox {
+    pub fn new(id: i32, pos: Point3<f32>) -> UnitBox {
+        UnitBox {
+            id: id,
+            pos: pos,
+            node_index: 0,
+        }
+    }
+}
+
+/// `UnitBox`'s `AABB`s are unit `AABB`s centered on the box's position.
 impl Bounded for UnitBox {
     fn aabb(&self) -> AABB {
         let min = self.pos + Vector3::new(-0.5, -0.5, -0.5);
         let max = self.pos + Vector3::new(0.5, 0.5, 0.5);
         AABB::with_bounds(min, max)
+    }
+}
+
+impl BHShape for UnitBox {
+    fn set_bh_node_index(&mut self, index: usize) {
+        self.node_index = index;
+    }
+
+    fn bh_node_index(&self) -> usize {
+        self.node_index
     }
 }
 
@@ -43,18 +64,15 @@ pub fn generate_aligned_boxes() -> Vec<UnitBox> {
     // Create 21 boxes along the x-axis
     let mut shapes = Vec::new();
     for x in -10..11 {
-        shapes.push(UnitBox {
-            id: x,
-            pos: Point3::new(x as f32, 0.0, 0.0),
-        });
+        shapes.push(UnitBox::new(x, Point3::new(x as f32, 0.0, 0.0)));
     }
     shapes
 }
 
 /// Creates a `BoundingHierarchy` for a fixed scene structure.
 pub fn build_some_bh<BH: BoundingHierarchy>() -> (Vec<UnitBox>, BH) {
-    let boxes = generate_aligned_boxes();
-    let bh = BH::build(&boxes);
+    let mut boxes = generate_aligned_boxes();
+    let bh = BH::build(&mut boxes);
     (boxes, bh)
 }
 
@@ -122,15 +140,17 @@ pub struct Triangle {
     pub b: Point3<f32>,
     pub c: Point3<f32>,
     aabb: AABB,
+    node_index: usize,
 }
 
 impl Triangle {
-    fn new(a: Point3<f32>, b: Point3<f32>, c: Point3<f32>) -> Triangle {
+    pub fn new(a: Point3<f32>, b: Point3<f32>, c: Point3<f32>) -> Triangle {
         Triangle {
             a: a,
             b: b,
             c: c,
             aabb: AABB::empty().grow(&a).grow(&b).grow(&c),
+            node_index: 0,
         }
     }
 }
@@ -138,6 +158,16 @@ impl Triangle {
 impl Bounded for Triangle {
     fn aabb(&self) -> AABB {
         self.aabb
+    }
+}
+
+impl BHShape for Triangle {
+    fn set_bh_node_index(&mut self, index: usize) {
+        self.node_index = index;
+    }
+
+    fn bh_node_index(&self) -> usize {
+        self.node_index
     }
 }
 
@@ -177,7 +207,7 @@ fn splitmix64(x: &mut u64) -> u64 {
 }
 
 /// Generates a new Point3, mutates the seed.
-fn next_point3(seed: &mut u64) -> Point3<f32> {
+pub fn next_point3(seed: &mut u64) -> Point3<f32> {
     let u = splitmix64(seed);
     let a = ((u >> 32) & 0xFFFFFFFF) as i64 - 0x80000000;
     let b = (u & 0xFFFFFFFF) as i64 - 0x80000000;
@@ -199,15 +229,15 @@ pub fn create_n_cubes(n: u64) -> Vec<Triangle> {
 /// Creates a `Ray` from the random `seed`. Mutates the `seed`.
 pub fn create_ray(seed: &mut u64) -> Ray {
     let origin = next_point3(seed);
-    let direction = next_point3(seed).to_vector();
+    let direction = next_point3(seed).coords;
     Ray::new(origin, direction)
 }
 
 /// Benchmark the construction of a `BoundingHierarchy` with 120,000 triangles.
 fn build_n_triangles_bh<T: BoundingHierarchy>(n: u64, b: &mut ::test::Bencher) {
-    let triangles = create_n_cubes(n);
+    let mut triangles = create_n_cubes(n);
     b.iter(|| {
-        T::build(&triangles);
+        T::build(&mut triangles);
     });
 }
 
@@ -263,8 +293,8 @@ fn bench_intersect_120k_triangles_list_aabb(b: &mut ::test::Bencher) {
 
 /// Benchmark the traversal of a `BoundingHierarchy` with `n` triangles.
 pub fn intersect_n_triangles<T: BoundingHierarchy>(n: u64, b: &mut ::test::Bencher) {
-    let triangles = create_n_cubes(n);
-    let structure = T::build(&triangles);
+    let mut triangles = create_n_cubes(n);
+    let structure = T::build(&mut triangles);
     let mut seed = 0;
 
     b.iter(|| {

@@ -2,6 +2,7 @@
 
 use std::ops::{Index, IndexMut};
 use std::fmt::{Display, Formatter, Result};
+use nalgebra::Point3;
 
 /// An `Axis` in a three-dimensional coordinate system.
 /// Used to access `Vector3`/`Point3` structs via index.
@@ -28,7 +29,7 @@ use std::fmt::{Display, Formatter, Result};
 /// use nalgebra::Point3;
 ///
 /// # fn main() {
-/// let mut position = Point3::new(1.0, 2.0, 3.0);
+/// let mut position: Point3<f32> = Point3::new(1.0, 2.0, 3.0);
 /// position[Axis::X] = 1000.0;
 ///
 /// assert_eq!(position[Axis::X], 1000.0);
@@ -49,10 +50,10 @@ pub enum Axis {
 /// Display implementation for `Axis`.
 impl Display for Axis {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        let c = match *self {
-            Axis::X => "x",
-            Axis::Y => "y",
-            Axis::Z => "z",
+        let c = match self {
+            &Axis::X => "x",
+            &Axis::Y => "y",
+            &Axis::Z => "z",
         };
         write!(f, "{}", c)
     }
@@ -67,10 +68,34 @@ impl Index<Axis> for [f32] {
     }
 }
 
+/// Make `Point3` indexable by `Axis`.
+impl Index<Axis> for Point3<f32> {
+    type Output = f32;
+
+    fn index(&self, axis: Axis) -> &f32 {
+        match axis {
+            Axis::X => &self.x,
+            Axis::Y => &self.y,
+            Axis::Z => &self.z,
+        }
+    }
+}
+
 /// Make slices mutably accessible by `Axis`.
 impl IndexMut<Axis> for [f32] {
     fn index_mut(&mut self, axis: Axis) -> &mut f32 {
         &mut self[axis as usize]
+    }
+}
+
+/// Make `Point3` mutably accessible by `Axis`.
+impl IndexMut<Axis> for Point3<f32> {
+    fn index_mut(&mut self, axis: Axis) -> &mut f32 {
+        match axis {
+            Axis::X => &mut self.x,
+            Axis::Y => &mut self.y,
+            Axis::Z => &mut self.z,
+        }
     }
 }
 
