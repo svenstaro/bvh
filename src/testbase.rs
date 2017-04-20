@@ -291,23 +291,26 @@ fn bench_intersect_120k_triangles_list_aabb(b: &mut ::test::Bencher) {
     });
 }
 
-/// Benchmark the traversal of a `BoundingHierarchy` with `n` triangles.
-pub fn intersect_n_triangles<T: BoundingHierarchy>(n: u64, b: &mut ::test::Bencher) {
-    let mut triangles = create_n_cubes(n);
-    let structure = T::build(&mut triangles);
+pub fn intersect_bh<T: BoundingHierarchy>(bh: &T, triangles: &[Triangle], b: &mut ::test::Bencher) {
     let mut seed = 0;
-
     b.iter(|| {
         let ray = create_ray(&mut seed);
 
         // Traverse the `BoundingHierarchy` recursively.
-        let hits = structure.traverse(&ray, &triangles);
+        let hits = bh.traverse(&ray, triangles);
 
         // Traverse the resulting list of positive AABB tests
         for triangle in &hits {
             ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
         }
     });
+}
+
+/// Benchmark the traversal of a `BoundingHierarchy` with `n` triangles.
+pub fn intersect_n_triangles<T: BoundingHierarchy>(n: u64, b: &mut ::test::Bencher) {
+    let mut triangles = create_n_cubes(n);
+    let bh = T::build(&mut triangles);
+    intersect_bh(&bh, &triangles, b)
 }
 
 /// Benchmark the traversal of a `BoundingHierarchy` with 1,200 triangles.

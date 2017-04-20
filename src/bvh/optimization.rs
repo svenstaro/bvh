@@ -503,7 +503,7 @@ pub mod tests {
     use std::collections::HashSet;
     use rand::{Rng, SeedableRng, StdRng};
     use nalgebra::Point3;
-    use testbase::{build_some_bh, create_n_cubes, next_point3, Triangle, UnitBox};
+    use testbase::{build_some_bh, create_n_cubes, intersect_bh, next_point3, Triangle, UnitBox};
     use bounding_hierarchy::BHShape;
     use std::f32;
 
@@ -950,7 +950,7 @@ pub mod tests {
         for index in &indices {
             let random_pos = next_point3(seed);
             let b = triangles[*index].b - triangles[*index].a;
-            let c = triangles[*index].b - triangles[*index].a;
+            let c = triangles[*index].c - triangles[*index].a;
             triangles[*index].a = random_pos;
             triangles[*index].b = random_pos + b;
             triangles[*index].c = random_pos + c;
@@ -1006,6 +1006,39 @@ pub mod tests {
                    bvh.optimize(&updated, &triangles);
                });
     }
+
+    #[bench]
+    /// Benchmark intersecting a `BVH` after randomly moving the triangles and optimizing.
+    fn bench_intersect_after_optimize(b: &mut ::test::Bencher) {
+        let mut triangles = create_n_cubes(10_000);
+        let mut bvh = BVH::build(&mut triangles);
+        let mut seed = 0;
+
+        for _ in 0..10_000 {
+            let updated = randomly_move_triangles(&mut triangles, 1, &mut seed);
+            bvh.optimize(&updated, &triangles);
+        }
+
+        intersect_bh(&bvh, &triangles, b);
+    }
+
+    #[bench]
+    /// Benchmark intersecting a `BVH` after rebuilding.
+    /// Used to compare optimizing with rebuilding. For reference see
+    /// `bench_intersect_after_optimize`.
+    fn bench_intersect_with_rebuild(b: &mut ::test::Bencher) {
+        let mut triangles = create_n_cubes(10_000);
+        let mut seed = 0;
+
+        for _ in 0..10_000 {
+            randomly_move_triangles(&mut triangles, 1, &mut seed);
+        }
+        let bvh = BVH::build(&mut triangles);
+
+        intersect_bh(&bvh, &triangles, b);
+    }
+
+
 
     // TODO Add benchmarks for:
     // * Benchmark optimizing an optimal bvh
