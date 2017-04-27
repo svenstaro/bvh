@@ -86,11 +86,24 @@ impl BVHNode {
         where F: Fn(&AABB, u32, u32, u32) -> FNodeType
     {
         match *self {
-            BVHNode::Node { ref child_l_aabb, child_l_index, ref child_r_aabb, child_r_index, .. } => {
-                let index_after_child_l = nodes[child_l_index]
-                    .create_flat_branch(nodes, child_l_aabb, vec, next_free, constructor);
-                nodes[child_r_index]
-                    .create_flat_branch(nodes, child_r_aabb, vec, index_after_child_l, constructor)
+            BVHNode::Node {
+                ref child_l_aabb,
+                child_l_index,
+                ref child_r_aabb,
+                child_r_index,
+                ..
+            } => {
+                let index_after_child_l =
+                    nodes[child_l_index].create_flat_branch(nodes,
+                                                            child_l_aabb,
+                                                            vec,
+                                                            next_free,
+                                                            constructor);
+                nodes[child_r_index].create_flat_branch(nodes,
+                                                        child_r_aabb,
+                                                        vec,
+                                                        index_after_child_l,
+                                                        constructor)
             }
             BVHNode::Leaf { shape_index, .. } => {
                 let mut next_shape = next_free;
@@ -270,13 +283,13 @@ impl BVH {
     /// ```
     pub fn flatten(&self) -> FlatBVH {
         self.flatten_custom(&|aabb, entry, exit, shape| {
-            FlatNode {
-                aabb: *aabb,
-                entry_index: entry,
-                exit_index: exit,
-                shape_index: shape,
-            }
-        })
+                                 FlatNode {
+                                     aabb: *aabb,
+                                     entry_index: entry,
+                                     exit_index: exit,
+                                     shape_index: shape,
+                                 }
+                             })
     }
 }
 
@@ -410,7 +423,7 @@ mod tests {
 
     use testbase::{create_n_cubes, build_some_bh, traverse_some_bh, build_1200_triangles_bh,
                    build_12k_triangles_bh, build_120k_triangles_bh, intersect_1200_triangles_bh,
-                   intersect_12k_triangles_bh, intersect_120k_triangles_bh};
+                   intersect_12k_triangles_bh, intersect_120k_triangles_bh, default_bounds};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -428,12 +441,11 @@ mod tests {
     #[bench]
     /// Benchmark the flattening of a BVH with 120,000 triangles.
     fn bench_flatten_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        let mut triangles = create_n_cubes(10_000);
+        let bounds = default_bounds();
+        let mut triangles = create_n_cubes(10_000, &bounds);
         let bvh = BVH::build(&mut triangles);
 
-        b.iter(|| {
-            bvh.flatten();
-        });
+        b.iter(|| { bvh.flatten(); });
     }
 
     #[bench]

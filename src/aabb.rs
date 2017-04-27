@@ -67,10 +67,7 @@ impl AABB {
     /// [`AABB`]: struct.AABB.html
     ///
     pub fn with_bounds(min: Point3<f32>, max: Point3<f32>) -> AABB {
-        AABB {
-            min: min,
-            max: max,
-        }
+        AABB { min: min, max: max }
     }
 
     /// Creates a new empty [`AABB`].
@@ -241,6 +238,46 @@ impl AABB {
                                       self.max.z.max(other.max.z)))
     }
 
+    /// Mutable version of [`AABB::join`].
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::aabb::AABB;
+    /// use bvh::nalgebra::Point3;
+    ///
+    /// let aabb = AABB::with_bounds(Point3::new(-101.0, 0.0, 0.0), Point3::new(-100.0, 1.0, 1.0));
+    /// let other = AABB::with_bounds(Point3::new(100.0, 0.0, 0.0), Point3::new(101.0, 1.0, 1.0));
+    ///
+    /// let point_inside_aabb = Point3::new(-100.5, 0.5, 0.5);
+    /// let point_inside_other = Point3::new(100.5, 0.5, 0.5);
+    /// let point_inside_joint = Point3::new(0.0, 0.5, 0.5);
+    ///
+    /// # assert!(aabb.contains(&point_inside_aabb));
+    /// # assert!(!aabb.contains(&point_inside_other));
+    /// # assert!(!aabb.contains(&point_inside_joint));
+    /// #
+    /// # assert!(!other.contains(&point_inside_aabb));
+    /// # assert!(other.contains(&point_inside_other));
+    /// # assert!(!other.contains(&point_inside_joint));
+    ///
+    /// aabb.join_mut(&other);
+    ///
+    /// assert!(aabb.contains(&point_inside_aabb));
+    /// assert!(aabb.contains(&point_inside_other));
+    /// assert!(aabb.contains(&point_inside_joint));
+    /// ```
+    ///
+    /// [`AABB::join`]: struct.AABB.html
+    ///
+    pub fn join_mut(&mut self, other: &AABB) {
+        self.min = Point3::new(self.min.x.min(other.min.x),
+                               self.min.y.min(other.min.y),
+                               self.min.z.min(other.min.z));
+        self.max = Point3::new(self.max.x.max(other.max.x),
+                               self.max.y.max(other.max.y),
+                               self.max.z.max(other.max.z));
+    }
+
     /// Returns a new minimal [`AABB`] which contains both
     /// this [`AABB`] and the [`Point3`] `other`.
     ///
@@ -274,6 +311,41 @@ impl AABB {
                           Point3::new(self.max.x.max(other.x),
                                       self.max.y.max(other.y),
                                       self.max.z.max(other.z)))
+    }
+
+    /// Mutable version of [`AABB::grow`].
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::aabb::AABB;
+    /// use bvh::nalgebra::Point3;
+    ///
+    /// let point1 = Point3::new(0.0, 0.0, 0.0);
+    /// let point2 = Point3::new(1.0, 1.0, 1.0);
+    /// let point3 = Point3::new(2.0, 2.0, 2.0);
+    ///
+    /// let aabb = AABB::empty();
+    /// assert!(!aabb.contains(&point1));
+    ///
+    /// aabb.grow_mut(&point1);
+    /// assert!(aabb.contains(&point1));
+    /// assert!(!aabb.contains(&point2));
+    ///
+    /// aabb.grow_mut(&point2);
+    /// assert!(aabb.contains(&point2));
+    /// assert!(!aabb.contains(&point3));
+    /// ```
+    ///
+    /// [`AABB::grow`]: struct.AABB.html
+    /// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
+    ///
+    pub fn grow_mut(&mut self, other: &Point3<f32>) {
+        self.min = Point3::new(self.min.x.min(other.x),
+                               self.min.y.min(other.y),
+                               self.min.z.min(other.z));
+        self.max = Point3::new(self.max.x.max(other.x),
+                               self.max.y.max(other.y),
+                               self.max.z.max(other.z));
     }
 
     /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and the [`Bounded`] `other`.

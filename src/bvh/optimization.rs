@@ -501,9 +501,9 @@ pub mod tests {
     use bvh::{BVH, BVHNode};
     use aabb::{AABB, Bounded};
     use std::collections::HashSet;
-    use rand::{Rng, SeedableRng, StdRng};
     use nalgebra::Point3;
-    use testbase::{build_some_bh, create_n_cubes, intersect_bh, next_point3, Triangle, UnitBox};
+    use testbase::{build_some_bh, create_n_cubes, load_sponza_scene, intersect_bh, UnitBox,
+                   randomly_move_triangles, randomly_transform_scene, default_bounds};
     use bounding_hierarchy::BHShape;
     use std::f32;
 
@@ -936,37 +936,15 @@ pub mod tests {
                     .relative_eq(&shapes[1].aabb(), EPSILON));
     }
 
-    /// Given an array of `Triangle`s, moves `amount` triangles around using the random `seed`.
-    /// Returns a `HashSet` of indices of modified triangles.
-    fn randomly_move_triangles(triangles: &mut Vec<Triangle>,
-                               amount: usize,
-                               seed: &mut u64)
-                               -> HashSet<usize> {
-        let mut indices: Vec<usize> = (0..triangles.len()).collect();
-        let mut rng: StdRng = SeedableRng::from_seed([*seed as usize].as_ref());
-        rng.shuffle(&mut indices);
-        indices.truncate(amount);
-
-        for index in &indices {
-            let random_pos = next_point3(seed);
-            let b = triangles[*index].b - triangles[*index].a;
-            let c = triangles[*index].c - triangles[*index].a;
-            triangles[*index].a = random_pos;
-            triangles[*index].b = random_pos + b;
-            triangles[*index].c = random_pos + c;
-        }
-
-        indices.into_iter().collect()
-    }
-
     #[test]
     /// Test optimizing `BVH` after randomizing 50% of the shapes.
     fn test_optimize_bvh_120k_triangles_50p() {
-        let mut triangles = create_n_cubes(10_000);
+        let bounds = default_bounds();
+        let mut triangles = create_n_cubes(10_000, &bounds);
         let mut bvh = BVH::build(&mut triangles);
         let mut seed = 0;
 
-        let updated = randomly_move_triangles(&mut triangles, 60_000, &mut seed);
+        let updated = randomly_move_triangles(&mut triangles, 60_000, &bounds, &mut seed);
         bvh.optimize(&updated, &triangles);
 
         bvh.assert_consistent();
@@ -975,21 +953,24 @@ pub mod tests {
     #[bench]
     /// Benchmark optimizing a `BVH` after randomizing 50% of the shapes.
     fn bench_randomize_120k_triangles_50p(b: &mut ::test::Bencher) {
-        let mut triangles = create_n_cubes(10_000);
+        let bounds = default_bounds();
+        let mut triangles = create_n_cubes(10_000, &bounds);
         let mut seed = 0;
 
-        b.iter(|| { randomly_move_triangles(&mut triangles, 60_000, &mut seed); });
+        b.iter(|| { randomly_move_triangles(&mut triangles, 60_000, &bounds, &mut seed); });
     }
 
     #[bench]
     /// Benchmark optimizing a `BVH` after randomizing 50% of the shapes.
     fn bench_optimize_bvh_120k_triangles_50p(b: &mut ::test::Bencher) {
-        let mut triangles = create_n_cubes(10_000);
+        let bounds = default_bounds();
+        let mut triangles = create_n_cubes(10_000, &bounds);
         let mut bvh = BVH::build(&mut triangles);
         let mut seed = 0;
 
         b.iter(|| {
-                   let updated = randomly_move_triangles(&mut triangles, 60_000, &mut seed);
+                   let updated =
+                       randomly_move_triangles(&mut triangles, 60_000, &bounds, &mut seed);
                    bvh.optimize(&updated, &triangles);
                });
     }
@@ -997,12 +978,13 @@ pub mod tests {
     #[bench]
     /// Benchmark optimizing a `BVH` after randomizing one shape.
     fn bench_optimize_bvh_120k_triangles_single(b: &mut ::test::Bencher) {
-        let mut triangles = create_n_cubes(10_000);
+        let bounds = default_bounds();
+        let mut triangles = create_n_cubes(10_000, &bounds);
         let mut bvh = BVH::build(&mut triangles);
         let mut seed = 0;
 
         b.iter(|| {
-                   let updated = randomly_move_triangles(&mut triangles, 1, &mut seed);
+                   let updated = randomly_move_triangles(&mut triangles, 1, &bounds, &mut seed);
                    bvh.optimize(&updated, &triangles);
                });
     }
@@ -1010,16 +992,17 @@ pub mod tests {
     #[bench]
     /// Benchmark intersecting a `BVH` after randomly moving the triangles and optimizing.
     fn bench_intersect_after_optimize(b: &mut ::test::Bencher) {
-        let mut triangles = create_n_cubes(10_000);
+        let bounds = default_bounds();
+        let mut triangles = create_n_cubes(10_000, &bounds);
         let mut bvh = BVH::build(&mut triangles);
         let mut seed = 0;
 
-        for _ in 0..10_000 {
-            let updated = randomly_move_triangles(&mut triangles, 1, &mut seed);
+        for _ in 0..50 {
+            let updated = randomly_move_triangles(&mut triangles, 120_000, &bounds, &mut seed);
             bvh.optimize(&updated, &triangles);
         }
 
-        intersect_bh(&bvh, &triangles, b);
+        intersect_bh(&bvh, &triangles, &bounds, b);
     }
 
     #[bench]
@@ -1027,18 +1010,49 @@ pub mod tests {
     /// Used to compare optimizing with rebuilding. For reference see
     /// `bench_intersect_after_optimize`.
     fn bench_intersect_with_rebuild(b: &mut ::test::Bencher) {
-        let mut triangles = create_n_cubes(10_000);
+        let bounds = default_bounds();
+        let mut triangles = create_n_cubes(10_000, &bounds);
         let mut seed = 0;
 
-        for _ in 0..10_000 {
-            randomly_move_triangles(&mut triangles, 1, &mut seed);
+        for _ in 0..50 {
+            randomly_move_triangles(&mut triangles, 120_000, &bounds, &mut seed);
         }
         let bvh = BVH::build(&mut triangles);
 
-        intersect_bh(&bvh, &triangles, b);
+        intersect_bh(&bvh, &triangles, &bounds, b);
     }
 
+    #[bench]
+    /// Benchmark intersecting a `BVH` after randomly moving the triangles and optimizing.
+    fn bench_intersect_sponza_after_optimize(b: &mut ::test::Bencher) {
+        // Compute bounds // TODO
+        let (mut triangles, bounds) = load_sponza_scene();
+        let mut bvh = BVH::build(&mut triangles);
+        let mut seed = 0;
 
+        for _ in 0..10 {
+            let updated = randomly_transform_scene(&mut triangles, 120_000, &bounds, &mut seed);
+            bvh.optimize(&updated, &triangles);
+        }
+
+        intersect_bh(&bvh, &triangles, &bounds, b);
+    }
+
+    #[bench]
+    /// Benchmark intersecting a `BVH` after rebuilding.
+    /// Used to compare optimizing with rebuilding. For reference see
+    /// `bench_intersect_after_optimize`.
+    fn bench_intersect_sponza_with_rebuild(b: &mut ::test::Bencher) {
+        let (mut triangles, bounds) = load_sponza_scene();
+        let mut seed = 0;
+
+        for _ in 0..10 {
+            randomly_transform_scene(&mut triangles, 120_000, &bounds, &mut seed);
+        }
+        let bvh = BVH::build(&mut triangles);
+
+        intersect_bh(&bvh, &triangles, &bounds, b);
+    }
 
     // TODO Add benchmarks for:
     // * Benchmark optimizing an optimal bvh

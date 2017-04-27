@@ -77,6 +77,8 @@ extern crate approx;
 #[macro_use]
 extern crate log;
 #[cfg(test)]
+extern crate obj;
+#[cfg(test)]
 extern crate test;
 #[cfg(test)]
 #[macro_use]
