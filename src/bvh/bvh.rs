@@ -98,73 +98,73 @@ impl PartialEq for BVHNode {
 impl BVHNode {
     /// Returns the index of the parent node.
     pub fn parent(&self) -> usize {
-        match self {
-            &BVHNode::Node { parent_index, .. } |
-            &BVHNode::Leaf { parent_index, .. } => parent_index,
+        match *self {
+            BVHNode::Node { parent_index, .. } |
+            BVHNode::Leaf { parent_index, .. } => parent_index,
         }
     }
 
     /// Returns a mutable reference to the parent node index.
     pub fn parent_mut(&mut self) -> &mut usize {
-        match self {
-            &mut BVHNode::Node { ref mut parent_index, .. } |
-            &mut BVHNode::Leaf { ref mut parent_index, .. } => parent_index,
+        match *self {
+            mut BVHNode::Node { ref mut parent_index, .. } |
+            mut BVHNode::Leaf { ref mut parent_index, .. } => parent_index,
         }
     }
 
     /// Returns the index of the left child node.
     pub fn child_l(&self) -> usize {
-        match self {
-            &BVHNode::Node { child_l_index, .. } => child_l_index,
+        match *self {
+            BVHNode::Node { child_l_index, .. } => child_l_index,
             _ => panic!("Tried to get the left child of a leaf node."),
         }
     }
 
     /// Returns the `AABB` of the right child node.
     pub fn child_l_aabb(&self) -> AABB {
-        match self {
-            &BVHNode::Node { child_l_aabb, .. } => child_l_aabb,
+        match *self {
+            BVHNode::Node { child_l_aabb, .. } => child_l_aabb,
             _ => panic!(),
         }
     }
 
     /// Returns a mutable reference to the `AABB` of the left child node.
     pub fn child_l_aabb_mut(&mut self) -> &mut AABB {
-        match self {
-            &mut BVHNode::Node { ref mut child_l_aabb, .. } => child_l_aabb,
+        match *self {
+            mut BVHNode::Node { ref mut child_l_aabb, .. } => child_l_aabb,
             _ => panic!("Tried to get the left child's `AABB` of a leaf node."),
         }
     }
 
     /// Returns the index of the right child node.
     pub fn child_r(&self) -> usize {
-        match self {
-            &BVHNode::Node { child_r_index, .. } => child_r_index,
+        match *self {
+            BVHNode::Node { child_r_index, .. } => child_r_index,
             _ => panic!("Tried to get the right child of a leaf node."),
         }
     }
 
     /// Returns the `AABB` of the right child node.
     pub fn child_r_aabb(&self) -> AABB {
-        match self {
-            &BVHNode::Node { child_r_aabb, .. } => child_r_aabb,
+        match *self {
+            BVHNode::Node { child_r_aabb, .. } => child_r_aabb,
             _ => panic!(),
         }
     }
 
     /// Returns a mutable reference to the `AABB` of the right child node.
     pub fn child_r_aabb_mut(&mut self) -> &mut AABB {
-        match self {
-            &mut BVHNode::Node { ref mut child_r_aabb, .. } => child_r_aabb,
+        match *self {
+            mut BVHNode::Node { ref mut child_r_aabb, .. } => child_r_aabb,
             _ => panic!("Tried to get the right child's `AABB` of a leaf node."),
         }
     }
 
     /// Returns the depth of the node. The root node has depth `0`.
     pub fn depth(&self) -> u32 {
-        match self {
-            &BVHNode::Node { depth, .. } |
-            &BVHNode::Leaf { depth, .. } => depth,
+        match *self {
+            BVHNode::Node { depth, .. } |
+            BVHNode::Leaf { depth, .. } => depth,
         }
     }
 
@@ -172,13 +172,13 @@ impl BVHNode {
     /// Returns the shape's `AABB` for leaves, and the joined `AABB` of
     /// the two children's `AABB`s for non-leaves.
     pub fn get_node_aabb<Shape: BHShape>(&self, shapes: &[Shape]) -> AABB {
-        match self {
-            &BVHNode::Node {
+        match *self {
+            BVHNode::Node {
                  child_l_aabb,
                  child_r_aabb,
                  ..
              } => child_l_aabb.join(&child_r_aabb),
-            &BVHNode::Leaf { shape_index, .. } => shapes[shape_index].aabb(),
+            BVHNode::Leaf { shape_index, .. } => shapes[shape_index].aabb(),
         }
     }
 

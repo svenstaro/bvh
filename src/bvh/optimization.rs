@@ -171,7 +171,7 @@ impl BVH {
                 info!("Leaf node. Queueing parent ({}). {:?}.",
                       parent_index,
                       shapes[shape_index].aabb());
-                return Some(OptimizationIndex::Refit(parent_index));
+                Some(OptimizationIndex::Refit(parent_index))
             }
             BVHNode::Node {
                 parent_index,
@@ -388,7 +388,7 @@ impl BVH {
                 }
             }
             // Don't do anything if the node is a leaf
-            _ => return None,
+            _ => None,
         }
 
     }
