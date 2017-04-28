@@ -281,12 +281,12 @@ pub fn next_point3(seed: &mut u64, aabb: &AABB) -> Point3<f32> {
 
 /// Returns an `AABB` which defines the default testing space bounds.
 pub fn default_bounds() -> AABB {
-    AABB::with_bounds(Point3::new(-100_000.0, -100_000.0, -100_000.0),
-                      Point3::new(100_000.0, 100_000.0, 100_000.0))
+    AABB::with_bounds(Point3::new(-100_000_000.0, -100_000_000.0, -100_000_000.0),
+                      Point3::new(100_000_000.0, 100_000_000.0, 100_000_000.0))
 }
 
 /// Creates `n` deterministic random cubes. Returns the `Vec` of surface `Triangle`s.
-pub fn create_n_cubes(n: u64, bounds: &AABB) -> Vec<Triangle> {
+pub fn create_n_cubes(n: usize, bounds: &AABB) -> Vec<Triangle> {
     let mut vec = Vec::new();
     let mut seed = 0;
     for _ in 0..n {
@@ -369,7 +369,7 @@ pub fn create_ray(seed: &mut u64, bounds: &AABB) -> Ray {
 }
 
 /// Benchmark the construction of a `BoundingHierarchy` with `n` triangles.
-fn build_n_triangles_bh<T: BoundingHierarchy>(n: u64, b: &mut ::test::Bencher) {
+fn build_n_triangles_bh<T: BoundingHierarchy>(n: usize, b: &mut ::test::Bencher) {
     let bounds = default_bounds();
     let mut triangles = create_n_cubes(n, &bounds);
     b.iter(|| { T::build(&mut triangles); });
@@ -446,7 +446,7 @@ pub fn intersect_bh<T: BoundingHierarchy>(bh: &T,
 }
 
 /// Benchmark the traversal of a `BoundingHierarchy` with `n` triangles.
-pub fn intersect_n_triangles<T: BoundingHierarchy>(n: u64, b: &mut ::test::Bencher) {
+pub fn intersect_n_triangles<T: BoundingHierarchy>(n: usize, b: &mut ::test::Bencher) {
     let bounds = default_bounds();
     let mut triangles = create_n_cubes(n, &bounds);
     let bh = T::build(&mut triangles);
