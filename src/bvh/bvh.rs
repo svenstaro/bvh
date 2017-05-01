@@ -107,8 +107,8 @@ impl BVHNode {
     /// Returns a mutable reference to the parent node index.
     pub fn parent_mut(&mut self) -> &mut usize {
         match *self {
-            mut BVHNode::Node { ref mut parent_index, .. } |
-            mut BVHNode::Leaf { ref mut parent_index, .. } => parent_index,
+            BVHNode::Node { ref mut parent_index, .. } |
+            BVHNode::Leaf { ref mut parent_index, .. } => parent_index,
         }
     }
 
@@ -131,7 +131,7 @@ impl BVHNode {
     /// Returns a mutable reference to the `AABB` of the left child node.
     pub fn child_l_aabb_mut(&mut self) -> &mut AABB {
         match *self {
-            mut BVHNode::Node { ref mut child_l_aabb, .. } => child_l_aabb,
+            BVHNode::Node { ref mut child_l_aabb, .. } => child_l_aabb,
             _ => panic!("Tried to get the left child's `AABB` of a leaf node."),
         }
     }
@@ -155,7 +155,7 @@ impl BVHNode {
     /// Returns a mutable reference to the `AABB` of the right child node.
     pub fn child_r_aabb_mut(&mut self) -> &mut AABB {
         match *self {
-            mut BVHNode::Node { ref mut child_r_aabb, .. } => child_r_aabb,
+            BVHNode::Node { ref mut child_r_aabb, .. } => child_r_aabb,
             _ => panic!("Tried to get the right child's `AABB` of a leaf node."),
         }
     }
