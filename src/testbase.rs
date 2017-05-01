@@ -272,6 +272,11 @@ pub fn next_point3(seed: &mut u64, aabb: &AABB) -> Point3<f32> {
                                     (b as f32 / i32::MAX as f32) + 1.0,
                                     (c as f32 / i32::MAX as f32) + 1.0) *
                        0.5;
+
+    assert!(float_vector.x >= 0.0 && float_vector.x <= 1.0);
+    assert!(float_vector.y >= 0.0 && float_vector.y <= 1.0);
+    assert!(float_vector.z >= 0.0 && float_vector.z <= 1.0);
+
     let size = aabb.size();
     let offset = Vector3::new(float_vector[Axis::X] * size[Axis::X],
                               float_vector[Axis::Y] * size[Axis::Y],
@@ -281,8 +286,8 @@ pub fn next_point3(seed: &mut u64, aabb: &AABB) -> Point3<f32> {
 
 /// Returns an `AABB` which defines the default testing space bounds.
 pub fn default_bounds() -> AABB {
-    AABB::with_bounds(Point3::new(-100_000_000.0, -100_000_000.0, -100_000_000.0),
-                      Point3::new(100_000_000.0, 100_000_000.0, 100_000_000.0))
+    AABB::with_bounds(Point3::new(-100_0.0, -1_000.0, -1_000.0),
+                      Point3::new(100_0.0, 1000.0, 100_0.0))
 }
 
 /// Creates `n` deterministic random cubes. Returns the `Vec` of surface `Triangle`s.
@@ -315,7 +320,7 @@ pub fn load_sponza_scene() -> (Vec<Triangle>, AABB) {
 /// Returns a `HashSet` of indices of modified triangles.
 pub fn randomly_move_triangles(triangles: &mut Vec<Triangle>,
                                amount: usize,
-                               aabb: &AABB,
+                               bounds: &AABB,
                                seed: &mut u64)
                                -> HashSet<usize> {
     let mut indices: Vec<usize> = (0..triangles.len()).collect();
@@ -324,9 +329,9 @@ pub fn randomly_move_triangles(triangles: &mut Vec<Triangle>,
     indices.truncate(amount);
 
     for index in &indices {
-        triangles[*index].a = next_point3(seed, aabb);
-        triangles[*index].b = next_point3(seed, aabb);
-        triangles[*index].c = next_point3(seed, aabb);
+        triangles[*index] = Triangle::new(next_point3(seed, bounds),
+                                          next_point3(seed, bounds),
+                                          next_point3(seed, bounds));
     }
 
     indices.into_iter().collect()
@@ -351,9 +356,9 @@ pub fn randomly_transform_scene(triangles: &mut Vec<Triangle>,
         let movement_bounds = AABB::with_bounds(min_move_bound, max_move_bound);
 
         let random_offset = next_point3(seed, &movement_bounds).coords;
-        triangles[*index].a = triangles[*index].a + random_offset;
-        triangles[*index].b = triangles[*index].b + random_offset;
-        triangles[*index].c = triangles[*index].c + random_offset;
+        triangles[*index] = Triangle::new(triangles[*index].a + random_offset,
+                                          triangles[*index].b + random_offset,
+                                          triangles[*index].c + random_offset);
     }
 
     indices.into_iter().collect()

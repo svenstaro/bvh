@@ -1,6 +1,7 @@
 //! Axis Aligned Bounding Boxes.
 
 use std::f32;
+use std::fmt;
 use std::ops::Index;
 
 use nalgebra::{Point3, Vector3};
@@ -15,6 +16,12 @@ pub struct AABB {
 
     /// Maximum coordinates
     pub max: Point3<f32>,
+}
+
+impl fmt::Display for AABB {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Min bound: {}; Max bound: {}", self.min, self.max)
+    }
 }
 
 /// A trait implemented by things which can be bounded by an [`AABB`].
@@ -418,6 +425,30 @@ impl AABB {
     ///
     pub fn center(&self) -> Point3<f32> {
         self.min + (self.size() / 2.0)
+    }
+
+    /// An empty [`AABB`] is an [`AABB`] where the lower bound is greater than
+    /// the upper bound in at least one component
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::aabb::AABB;
+    /// use bvh::nalgebra::Point3;
+    ///
+    /// let empty_aabb = AABB::empty();
+    /// assert!(empty_aabb.is_empty());
+    ///
+    /// let min = Point3::new(41.0,41.0,41.0);
+    /// let max = Point3::new(43.0,43.0,43.0);
+    ///
+    /// let aabb = AABB::with_bounds(min, max);
+    /// assert!(aabb.is_empty());
+    /// ```
+    ///
+    /// [`AABB`]: struct.AABB.html
+    ///
+    pub fn is_empty(&self) -> bool {
+        self.min.x > self.max.x || self.min.y > self.max.y || self.min.z > self.max.z
     }
 
     /// Returns the total surface area of this [`AABB`].

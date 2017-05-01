@@ -486,12 +486,12 @@ mod tests {
         let mut rng = StdRng::from_seed(&seed);
 
         b.iter(|| {
-            let one_thousand = ::test::black_box(1000);
-            for _ in 0..one_thousand {
-                let (ray, aabb) = gen_random_ray_aabb(&mut rng);
-                ray.intersects_aabb(&aabb);
-            }
-        });
+                   let one_thousand = ::test::black_box(1000);
+                   for _ in 0..one_thousand {
+                       let (ray, aabb) = gen_random_ray_aabb(&mut rng);
+                       ray.intersects_aabb(&aabb);
+                   }
+               });
     }
 
     #[bench]
@@ -501,12 +501,12 @@ mod tests {
         let mut rng = StdRng::from_seed(&seed);
 
         b.iter(|| {
-            let one_thousand = ::test::black_box(1000);
-            for _ in 0..one_thousand {
-                let (ray, aabb) = gen_random_ray_aabb(&mut rng);
-                ray.intersects_aabb_naive(&aabb);
-            }
-        });
+                   let one_thousand = ::test::black_box(1000);
+                   for _ in 0..one_thousand {
+                       let (ray, aabb) = gen_random_ray_aabb(&mut rng);
+                       ray.intersects_aabb_naive(&aabb);
+                   }
+               });
     }
 
     #[bench]
@@ -516,11 +516,11 @@ mod tests {
         let mut rng = StdRng::from_seed(&seed);
 
         b.iter(|| {
-            let one_thousand = ::test::black_box(1000);
-            for _ in 0..one_thousand {
-                let (ray, aabb) = gen_random_ray_aabb(&mut rng);
-                ray.intersects_aabb_branchless(&aabb);
-            }
-        });
+                   let one_thousand = ::test::black_box(1000);
+                   for _ in 0..one_thousand {
+                       let (ray, aabb) = gen_random_ray_aabb(&mut rng);
+                       ray.intersects_aabb_branchless(&aabb);
+                   }
+               });
     }
 }

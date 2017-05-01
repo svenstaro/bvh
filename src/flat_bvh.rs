@@ -46,7 +46,7 @@ impl BVHNode {
     /// TODO: change the algorithm which pushes `FlatNode`s to a vector to not use indices this
     /// much. Implement an algorithm which writes directly to a writable slice.
     fn create_flat_branch<F, FNodeType>(&self,
-                                        nodes: &Vec<BVHNode>,
+                                        nodes: &[BVHNode],
                                         this_aabb: &AABB,
                                         vec: &mut Vec<FNodeType>,
                                         next_free: usize,
@@ -57,7 +57,7 @@ impl BVHNode {
         // Create dummy node.
         let dummy = constructor(&AABB::empty(), 0, 0, 0);
         vec.push(dummy);
-        assert!(vec.len() - 1 == next_free);
+        assert_eq!(vec.len() - 1, next_free);
 
         // Create subtree.
         let index_after_subtree = self.flatten_custom(nodes, vec, next_free + 1, constructor);
@@ -78,7 +78,7 @@ impl BVHNode {
     /// [`BVH`]: struct.BVH.html
     ///
     pub fn flatten_custom<F, FNodeType>(&self,
-                                        nodes: &Vec<BVHNode>,
+                                        nodes: &[BVHNode],
                                         vec: &mut Vec<FNodeType>,
                                         next_free: usize,
                                         constructor: &F)

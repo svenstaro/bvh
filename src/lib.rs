@@ -85,7 +85,6 @@ extern crate test;
 extern crate quickcheck;
 
 extern crate rand;
-#[macro_use]
 pub extern crate nalgebra;
 
 /// A minimal floating value used as a lower bound.
@@ -98,6 +97,7 @@ pub mod bounding_hierarchy;
 pub mod bvh;
 pub mod flat_bvh;
 pub mod ray;
+mod utils;
 
 #[cfg(test)]
 mod testbase;
