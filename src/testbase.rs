@@ -286,8 +286,8 @@ pub fn next_point3(seed: &mut u64, aabb: &AABB) -> Point3<f32> {
 
 /// Returns an `AABB` which defines the default testing space bounds.
 pub fn default_bounds() -> AABB {
-    AABB::with_bounds(Point3::new(-100_0.0, -1_000.0, -1_000.0),
-                      Point3::new(100_0.0, 1000.0, 100_0.0))
+    AABB::with_bounds(Point3::new(-100_000.0, -100_000.0, -100_000.0),
+                      Point3::new(100_000.0, 100_000.0, 100_000.0))
 }
 
 /// Creates `n` deterministic random cubes. Returns the `Vec` of surface `Triangle`s.
