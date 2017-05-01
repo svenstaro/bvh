@@ -501,7 +501,7 @@ pub mod tests {
     use std::collections::HashSet;
     use nalgebra::Point3;
     use testbase::{build_some_bh, create_n_cubes, load_sponza_scene, intersect_bh, UnitBox,
-                   randomly_move_triangles, randomly_transform_scene, default_bounds, Triangle};
+                   randomly_transform_scene, default_bounds, Triangle};
     use bounding_hierarchy::BHShape;
 
     #[test]
@@ -881,7 +881,7 @@ pub mod tests {
         // After moving triangles, the BVH should be inconsistent, because the shape `AABB`s do not
         // match the tree entries.
         let mut seed = 0;
-        let updated = randomly_move_triangles(&mut triangles, 60_000, &bounds, &mut seed);
+        let updated = randomly_transform_scene(&mut triangles, 60_000, &bounds, None, &mut seed);
         assert!(!bvh.is_consistent(&triangles), "BVH is consistent.");
 
         // After fixing the `AABB` consistency should be restored.
@@ -896,7 +896,7 @@ pub mod tests {
         let mut triangles = create_n_cubes(10_000, &bounds);
         let mut seed = 0;
 
-        b.iter(|| { randomly_move_triangles(&mut triangles, 60_000, &bounds, &mut seed); });
+        b.iter(|| { randomly_transform_scene(&mut triangles, 60_000, &bounds, None, &mut seed); });
     }
 
     #[bench]
@@ -909,7 +909,7 @@ pub mod tests {
 
         b.iter(|| {
                    let updated =
-                       randomly_move_triangles(&mut triangles, 60_000, &bounds, &mut seed);
+                       randomly_transform_scene(&mut triangles, 60_000, &bounds, None, &mut seed);
                    bvh.optimize(&updated, &triangles);
                });
     }
@@ -923,7 +923,7 @@ pub mod tests {
         let mut seed = 0;
 
         b.iter(|| {
-                   let updated = randomly_move_triangles(&mut triangles, 1, &bounds, &mut seed);
+                   let updated = randomly_transform_scene(&mut triangles, 1, &bounds, None, &mut seed);
                    bvh.optimize(&updated, &triangles);
                });
     }
@@ -937,7 +937,7 @@ pub mod tests {
         let mut seed = 0;
 
         for _ in 0..10 {
-            let updated = randomly_move_triangles(&mut triangles, 60_000, &bounds, &mut seed);
+            let updated = randomly_transform_scene(&mut triangles, 60_000, &bounds, None, &mut seed);
             bvh.optimize(&updated, &triangles);
         }
 
@@ -954,7 +954,7 @@ pub mod tests {
         let mut seed = 0;
 
         for _ in 0..10 {
-            randomly_move_triangles(&mut triangles, 60_000, &bounds, &mut seed);
+            randomly_transform_scene(&mut triangles, 60_000, &bounds, None, &mut seed);
         }
         let bvh = BVH::build(&mut triangles);
 
@@ -973,7 +973,7 @@ pub mod tests {
         let mut seed = 0;
 
         for _ in 0..iterations {
-            let updated = randomly_transform_scene(&mut triangles, n, &bounds, &mut seed);
+            let updated = randomly_transform_scene(&mut triangles, n, &bounds, None, &mut seed);
             bvh.optimize(&updated, &triangles);
         }
 
@@ -988,7 +988,7 @@ pub mod tests {
                                     b: &mut ::test::Bencher) {
         let mut seed = 0;
         for _ in 0..iterations {
-            randomly_transform_scene(&mut triangles, n, &bounds, &mut seed);
+            randomly_transform_scene(&mut triangles, n, &bounds, None, &mut seed);
         }
 
         let bvh = BVH::build(&mut triangles);

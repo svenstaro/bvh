@@ -4,6 +4,7 @@
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
+use std::f32;
 
 use nalgebra::{Point3, Vector3};
 use obj::*;
@@ -315,36 +316,14 @@ pub fn load_sponza_scene() -> (Vec<Triangle>, AABB) {
     (triangles, bounds)
 }
 
-/// Given an array of `Triangle`s, moves `amount` triangles around using the random `seed`.
-/// The triangles will stay inside the `aabb`.
+/// This functions moves `amount` shapes in the `triangles` array to a new position inside
+/// `bounds`. If `max_offset_option` is not `None` then the wrapped value is used as the maximum
+/// offset of a shape. This is used to simulate a realistic scene.
 /// Returns a `HashSet` of indices of modified triangles.
-pub fn randomly_move_triangles(triangles: &mut Vec<Triangle>,
-                               amount: usize,
-                               bounds: &AABB,
-                               seed: &mut u64)
-                               -> HashSet<usize> {
-    let mut indices: Vec<usize> = (0..triangles.len()).collect();
-    let mut rng: StdRng = SeedableRng::from_seed([*seed as usize].as_ref());
-    rng.shuffle(&mut indices);
-    indices.truncate(amount);
-
-    for index in &indices {
-        let triangle = &mut triangles[*index];
-        let old_index = triangle.bh_node_index();
-        *triangle = Triangle::new(next_point3(seed, bounds),
-                                 next_point3(seed, bounds),
-                                 next_point3(seed, bounds));
-        triangle.set_bh_node_index(old_index);
-    }
-
-    indices.into_iter().collect()
-}
-
-/// This function doesn't just randomly offset all triangles, but instead moves them by a value
-/// relative to their size. This simulates a real-world scene, where shapes and objects tend to be structured.
 pub fn randomly_transform_scene(triangles: &mut Vec<Triangle>,
                                 amount: usize,
                                 bounds: &AABB,
+                                max_offset_option: Option<f32>,
                                 seed: &mut u64)
                                 -> HashSet<usize> {
     let mut indices: Vec<usize> = (0..triangles.len()).collect();
@@ -352,13 +331,23 @@ pub fn randomly_transform_scene(triangles: &mut Vec<Triangle>,
     rng.shuffle(&mut indices);
     indices.truncate(amount);
 
+    let max_offset = if let Some(value) = max_offset_option {
+        value
+    } else {
+        f32::INFINITY
+    };
+
     for index in &indices {
         let aabb = triangles[*index].aabb();
         let min_move_bound = bounds.min - aabb.min.coords;
         let max_move_bound = bounds.max - aabb.max.coords;
         let movement_bounds = AABB::with_bounds(min_move_bound, max_move_bound);
 
-        let random_offset = next_point3(seed, &movement_bounds).coords;
+        let mut random_offset = next_point3(seed, &movement_bounds).coords;
+        random_offset.x = max_offset.min((-max_offset).max(random_offset.x));
+        random_offset.y = max_offset.min((-max_offset).max(random_offset.y));
+        random_offset.z = max_offset.min((-max_offset).max(random_offset.z));
+
         let triangle = &mut triangles[*index];
         let old_index = triangle.bh_node_index();
         *triangle = Triangle::new(triangle.a + random_offset,

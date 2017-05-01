@@ -252,7 +252,7 @@ impl AABB {
     /// use bvh::aabb::AABB;
     /// use bvh::nalgebra::Point3;
     ///
-    /// let aabb = AABB::with_bounds(Point3::new(-101.0, 0.0, 0.0), Point3::new(-100.0, 1.0, 1.0));
+    /// let mut aabb = AABB::with_bounds(Point3::new(-101.0, 0.0, 0.0), Point3::new(-100.0, 1.0, 1.0));
     /// let other = AABB::with_bounds(Point3::new(100.0, 0.0, 0.0), Point3::new(101.0, 1.0, 1.0));
     ///
     /// let point_inside_aabb = Point3::new(-100.5, 0.5, 0.5);
@@ -331,7 +331,7 @@ impl AABB {
     /// let point2 = Point3::new(1.0, 1.0, 1.0);
     /// let point3 = Point3::new(2.0, 2.0, 2.0);
     ///
-    /// let aabb = AABB::empty();
+    /// let mut aabb = AABB::empty();
     /// assert!(!aabb.contains(&point1));
     ///
     /// aabb.grow_mut(&point1);
@@ -442,7 +442,7 @@ impl AABB {
     /// let max = Point3::new(43.0,43.0,43.0);
     ///
     /// let aabb = AABB::with_bounds(min, max);
-    /// assert!(aabb.is_empty());
+    /// assert!(!aabb.is_empty());
     /// ```
     ///
     /// [`AABB`]: struct.AABB.html

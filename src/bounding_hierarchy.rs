@@ -147,7 +147,7 @@ pub trait BoundingHierarchy {
     /// #         let position = Point3::new(i as f32, i as f32, i as f32);
     /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
-    /// #     let bvh = BVH::build(&mutno, moszem sozwonit'sja shapes);
+    /// #     let bvh = BVH::build(&mut shapes);
     /// #     (bvh, shapes)
     /// # }
     ///
