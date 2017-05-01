@@ -3,6 +3,25 @@
 use aabb::Bounded;
 use ray::Ray;
 
+/// Describes a shape as referenced by a [`BoundingHierarchy`] leaf node.
+/// Knows the index of the node in the [`BoundingHierarchy`] it is in.
+///
+/// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
+///
+pub trait BHShape: Bounded {
+    /// Sets the index of the referenced [`BoundingHierarchy`] node.
+    ///
+    /// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
+    ///
+    fn set_bh_node_index(&mut self, usize);
+
+    /// Gets the index of the referenced [`BoundingHierarchy`] node.
+    ///
+    /// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
+    ///
+    fn bh_node_index(&self) -> usize;
+}
+
 /// This trait defines an acceleration structure with space partitioning.
 /// This structure is used to efficiently compute ray-scene intersections.
 pub trait BoundingHierarchy {
@@ -128,7 +147,7 @@ pub trait BoundingHierarchy {
     /// #         let position = Point3::new(i as f32, i as f32, i as f32);
     /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
-    /// #     let bvh = BVH::build(&mut shapes);
+    /// #     let bvh = BVH::build(&mutno, moszem sozwonit'sja shapes);
     /// #     (bvh, shapes)
     /// # }
     ///
@@ -150,23 +169,4 @@ pub trait BoundingHierarchy {
     /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
     ///
     fn pretty_print(&self) {}
-}
-
-/// Describes a shape as referenced by a [`BoundingHierarchy`] leaf node.
-/// Knows the index of the node in the [`BoundingHierarchy`] it is in.
-///
-/// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
-///
-pub trait BHShape: Bounded {
-    /// Sets the index of the referenced [`BoundingHierarchy`] node.
-    ///
-    /// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
-    ///
-    fn set_bh_node_index(&mut self, usize);
-
-    /// Gets the index of the referenced [`BoundingHierarchy`] node.
-    ///
-    /// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
-    ///
-    fn bh_node_index(&self) -> usize;
 }

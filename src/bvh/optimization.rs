@@ -17,7 +17,7 @@ use rand::{thread_rng, Rng};
 // shapes, but also their new AABBs into optimize().
 // TODO Consider: Stop updating AABBs upwards the tree once an AABB didn't get changed.
 
-#[derive(Eq, PartialEq, Hash, Copy, Clone)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 enum OptimizationIndex {
     Refit(usize),
     FixAABBs(usize),
@@ -327,7 +327,7 @@ impl BVH {
                 // could be beneficial, so queue the parent *sometimes*.
                 // For reference see:
                 // https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH_Node.cs#L307
-                // TODO Evaluate whether or not this is a smart thing to do
+                // TODO Evaluate whether this is a smart thing to do.
                 if chance(0.01f32) {
                     Some(OptimizationIndex::Refit(parent_index))
                 } else {
@@ -343,24 +343,23 @@ impl BVH {
     /// Sets child_l_aabb and child_r_aabb of a BVHNode::Node to match its children,
     /// right after updating the children themselves. Not recursive.
     fn fix_children_and_own_aabbs<Shape: BHShape>(&mut self, node_index: usize, shapes: &[Shape]) {
-        let (child_l, child_r) = {
-            let node = &self.nodes[node_index];
-            match *node {
-                BVHNode::Node {
-                    child_l_index,
-                    child_r_index,
-                    ..
-                } => (child_l_index, child_r_index),
-                // node must be a BVHNode::Node for this function
-                _ => panic!(),
-            }
+        let (child_l_index, child_r_index) = if let BVHNode::Node {
+                   child_l_index,
+                   child_r_index,
+                   ..
+               } = self.nodes[node_index] {
+            (child_l_index, child_r_index)
+        } else {
+            unreachable!()
         };
 
-        self.fix_aabbs(child_l, shapes);
-        self.fix_aabbs(child_r, shapes);
+        self.fix_aabbs(child_l_index, shapes);
+        self.fix_aabbs(child_r_index, shapes);
 
-        *self.nodes[node_index].child_l_aabb_mut() = self.nodes[child_l].get_node_aabb(shapes);
-        *self.nodes[node_index].child_r_aabb_mut() = self.nodes[child_r].get_node_aabb(shapes);
+        *self.nodes[node_index].child_l_aabb_mut() = self.nodes[child_l_index]
+            .get_node_aabb(shapes);
+        *self.nodes[node_index].child_r_aabb_mut() = self.nodes[child_r_index]
+            .get_node_aabb(shapes);
     }
 
     /// Updates `child_l_aabb` and `child_r_aabb` of the `BVHNode::Node`
@@ -387,7 +386,7 @@ impl BVH {
                     None
                 }
             }
-            // Don't do anything if the node is a leaf
+            // Don't do anything if the node is a leaf.
             _ => None,
         }
     }

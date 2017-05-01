@@ -329,9 +329,12 @@ pub fn randomly_move_triangles(triangles: &mut Vec<Triangle>,
     indices.truncate(amount);
 
     for index in &indices {
-        triangles[*index] = Triangle::new(next_point3(seed, bounds),
-                                          next_point3(seed, bounds),
-                                          next_point3(seed, bounds));
+        let triangle = &mut triangles[*index];
+        let old_index = triangle.bh_node_index();
+        *triangle = Triangle::new(next_point3(seed, bounds),
+                                 next_point3(seed, bounds),
+                                 next_point3(seed, bounds));
+        triangle.set_bh_node_index(old_index);
     }
 
     indices.into_iter().collect()
@@ -356,9 +359,12 @@ pub fn randomly_transform_scene(triangles: &mut Vec<Triangle>,
         let movement_bounds = AABB::with_bounds(min_move_bound, max_move_bound);
 
         let random_offset = next_point3(seed, &movement_bounds).coords;
-        triangles[*index] = Triangle::new(triangles[*index].a + random_offset,
-                                          triangles[*index].b + random_offset,
-                                          triangles[*index].c + random_offset);
+        let triangle = &mut triangles[*index];
+        let old_index = triangle.bh_node_index();
+        *triangle = Triangle::new(triangle.a + random_offset,
+                                 triangle.b + random_offset,
+                                 triangle.c + random_offset);
+        triangle.set_bh_node_index(old_index);
     }
 
     indices.into_iter().collect()

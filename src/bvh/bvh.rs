@@ -228,7 +228,7 @@ impl BVHNode {
                            depth: depth,
                            shape_index: shape_index,
                        });
-            // Let the shape know the index of the node that represents it
+            // Let the shape know the index of the node that represents it.
             shapes[shape_index].set_bh_node_index(node_index);
             return node_index;
         }
