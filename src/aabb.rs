@@ -250,14 +250,18 @@ impl AABB {
     /// # Examples
     /// ```
     /// use bvh::aabb::AABB;
-    /// use bvh::nalgebra::Point3;
+    /// use bvh::nalgebra::{Point3, Vector3};
     ///
-    /// let mut aabb = AABB::with_bounds(Point3::new(-101.0, 0.0, 0.0), Point3::new(-100.0, 1.0, 1.0));
-    /// let other = AABB::with_bounds(Point3::new(100.0, 0.0, 0.0), Point3::new(101.0, 1.0, 1.0));
+    /// let size = Vector3::new(1.0, 1.0, 1.0);
+    /// let aabb_pos = Point3::new(-101.0, 0.0, 0.0);
+    /// let mut aabb = AABB::with_bounds(aabb_pos, aabb_pos + size);
     ///
-    /// let point_inside_aabb = Point3::new(-100.5, 0.5, 0.5);
-    /// let point_inside_other = Point3::new(100.5, 0.5, 0.5);
-    /// let point_inside_joint = Point3::new(0.0, 0.5, 0.5);
+    /// let other_pos = Point3::new(100.0, 0.0, 0.0);
+    /// let other = AABB::with_bounds(other_pos, other_pos + size);
+    ///
+    /// let point_inside_aabb = aabb_pos + size / 2.0;
+    /// let point_inside_other = other_pos + size / 2.0;
+    /// let point_inside_joint = size / 2.0;
     ///
     /// # assert!(aabb.contains(&point_inside_aabb));
     /// # assert!(!aabb.contains(&point_inside_other));
@@ -355,7 +359,8 @@ impl AABB {
                                self.max.z.max(other.z));
     }
 
-    /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and the [`Bounded`] `other`.
+    /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and the [`Bounded`]
+    /// `other`.
     ///
     /// # Examples
     /// ```

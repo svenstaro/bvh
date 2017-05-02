@@ -142,6 +142,7 @@ pub fn traverse_some_bh<BH: BoundingHierarchy>() {
 }
 
 /// A triangle struct. Instance of a more complex `Bounded` primitive.
+#[derive(Debug)]
 pub struct Triangle {
     pub a: Point3<f32>,
     pub b: Point3<f32>,
@@ -265,8 +266,17 @@ pub fn next_point3_raw(seed: &mut u64) -> (i32, i32, i32) {
     (a as i32, b as i32, c as i32)
 }
 
+/// Generates a new `i32` triple. Mutates the seed.
+pub fn next_point3(seed: &mut u64, bounds: &AABB) -> Point3<f32> {
+    let u = splitmix64(seed);
+    let a = ((u >> 32) & 0xFFFFFFFF) as i64 - 0x80000000;
+    let b = (u & 0xFFFFFFFF) as i64 - 0x80000000;
+    let c = a ^ b.rotate_left(6);
+    Point3::new(a as f32, b as f32, c as f32) / 100_000.0
+}
+
 /// Generates a new `Point3`, which will lie inside the given `aabb`. Mutates the seed.
-pub fn next_point3(seed: &mut u64, aabb: &AABB) -> Point3<f32> {
+pub fn next_point3_new(seed: &mut u64, aabb: &AABB) -> Point3<f32> {
     let (a, b, c) = next_point3_raw(seed);
     use std::i32;
     let float_vector = Vector3::new((a as f32 / i32::MAX as f32) + 1.0,
@@ -316,9 +326,7 @@ pub fn load_sponza_scene() -> (Vec<Triangle>, AABB) {
     (triangles, bounds)
 }
 
-/// This functions moves `amount` shapes in the `triangles` array to a new position inside
-/// `bounds`. If `max_offset_option` is not `None` then the wrapped value is used as the maximum
-/// offset of a shape. This is used to simulate a realistic scene.
+/// Given an array of `Triangle`s, moves `amount` triangles around using the random `seed`.
 /// Returns a `HashSet` of indices of modified triangles.
 pub fn randomly_transform_scene(triangles: &mut Vec<Triangle>,
                                 amount: usize,
@@ -326,6 +334,35 @@ pub fn randomly_transform_scene(triangles: &mut Vec<Triangle>,
                                 max_offset_option: Option<f32>,
                                 seed: &mut u64)
                                 -> HashSet<usize> {
+    let mut indices: Vec<usize> = (0..triangles.len()).collect();
+    let mut rng: StdRng = SeedableRng::from_seed([*seed as usize].as_ref());
+    rng.shuffle(&mut indices);
+    indices.truncate(amount);
+
+    for index in &indices {
+        println!("Old: {:?}", triangles[*index]);
+        let random_pos = next_point3(seed, &AABB::empty());
+        let b = triangles[*index].b - triangles[*index].a;
+        let c = triangles[*index].b - triangles[*index].a;
+        triangles[*index].a = random_pos;
+        triangles[*index].b = random_pos + b;
+        triangles[*index].c = random_pos + c;
+        println!("New: {:?}", triangles[*index]);
+    }
+
+    indices.into_iter().collect()
+}
+
+/// This functions moves `amount` shapes in the `triangles` array to a new position inside
+/// `bounds`. If `max_offset_option` is not `None` then the wrapped value is used as the maximum
+/// offset of a shape. This is used to simulate a realistic scene.
+/// Returns a `HashSet` of indices of modified triangles.
+pub fn randomly_transform_scene_new(triangles: &mut Vec<Triangle>,
+                                    amount: usize,
+                                    bounds: &AABB,
+                                    max_offset_option: Option<f32>,
+                                    seed: &mut u64)
+                                    -> HashSet<usize> {
     let mut indices: Vec<usize> = (0..triangles.len()).collect();
     let mut rng: StdRng = SeedableRng::from_seed([*seed as usize].as_ref());
     rng.shuffle(&mut indices);
@@ -351,8 +388,8 @@ pub fn randomly_transform_scene(triangles: &mut Vec<Triangle>,
         let triangle = &mut triangles[*index];
         let old_index = triangle.bh_node_index();
         *triangle = Triangle::new(triangle.a + random_offset,
-                                 triangle.b + random_offset,
-                                 triangle.c + random_offset);
+                                  triangle.b + random_offset,
+                                  triangle.c + random_offset);
         triangle.set_bh_node_index(old_index);
     }
 
