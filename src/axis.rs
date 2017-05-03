@@ -50,12 +50,13 @@ pub enum Axis {
 /// Display implementation for `Axis`.
 impl Display for Axis {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        let c = match *self {
-            Axis::X => "x",
-            Axis::Y => "y",
-            Axis::Z => "z",
-        };
-        write!(f, "{}", c)
+        write!(f,
+               "{}",
+               match *self {
+                   Axis::X => "x",
+                   Axis::Y => "y",
+                   Axis::Z => "z",
+               })
     }
 }
 

@@ -415,7 +415,7 @@ fn bench_intersect_120k_triangles_list(b: &mut ::test::Bencher) {
 #[bench]
 /// Benchmark intersecting Sponza.
 fn bench_intersect_sponza_list(b: &mut ::test::Bencher) {
-    let (mut triangles, bounds) = load_sponza_scene();
+    let (triangles, bounds) = load_sponza_scene();
     intersect_list(&triangles, &bounds, b);
 }
 
@@ -447,7 +447,7 @@ fn bench_intersect_120k_triangles_list_aabb(b: &mut ::test::Bencher) {
 #[bench]
 /// Benchmark intersecting 120,000 triangles with preceeding `AABB` tests.
 fn bench_intersect_sponza_list_aabb(b: &mut ::test::Bencher) {
-    let (mut triangles, bounds) = load_sponza_scene();
+    let (triangles, bounds) = load_sponza_scene();
     intersect_list_aabb(&triangles, &bounds, b);
 }
 

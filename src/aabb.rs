@@ -74,7 +74,7 @@ impl AABB {
     /// [`AABB`]: struct.AABB.html
     ///
     pub fn with_bounds(min: Point3<f32>, max: Point3<f32>) -> AABB {
-        AABB { min: min, max: max }
+        AABB { min, max }
     }
 
     /// Creates a new empty [`AABB`].

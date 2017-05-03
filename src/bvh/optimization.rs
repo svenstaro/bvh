@@ -146,11 +146,6 @@ impl BVH {
         }
     }
 
-    // Since the value of best_surface_area is read and set in a closure form,
-    // there is a false alarm about unused_assignments.
-    // https://github.com/rust-lang/rust/issues/28570
-    // #[allow(unused_assignments)]
-
     /// This method is called for each node which has been modified and needs to be updated.
     /// If the specified node is a grandparent, then try to optimize the `BVH` by rotating its
     /// children.
@@ -160,8 +155,7 @@ impl BVH {
                               -> Option<OptimizationIndex> {
         info!("   [{}]\t", node_index);
 
-        let node_clone = self.nodes[node_index];
-        match node_clone {
+        match self.nodes[node_index] {
             BVHNode::Leaf {
                 parent_index,
                 shape_index,

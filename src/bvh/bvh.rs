@@ -242,11 +242,6 @@ impl BVHNode {
         let split_axis = centroid_bounds.largest_axis();
         let split_axis_size = centroid_bounds.max[split_axis] - centroid_bounds.min[split_axis];
 
-        // Create six `Bucket`s, and six index assignment vector.
-        const NUM_BUCKETS: usize = 6;
-        let mut buckets = [Bucket::empty(); NUM_BUCKETS];
-        let mut bucket_assignments: [Vec<usize>; NUM_BUCKETS] = Default::default();
-
         // The following `if` partitions `indices` for recursively calling `BVH::build`.
         let (child_l_index, child_l_aabb, child_r_index, child_r_aabb) = if split_axis_size <
                                                                             EPSILON {
@@ -263,6 +258,11 @@ impl BVHNode {
                 BVHNode::build(shapes, child_r_indices, nodes, node_index, depth + 1);
             (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
         } else {
+            // Create six `Bucket`s, and six index assignment vector.
+            const NUM_BUCKETS: usize = 6;
+            let mut buckets = [Bucket::empty(); NUM_BUCKETS];
+            let mut bucket_assignments: [Vec<usize>; NUM_BUCKETS] = Default::default();
+
             // In this branch the `split_axis_size` is large enough to perform meaningful splits.
             // We start by assigning the shapes to `Bucket`s.
             for idx in indices {
@@ -581,7 +581,7 @@ impl BVH {
             BVHNode::Leaf { shape_index, .. } => {
                 let shape_aabb = shapes[shape_index].aabb();
                 assert!(expected_outer_aabb.approx_contains_aabb_eps(&shape_aabb, EPSILON),
-                        "Shape's AABB lies outide the expected bounds.\n\tBounds: {}\n\tShape: {}",
+                        "Shape's AABB lies outside the expected bounds.\n\tBounds: {}\n\tShape: {}",
                         expected_outer_aabb,
                         shape_aabb);
             }
