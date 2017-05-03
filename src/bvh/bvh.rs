@@ -602,7 +602,7 @@ impl BVH {
 
         // Check if all nodes have been counted from the root node.
         // If this is false, it means we have a detached subtree.
-        assert!(node_count == self.nodes.len(), "Detached subtree");
+        assert_eq!(node_count, self.nodes.len(), "Detached subtree");
     }
 
     /// Check that the `AABB`s in the `BVH` are tight, which means, that parent `AABB`s are not
