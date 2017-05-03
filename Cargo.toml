@@ -1,7 +1,7 @@
 [package]
 name = "bvh"
 description = "A fast BVH using SAH"
-version = "0.2.0"
+version = "0.2.1"
 authors = [
     "Sven-Hendrik Haase <svenstaro@gmail.com>",
     "Alexander Dmitriev <alexander.dmitriev2580@gmail.com>"
@@ -14,10 +14,10 @@ license = "MIT"
 
 [dependencies]
 approx = "0.1.1"
-nalgebra = "0.11.1"
+nalgebra = "0.12.1"
 rand = "0.3.14"
 log = "0.3.7"
 
 [dev-dependencies]
-quickcheck = "0.3.1"
+quickcheck = "0.4.1"
 obj-rs = "0.4"
