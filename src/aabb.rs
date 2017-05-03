@@ -1,6 +1,7 @@
 //! Axis Aligned Bounding Boxes.
 
 use std::f32;
+use std::fmt;
 use std::ops::Index;
 
 use nalgebra::{Point3, Vector3};
@@ -15,6 +16,12 @@ pub struct AABB {
 
     /// Maximum coordinates
     pub max: Point3<f32>,
+}
+
+impl fmt::Display for AABB {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Min bound: {}; Max bound: {}", self.min, self.max)
+    }
 }
 
 /// A trait implemented by things which can be bounded by an [`AABB`].
@@ -67,10 +74,7 @@ impl AABB {
     /// [`AABB`]: struct.AABB.html
     ///
     pub fn with_bounds(min: Point3<f32>, max: Point3<f32>) -> AABB {
-        AABB {
-            min: min,
-            max: max,
-        }
+        AABB { min, max }
     }
 
     /// Creates a new empty [`AABB`].
@@ -241,6 +245,50 @@ impl AABB {
                                       self.max.z.max(other.max.z)))
     }
 
+    /// Mutable version of [`AABB::join`].
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::aabb::AABB;
+    /// use bvh::nalgebra::{Point3, Vector3};
+    ///
+    /// let size = Vector3::new(1.0, 1.0, 1.0);
+    /// let aabb_pos = Point3::new(-101.0, 0.0, 0.0);
+    /// let mut aabb = AABB::with_bounds(aabb_pos, aabb_pos + size);
+    ///
+    /// let other_pos = Point3::new(100.0, 0.0, 0.0);
+    /// let other = AABB::with_bounds(other_pos, other_pos + size);
+    ///
+    /// let point_inside_aabb = aabb_pos + size / 2.0;
+    /// let point_inside_other = other_pos + size / 2.0;
+    /// let point_inside_joint = Point3::new(0.0, 0.0, 0.0) + size / 2.0;
+    ///
+    /// # assert!(aabb.contains(&point_inside_aabb));
+    /// # assert!(!aabb.contains(&point_inside_other));
+    /// # assert!(!aabb.contains(&point_inside_joint));
+    /// #
+    /// # assert!(!other.contains(&point_inside_aabb));
+    /// # assert!(other.contains(&point_inside_other));
+    /// # assert!(!other.contains(&point_inside_joint));
+    ///
+    /// aabb.join_mut(&other);
+    ///
+    /// assert!(aabb.contains(&point_inside_aabb));
+    /// assert!(aabb.contains(&point_inside_other));
+    /// assert!(aabb.contains(&point_inside_joint));
+    /// ```
+    ///
+    /// [`AABB::join`]: struct.AABB.html
+    ///
+    pub fn join_mut(&mut self, other: &AABB) {
+        self.min = Point3::new(self.min.x.min(other.min.x),
+                               self.min.y.min(other.min.y),
+                               self.min.z.min(other.min.z));
+        self.max = Point3::new(self.max.x.max(other.max.x),
+                               self.max.y.max(other.max.y),
+                               self.max.z.max(other.max.z));
+    }
+
     /// Returns a new minimal [`AABB`] which contains both
     /// this [`AABB`] and the [`Point3`] `other`.
     ///
@@ -276,7 +324,43 @@ impl AABB {
                                       self.max.z.max(other.z)))
     }
 
-    /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and the [`Bounded`] `other`.
+    /// Mutable version of [`AABB::grow`].
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::aabb::AABB;
+    /// use bvh::nalgebra::Point3;
+    ///
+    /// let point1 = Point3::new(0.0, 0.0, 0.0);
+    /// let point2 = Point3::new(1.0, 1.0, 1.0);
+    /// let point3 = Point3::new(2.0, 2.0, 2.0);
+    ///
+    /// let mut aabb = AABB::empty();
+    /// assert!(!aabb.contains(&point1));
+    ///
+    /// aabb.grow_mut(&point1);
+    /// assert!(aabb.contains(&point1));
+    /// assert!(!aabb.contains(&point2));
+    ///
+    /// aabb.grow_mut(&point2);
+    /// assert!(aabb.contains(&point2));
+    /// assert!(!aabb.contains(&point3));
+    /// ```
+    ///
+    /// [`AABB::grow`]: struct.AABB.html
+    /// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
+    ///
+    pub fn grow_mut(&mut self, other: &Point3<f32>) {
+        self.min = Point3::new(self.min.x.min(other.x),
+                               self.min.y.min(other.y),
+                               self.min.z.min(other.z));
+        self.max = Point3::new(self.max.x.max(other.x),
+                               self.max.y.max(other.y),
+                               self.max.z.max(other.z));
+    }
+
+    /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and the [`Bounded`]
+    /// `other`.
     ///
     /// # Examples
     /// ```
@@ -346,6 +430,30 @@ impl AABB {
     ///
     pub fn center(&self) -> Point3<f32> {
         self.min + (self.size() / 2.0)
+    }
+
+    /// An empty [`AABB`] is an [`AABB`] where the lower bound is greater than
+    /// the upper bound in at least one component
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::aabb::AABB;
+    /// use bvh::nalgebra::Point3;
+    ///
+    /// let empty_aabb = AABB::empty();
+    /// assert!(empty_aabb.is_empty());
+    ///
+    /// let min = Point3::new(41.0,41.0,41.0);
+    /// let max = Point3::new(43.0,43.0,43.0);
+    ///
+    /// let aabb = AABB::with_bounds(min, max);
+    /// assert!(!aabb.is_empty());
+    /// ```
+    ///
+    /// [`AABB`]: struct.AABB.html
+    ///
+    pub fn is_empty(&self) -> bool {
+        self.min.x > self.max.x || self.min.y > self.max.y || self.min.z > self.max.z
     }
 
     /// Returns the total surface area of this [`AABB`].

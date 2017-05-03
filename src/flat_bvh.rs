@@ -46,7 +46,7 @@ impl BVHNode {
     /// TODO: change the algorithm which pushes `FlatNode`s to a vector to not use indices this
     /// much. Implement an algorithm which writes directly to a writable slice.
     fn create_flat_branch<F, FNodeType>(&self,
-                                        nodes: &Vec<BVHNode>,
+                                        nodes: &[BVHNode],
                                         this_aabb: &AABB,
                                         vec: &mut Vec<FNodeType>,
                                         next_free: usize,
@@ -57,7 +57,7 @@ impl BVHNode {
         // Create dummy node.
         let dummy = constructor(&AABB::empty(), 0, 0, 0);
         vec.push(dummy);
-        assert!(vec.len() - 1 == next_free);
+        assert_eq!(vec.len() - 1, next_free);
 
         // Create subtree.
         let index_after_subtree = self.flatten_custom(nodes, vec, next_free + 1, constructor);
@@ -78,7 +78,7 @@ impl BVHNode {
     /// [`BVH`]: struct.BVH.html
     ///
     pub fn flatten_custom<F, FNodeType>(&self,
-                                        nodes: &Vec<BVHNode>,
+                                        nodes: &[BVHNode],
                                         vec: &mut Vec<FNodeType>,
                                         next_free: usize,
                                         constructor: &F)
@@ -86,11 +86,24 @@ impl BVHNode {
         where F: Fn(&AABB, u32, u32, u32) -> FNodeType
     {
         match *self {
-            BVHNode::Node { ref child_l_aabb, child_l_index, ref child_r_aabb, child_r_index, .. } => {
-                let index_after_child_l = nodes[child_l_index]
-                    .create_flat_branch(nodes, child_l_aabb, vec, next_free, constructor);
-                nodes[child_r_index]
-                    .create_flat_branch(nodes, child_r_aabb, vec, index_after_child_l, constructor)
+            BVHNode::Node {
+                ref child_l_aabb,
+                child_l_index,
+                ref child_r_aabb,
+                child_r_index,
+                ..
+            } => {
+                let index_after_child_l =
+                    nodes[child_l_index].create_flat_branch(nodes,
+                                                            child_l_aabb,
+                                                            vec,
+                                                            next_free,
+                                                            constructor);
+                nodes[child_r_index].create_flat_branch(nodes,
+                                                        child_r_aabb,
+                                                        vec,
+                                                        index_after_child_l,
+                                                        constructor)
             }
             BVHNode::Leaf { shape_index, .. } => {
                 let mut next_shape = next_free;
@@ -410,7 +423,7 @@ mod tests {
 
     use testbase::{create_n_cubes, build_some_bh, traverse_some_bh, build_1200_triangles_bh,
                    build_12k_triangles_bh, build_120k_triangles_bh, intersect_1200_triangles_bh,
-                   intersect_12k_triangles_bh, intersect_120k_triangles_bh};
+                   intersect_12k_triangles_bh, intersect_120k_triangles_bh, default_bounds};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -428,12 +441,11 @@ mod tests {
     #[bench]
     /// Benchmark the flattening of a BVH with 120,000 triangles.
     fn bench_flatten_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        let mut triangles = create_n_cubes(10_000);
+        let bounds = default_bounds();
+        let mut triangles = create_n_cubes(10_000, &bounds);
         let bvh = BVH::build(&mut triangles);
 
-        b.iter(|| {
-            bvh.flatten();
-        });
+        b.iter(|| { bvh.flatten(); });
     }
 
     #[bench]

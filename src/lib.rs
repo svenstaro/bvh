@@ -77,14 +77,14 @@ extern crate approx;
 #[macro_use]
 extern crate log;
 #[cfg(test)]
+extern crate obj;
+#[cfg(test)]
 extern crate test;
 #[cfg(test)]
 #[macro_use]
 extern crate quickcheck;
 
 extern crate rand;
-#[allow(unused_imports)] // The nalgebra macros are only used in tests
-#[macro_use]
 pub extern crate nalgebra;
 
 /// A minimal floating value used as a lower bound.
@@ -97,6 +97,7 @@ pub mod bounding_hierarchy;
 pub mod bvh;
 pub mod flat_bvh;
 pub mod ray;
+mod utils;
 
 #[cfg(test)]
 mod testbase;
