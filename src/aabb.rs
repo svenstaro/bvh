@@ -261,7 +261,7 @@ impl AABB {
     ///
     /// let point_inside_aabb = aabb_pos + size / 2.0;
     /// let point_inside_other = other_pos + size / 2.0;
-    /// let point_inside_joint = size / 2.0;
+    /// let point_inside_joint = Point3::new(0.0, 0.0, 0.0) + size / 2.0;
     ///
     /// # assert!(aabb.contains(&point_inside_aabb));
     /// # assert!(!aabb.contains(&point_inside_other));

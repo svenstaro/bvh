@@ -283,13 +283,13 @@ impl BVH {
     /// ```
     pub fn flatten(&self) -> FlatBVH {
         self.flatten_custom(&|aabb, entry, exit, shape| {
-                                 FlatNode {
-                                     aabb: *aabb,
-                                     entry_index: entry,
-                                     exit_index: exit,
-                                     shape_index: shape,
-                                 }
-                             })
+            FlatNode {
+                aabb: *aabb,
+                entry_index: entry,
+                exit_index: exit,
+                shape_index: shape,
+            }
+        })
     }
 }
 

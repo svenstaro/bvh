@@ -1,1 +1,2 @@
 error_on_line_overflow = false
+closure_block_indent_threshold = 0
