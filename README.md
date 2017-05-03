@@ -59,12 +59,13 @@ let hit_sphere_aabbs = bvh.traverse_recursive(&ray, &spheres);
 
 This crate provides BVH updating, which is also called optimization. With BVH optimization
 you can mutate the shapes on which the BVH is built and update the tree accordingly without rebuilding it completely.
-This method is very useful, when there are only very few changes to a huge scene. When the major part of the scene is static,
-then it is faster to update the tree, instead of rebuilding it from scratch.
+This method is very useful when there are only very few changes to a huge scene. When the major part of the scene is static,
+it is faster to update the tree, instead of rebuilding it from scratch.
 
 ### Drawbacks
 
-First of all, optimizing is not helpful, when more than half of the scene is not static. This is due to how optimizing takes place:
+First of all, optimizing is not helpful if more than half of the scene is not static.
+This is due to how optimizing takes place:
 Given a set of indices of all shapes which have changed, the optimize procedure tries to rotate fixed constellations
 in search for a better surface area heuristic (SAH) value. This is done recursively from bottom to top while fixing the AABBs
 in the inner nodes of the BVH. Which is why it is inefficient to update the BVH in comparison to rebuilding, when a lot
@@ -74,8 +75,8 @@ Another problem with updated BVHs is, that the resulting BVH is not optimal. Ass
 groups separated by a large gap. When one shape moves from one group to another, the updating procedure will not be able to
 find a sequence of bottom-up rotations which inserts the shape deeply into the other branch.
 
-The following benchmarks are run with wto diffferent datasets:
-* A randomly generated scene with unit size cubes containing a total of (1200, 12000, and 120000 triangles).
+The following benchmarks are run with two different datasets:
+* A randomly generated scene with unit sized cubes containing a total of (1200, 12000, and 120000 triangles).
 * Sponza, a popular scene for benchmarking graphics engines.
 
 ### Intersection via traversal of the list of triangles
@@ -120,7 +121,7 @@ test bvh::bvh::tests::bench_intersect_12k_triangles_bvh                  ... ben
 test bvh::bvh::tests::bench_intersect_sponza_bvh                         ... bench:       1,784 ns/iter (+/- 202)
 ```
 
-These performance measurements show, that traversing a BVH is much faster than traversing a list.
+These performance measurements show that traversing a BVH is much faster than traversing a list.
 
 ### Optimization
 
@@ -137,7 +138,7 @@ test bvh::optimization::tests::bench_optimize_bvh_120k_50p               ... ben
 // TODO Sponza benchmarks.
 ```
 
-This is the place where you have to differentiate between rebuilding the tree from scratch, or trying to optimize the old one.
+This is the place where you have to differentiate between rebuilding the tree from scratch or trying to optimize the old one.
 These tests show the impact of moving around a particular percentage of shapes (`10p` => `10%`).
 It is important to note that the randomization process here moves triangles around indiscriminately.
 This will also lead to cases where the BVH would have to be restructured completely.
@@ -145,8 +146,8 @@ This will also lead to cases where the BVH would have to be restructured complet
 ### Intersection after the optimization
 
 These intersection tests are grouped by dataset and by the BVH generation method.
-`_after_optimize` uses a BVH which was kept up to date with calls to `optimize`, while
-`_with_rebuild` uses the same triangle data as `_after_optimize`, but constructs a BVH from scratch.
+* `_after_optimize` uses a BVH which was kept up to date with calls to `optimize`, while
+* `_with_rebuild` uses the same triangle data as `_after_optimize`, but constructs a BVH from scratch.
 
 *120K Triangles*
 ```rust
