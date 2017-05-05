@@ -246,7 +246,7 @@ impl BVHNode {
         let (child_l_index, child_l_aabb, child_r_index, child_r_aabb) = if split_axis_size <
                                                                             EPSILON {
             // In this branch the shapes lie too close together so that splitting them in a
-            // sinsible way is not possible. Instead we just split the list of shapes in half.
+            // sensible way is not possible. Instead we just split the list of shapes in half.
             let (child_l_indices, child_r_indices) = indices.split_at(indices.len() / 2);
             let child_l_aabb = joint_aabb_of_shapes(child_l_indices, shapes);
             let child_r_aabb = joint_aabb_of_shapes(child_r_indices, shapes);
