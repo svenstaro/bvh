@@ -4,14 +4,14 @@
 //! [`BVHNode`]: struct.BVHNode.html
 //!
 
-use EPSILON;
-use aabb::{AABB, Bounded};
-use bounding_hierarchy::{BoundingHierarchy, BHShape};
+use aabb::{Bounded, AABB};
+use bounding_hierarchy::{BHShape, BoundingHierarchy};
 use nalgebra::Point3;
 use ray::Ray;
 use std::f32;
 use std::iter::repeat;
-use utils::{Bucket, concatenate_vectors, joint_aabb_of_shapes};
+use utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
+use EPSILON;
 
 /// The [`BVHNode`] enum that describes a node in a [`BVH`].
 /// It's either a leaf node and references a shape (by holding its index)
@@ -61,36 +61,42 @@ impl PartialEq for BVHNode {
     // TODO Consider also comparing AABBs
     fn eq(&self, other: &BVHNode) -> bool {
         match (self, other) {
-            (&BVHNode::Node {
-                  parent_index: self_parent_index,
-                  depth: self_depth,
-                  child_l_index: self_child_l_index,
-                  child_r_index: self_child_r_index,
-                  ..
-              },
-             &BVHNode::Node {
-                  parent_index: other_parent_index,
-                  depth: other_depth,
-                  child_l_index: other_child_l_index,
-                  child_r_index: other_child_r_index,
-                  ..
-              }) => {
-                self_parent_index == other_parent_index && self_depth == other_depth &&
-                self_child_l_index == other_child_l_index &&
-                self_child_r_index == other_child_r_index
+            (
+                &BVHNode::Node {
+                    parent_index: self_parent_index,
+                    depth: self_depth,
+                    child_l_index: self_child_l_index,
+                    child_r_index: self_child_r_index,
+                    ..
+                },
+                &BVHNode::Node {
+                    parent_index: other_parent_index,
+                    depth: other_depth,
+                    child_l_index: other_child_l_index,
+                    child_r_index: other_child_r_index,
+                    ..
+                },
+            ) => {
+                self_parent_index == other_parent_index
+                    && self_depth == other_depth
+                    && self_child_l_index == other_child_l_index
+                    && self_child_r_index == other_child_r_index
             }
-            (&BVHNode::Leaf {
-                  parent_index: self_parent_index,
-                  depth: self_depth,
-                  shape_index: self_shape_index,
-              },
-             &BVHNode::Leaf {
-                  parent_index: other_parent_index,
-                  depth: other_depth,
-                  shape_index: other_shape_index,
-              }) => {
-                self_parent_index == other_parent_index && self_depth == other_depth &&
-                self_shape_index == other_shape_index
+            (
+                &BVHNode::Leaf {
+                    parent_index: self_parent_index,
+                    depth: self_depth,
+                    shape_index: self_shape_index,
+                },
+                &BVHNode::Leaf {
+                    parent_index: other_parent_index,
+                    depth: other_depth,
+                    shape_index: other_shape_index,
+                },
+            ) => {
+                self_parent_index == other_parent_index
+                    && self_depth == other_depth
+                    && self_shape_index == other_shape_index
             }
             _ => false,
         }
@@ -101,16 +107,21 @@ impl BVHNode {
     /// Returns the index of the parent node.
     pub fn parent(&self) -> usize {
         match *self {
-            BVHNode::Node { parent_index, .. } |
-            BVHNode::Leaf { parent_index, .. } => parent_index,
+            BVHNode::Node { parent_index, .. } | BVHNode::Leaf { parent_index, .. } => parent_index,
         }
     }
 
     /// Returns a mutable reference to the parent node index.
     pub fn parent_mut(&mut self) -> &mut usize {
         match *self {
-            BVHNode::Node { ref mut parent_index, .. } |
-            BVHNode::Leaf { ref mut parent_index, .. } => parent_index,
+            BVHNode::Node {
+                ref mut parent_index,
+                ..
+            }
+            | BVHNode::Leaf {
+                ref mut parent_index,
+                ..
+            } => parent_index,
         }
     }
 
@@ -133,7 +144,10 @@ impl BVHNode {
     /// Returns a mutable reference to the `AABB` of the left child node.
     pub fn child_l_aabb_mut(&mut self) -> &mut AABB {
         match *self {
-            BVHNode::Node { ref mut child_l_aabb, .. } => child_l_aabb,
+            BVHNode::Node {
+                ref mut child_l_aabb,
+                ..
+            } => child_l_aabb,
             _ => panic!("Tried to get the left child's `AABB` of a leaf node."),
         }
     }
@@ -157,7 +171,10 @@ impl BVHNode {
     /// Returns a mutable reference to the `AABB` of the right child node.
     pub fn child_r_aabb_mut(&mut self) -> &mut AABB {
         match *self {
-            BVHNode::Node { ref mut child_r_aabb, .. } => child_r_aabb,
+            BVHNode::Node {
+                ref mut child_r_aabb,
+                ..
+            } => child_r_aabb,
             _ => panic!("Tried to get the right child's `AABB` of a leaf node."),
         }
     }
@@ -165,8 +182,7 @@ impl BVHNode {
     /// Returns the depth of the node. The root node has depth `0`.
     pub fn depth(&self) -> u32 {
         match *self {
-            BVHNode::Node { depth, .. } |
-            BVHNode::Leaf { depth, .. } => depth,
+            BVHNode::Node { depth, .. } | BVHNode::Leaf { depth, .. } => depth,
         }
     }
 
@@ -199,18 +215,22 @@ impl BVHNode {
     ///
     /// [`BVHNode`]: enum.BVHNode.html
     ///
-    pub fn build<T: BHShape>(shapes: &mut [T],
-                             indices: &[usize],
-                             nodes: &mut Vec<BVHNode>,
-                             parent_index: usize,
-                             depth: u32)
-                             -> usize {
+    pub fn build<T: BHShape>(
+        shapes: &mut [T],
+        indices: &[usize],
+        nodes: &mut Vec<BVHNode>,
+        parent_index: usize,
+        depth: u32,
+    ) -> usize {
         // Helper function to accumulate the AABB joint and the centroids AABB
         fn grow_convex_hull(convex_hull: (AABB, AABB), shape_aabb: &AABB) -> (AABB, AABB) {
             let center = &shape_aabb.center();
             let convex_hull_aabbs = &convex_hull.0;
             let convex_hull_centroids = &convex_hull.1;
-            (convex_hull_aabbs.join(shape_aabb), convex_hull_centroids.grow(center))
+            (
+                convex_hull_aabbs.join(shape_aabb),
+                convex_hull_centroids.grow(center),
+            )
         }
 
         let mut convex_hull = Default::default();
@@ -224,10 +244,10 @@ impl BVHNode {
             let shape_index = indices[0];
             let node_index = nodes.len();
             nodes.push(BVHNode::Leaf {
-                           parent_index: parent_index,
-                           depth: depth,
-                           shape_index: shape_index,
-                       });
+                parent_index: parent_index,
+                depth: depth,
+                shape_index: shape_index,
+            });
             // Let the shape know the index of the node that represents it.
             shapes[shape_index].set_bh_node_index(node_index);
             return node_index;
@@ -243,8 +263,9 @@ impl BVHNode {
         let split_axis_size = centroid_bounds.max[split_axis] - centroid_bounds.min[split_axis];
 
         // The following `if` partitions `indices` for recursively calling `BVH::build`.
-        let (child_l_index, child_l_aabb, child_r_index, child_r_aabb) = if split_axis_size <
-                                                                            EPSILON {
+        let (child_l_index, child_l_aabb, child_r_index, child_r_aabb) = if split_axis_size
+            < EPSILON
+        {
             // In this branch the shapes lie too close together so that splitting them in a
             // sensible way is not possible. Instead we just split the list of shapes in half.
             let (child_l_indices, child_r_indices) = indices.split_at(indices.len() / 2);
@@ -289,16 +310,12 @@ impl BVHNode {
             let mut child_r_aabb = AABB::empty();
             for i in 0..(NUM_BUCKETS - 1) {
                 let (l_buckets, r_buckets) = buckets.split_at(i + 1);
-                let child_l = l_buckets
-                    .iter()
-                    .fold(Bucket::empty(), Bucket::join_bucket);
-                let child_r = r_buckets
-                    .iter()
-                    .fold(Bucket::empty(), Bucket::join_bucket);
+                let child_l = l_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
+                let child_r = r_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
 
-                let cost = (child_l.size as f32 * child_l.aabb.surface_area() +
-                            child_r.size as f32 * child_r.aabb.surface_area()) /
-                           aabb_bounds.surface_area();
+                let cost = (child_l.size as f32 * child_l.aabb.surface_area()
+                    + child_r.size as f32 * child_r.aabb.surface_area())
+                    / aabb_bounds.surface_area();
                 if cost < min_cost {
                     min_bucket = i;
                     min_cost = cost;
@@ -342,10 +359,12 @@ impl BVHNode {
     /// [`BVH`]: struct.BVH.html
     /// [`Ray`]: ../ray/struct.Ray.html
     ///
-    pub fn traverse_recursive(nodes: &[BVHNode],
-                              node_index: usize,
-                              ray: &Ray,
-                              indices: &mut Vec<usize>) {
+    pub fn traverse_recursive(
+        nodes: &[BVHNode],
+        node_index: usize,
+        ray: &Ray,
+        indices: &mut Vec<usize>,
+    ) {
         match nodes[node_index] {
             BVHNode::Node {
                 ref child_l_aabb,
@@ -430,7 +449,9 @@ impl BVH {
                     println!("{}child_r {}", padding, child_r_aabb);
                     print_node(nodes, child_r_index);
                 }
-                BVHNode::Leaf { shape_index, depth, .. } => {
+                BVHNode::Leaf {
+                    shape_index, depth, ..
+                } => {
                     let padding: String = repeat(" ").take(depth as usize).collect();
                     println!("{}shape\t{:?}", padding, shape_index);
                 }
@@ -442,14 +463,15 @@ impl BVH {
     /// Verifies that the node at index `node_index` lies inside `expected_outer_aabb`,
     /// its parent index is equal to `expected_parent_index`, its depth is equal to
     /// `expected_depth`. Increares `node_count` by the number of visited nodes.
-    fn is_consistent_subtree<Shape: BHShape>(&self,
-                                             node_index: usize,
-                                             expected_parent_index: usize,
-                                             expected_outer_aabb: &AABB,
-                                             expected_depth: u32,
-                                             node_count: &mut usize,
-                                             shapes: &[Shape])
-                                             -> bool {
+    fn is_consistent_subtree<Shape: BHShape>(
+        &self,
+        node_index: usize,
+        expected_parent_index: usize,
+        expected_outer_aabb: &AABB,
+        expected_depth: u32,
+        node_count: &mut usize,
+        shapes: &[Shape],
+    ) -> bool {
         *node_count += 1;
         match self.nodes[node_index] {
             BVHNode::Node {
@@ -462,28 +484,33 @@ impl BVH {
             } => {
                 let correct_parent_index = expected_parent_index == parent_index;
                 let correct_depth = expected_depth == depth;
-                let left_aabb_in_parent = expected_outer_aabb
-                    .approx_contains_aabb_eps(&child_l_aabb, EPSILON);
-                let right_aabb_in_parent = expected_outer_aabb
-                    .approx_contains_aabb_eps(&child_r_aabb, EPSILON);
-                let left_subtree_consistent =
-                    self.is_consistent_subtree(child_l_index,
-                                               node_index,
-                                               &child_l_aabb,
-                                               expected_depth + 1,
-                                               node_count,
-                                               shapes);
-                let right_subtree_consistent =
-                    self.is_consistent_subtree(child_r_index,
-                                               node_index,
-                                               &child_r_aabb,
-                                               expected_depth + 1,
-                                               node_count,
-                                               shapes);
+                let left_aabb_in_parent =
+                    expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, EPSILON);
+                let right_aabb_in_parent =
+                    expected_outer_aabb.approx_contains_aabb_eps(&child_r_aabb, EPSILON);
+                let left_subtree_consistent = self.is_consistent_subtree(
+                    child_l_index,
+                    node_index,
+                    &child_l_aabb,
+                    expected_depth + 1,
+                    node_count,
+                    shapes,
+                );
+                let right_subtree_consistent = self.is_consistent_subtree(
+                    child_r_index,
+                    node_index,
+                    &child_r_aabb,
+                    expected_depth + 1,
+                    node_count,
+                    shapes,
+                );
 
-                correct_parent_index && correct_depth && left_aabb_in_parent &&
-                right_aabb_in_parent && left_subtree_consistent &&
-                right_subtree_consistent
+                correct_parent_index
+                    && correct_depth
+                    && left_aabb_in_parent
+                    && right_aabb_in_parent
+                    && left_subtree_consistent
+                    && right_subtree_consistent
             }
             BVHNode::Leaf {
                 parent_index,
@@ -493,8 +520,8 @@ impl BVH {
                 let correct_parent_index = expected_parent_index == parent_index;
                 let correct_depth = expected_depth == depth;
                 let shape_aabb = shapes[shape_index].aabb();
-                let shape_aabb_in_parent = expected_outer_aabb
-                    .approx_contains_aabb_eps(&shape_aabb, EPSILON);
+                let shape_aabb_in_parent =
+                    expected_outer_aabb.approx_contains_aabb_eps(&shape_aabb, EPSILON);
 
                 correct_parent_index && correct_depth && shape_aabb_in_parent
             }
@@ -522,28 +549,30 @@ impl BVH {
     }
 
     /// Assert version of `is_consistent_subtree`.
-    fn assert_consistent_subtree<Shape: BHShape>(&self,
-                                                 node_index: usize,
-                                                 expected_parent_index: usize,
-                                                 expected_outer_aabb: &AABB,
-                                                 expected_depth: u32,
-                                                 node_count: &mut usize,
-                                                 shapes: &[Shape]) {
+    fn assert_consistent_subtree<Shape: BHShape>(
+        &self,
+        node_index: usize,
+        expected_parent_index: usize,
+        expected_outer_aabb: &AABB,
+        expected_depth: u32,
+        node_count: &mut usize,
+        shapes: &[Shape],
+    ) {
         *node_count += 1;
         let node = &self.nodes[node_index];
 
         let parent = node.parent();
-        assert_eq!(expected_parent_index,
-                   parent,
-                   "Wrong parent index. Expected: {}; Actual: {}",
-                   expected_parent_index,
-                   parent);
+        assert_eq!(
+            expected_parent_index, parent,
+            "Wrong parent index. Expected: {}; Actual: {}",
+            expected_parent_index, parent
+        );
         let depth = node.depth();
-        assert_eq!(expected_depth,
-                   depth,
-                   "Wrong depth. Expected: {}; Actual: {}",
-                   expected_depth,
-                   depth);
+        assert_eq!(
+            expected_depth, depth,
+            "Wrong depth. Expected: {}; Actual: {}",
+            expected_depth, depth
+        );
 
         match *node {
             BVHNode::Node {
@@ -553,37 +582,47 @@ impl BVH {
                 child_r_aabb,
                 ..
             } => {
-                assert!(expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, EPSILON),
-                        "Left child lies outside the expected bounds.
+                assert!(
+                    expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, EPSILON),
+                    "Left child lies outside the expected bounds.
                          \tBounds: {}
                          \tLeft child: {}",
-                        expected_outer_aabb,
-                        child_l_aabb);
-                assert!(expected_outer_aabb.approx_contains_aabb_eps(&child_r_aabb, EPSILON),
-                        "Right child lies outside the expected bounds.
+                    expected_outer_aabb,
+                    child_l_aabb
+                );
+                assert!(
+                    expected_outer_aabb.approx_contains_aabb_eps(&child_r_aabb, EPSILON),
+                    "Right child lies outside the expected bounds.
                          \tBounds: {}
                          \tRight child: {}",
-                        expected_outer_aabb,
-                        child_r_aabb);
-                self.assert_consistent_subtree(child_l_index,
-                                               node_index,
-                                               &child_l_aabb,
-                                               expected_depth + 1,
-                                               node_count,
-                                               shapes);
-                self.assert_consistent_subtree(child_r_index,
-                                               node_index,
-                                               &child_r_aabb,
-                                               expected_depth + 1,
-                                               node_count,
-                                               shapes);
+                    expected_outer_aabb,
+                    child_r_aabb
+                );
+                self.assert_consistent_subtree(
+                    child_l_index,
+                    node_index,
+                    &child_l_aabb,
+                    expected_depth + 1,
+                    node_count,
+                    shapes,
+                );
+                self.assert_consistent_subtree(
+                    child_r_index,
+                    node_index,
+                    &child_r_aabb,
+                    expected_depth + 1,
+                    node_count,
+                    shapes,
+                );
             }
             BVHNode::Leaf { shape_index, .. } => {
                 let shape_aabb = shapes[shape_index].aabb();
-                assert!(expected_outer_aabb.approx_contains_aabb_eps(&shape_aabb, EPSILON),
-                        "Shape's AABB lies outside the expected bounds.\n\tBounds: {}\n\tShape: {}",
-                        expected_outer_aabb,
-                        shape_aabb);
+                assert!(
+                    expected_outer_aabb.approx_contains_aabb_eps(&shape_aabb, EPSILON),
+                    "Shape's AABB lies outside the expected bounds.\n\tBounds: {}\n\tShape: {}",
+                    expected_outer_aabb,
+                    shape_aabb
+                );
             }
         }
     }
@@ -608,17 +647,20 @@ impl BVH {
     /// Check that the `AABB`s in the `BVH` are tight, which means, that parent `AABB`s are not
     /// larger than they should be. This function checks, whether the children of node `node_index`
     /// lie inside `outer_aabb`.
-    pub fn assert_tight_subtree<Shape: BHShape>(&self,
-                                                node_index: usize,
-                                                outer_aabb: &AABB,
-                                                shapes: &[Shape]) {
+    pub fn assert_tight_subtree<Shape: BHShape>(
+        &self,
+        node_index: usize,
+        outer_aabb: &AABB,
+        shapes: &[Shape],
+    ) {
         if let BVHNode::Node {
-                   child_l_index,
-                   child_l_aabb,
-                   child_r_index,
-                   child_r_aabb,
-                   ..
-               } = self.nodes[node_index] {
+            child_l_index,
+            child_l_aabb,
+            child_r_index,
+            child_r_aabb,
+            ..
+        } = self.nodes[node_index]
+        {
             let joint_aabb = child_l_aabb.join(&child_r_aabb);
             assert!(joint_aabb.relative_eq(outer_aabb, EPSILON));
             self.assert_tight_subtree(child_l_index, &child_l_aabb, shapes);
@@ -632,10 +674,11 @@ impl BVH {
         // When starting to check whether the `BVH` is tight, we cannot provide a minimum
         // outer `AABB`, therefore we compute the correct one in this instance.
         if let BVHNode::Node {
-                   child_l_aabb,
-                   child_r_aabb,
-                   ..
-               } = self.nodes[0] {
+            child_l_aabb,
+            child_r_aabb,
+            ..
+        } = self.nodes[0]
+        {
             let joint_aabb = child_l_aabb.join(&child_r_aabb);
             self.assert_tight_subtree(0, &joint_aabb, shapes);
         }
@@ -659,10 +702,11 @@ impl BoundingHierarchy for BVH {
 #[cfg(test)]
 pub mod tests {
     use bvh::BVH;
-    use testbase::{build_some_bh, traverse_some_bh, build_1200_triangles_bh,
-                   build_12k_triangles_bh, build_120k_triangles_bh, intersect_1200_triangles_bh,
-                   intersect_12k_triangles_bh, intersect_120k_triangles_bh, load_sponza_scene,
-                   intersect_bh};
+    use testbase::{
+        build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh, build_some_bh,
+        intersect_1200_triangles_bh, intersect_120k_triangles_bh, intersect_12k_triangles_bh,
+        intersect_bh, load_sponza_scene, traverse_some_bh,
+    };
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -696,9 +740,11 @@ pub mod tests {
 
     #[bench]
     /// Benchmark the construction of a `BVH` for the Sponza scene.
-    fn bench_build_sponza_bvh(mut b: &mut ::test::Bencher) {
+    fn bench_build_sponza_bvh(b: &mut ::test::Bencher) {
         let (mut triangles, _) = load_sponza_scene();
-        b.iter(|| { BVH::build(&mut triangles); });
+        b.iter(|| {
+            BVH::build(&mut triangles);
+        });
     }
 
     #[bench]

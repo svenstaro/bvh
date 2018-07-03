@@ -1,8 +1,11 @@
 //! Axis enum for indexing three-dimensional structures.
 
-use std::ops::{Index, IndexMut};
-use std::fmt::{Display, Formatter, Result};
+#![allow(unused)]
 use nalgebra::{Point3, Vector3};
+use std::fmt::{Display, Formatter, Result};
+use std::ops::{Index, IndexMut};
+
+struct MyType<T>(T);
 
 /// An `Axis` in a three-dimensional coordinate system.
 /// Used to access `Vector3`/`Point3` structs via index.
@@ -50,13 +53,15 @@ pub enum Axis {
 /// Display implementation for `Axis`.
 impl Display for Axis {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f,
-               "{}",
-               match *self {
-                   Axis::X => "x",
-                   Axis::Y => "y",
-                   Axis::Z => "z",
-               })
+        write!(
+            f,
+            "{}",
+            match *self {
+                Axis::X => "x",
+                Axis::Y => "y",
+                Axis::Z => "z",
+            }
+        )
     }
 }
 
@@ -83,14 +88,14 @@ impl Index<Axis> for Point3<f32> {
 }
 
 /// Make `Vector3` indexable by `Axis`.
-impl Index<Axis> for Vector3<f32> {
+impl Index<Axis> for MyType<Vector3<f32>> {
     type Output = f32;
 
     fn index(&self, axis: Axis) -> &f32 {
         match axis {
-            Axis::X => &self.x,
-            Axis::Y => &self.y,
-            Axis::Z => &self.z,
+            Axis::X => &self.0.x,
+            Axis::Y => &self.0.y,
+            Axis::Z => &self.0.z,
         }
     }
 }
@@ -114,12 +119,12 @@ impl IndexMut<Axis> for Point3<f32> {
 }
 
 /// Make `Vector3` mutably accessible by `Axis`.
-impl IndexMut<Axis> for Vector3<f32> {
+impl IndexMut<Axis> for MyType<Vector3<f32>> {
     fn index_mut(&mut self, axis: Axis) -> &mut f32 {
         match axis {
-            Axis::X => &mut self.x,
-            Axis::Y => &mut self.y,
-            Axis::Z => &mut self.z,
+            Axis::X => &mut self.0.x,
+            Axis::Y => &mut self.0.y,
+            Axis::Z => &mut self.0.z,
         }
     }
 }
