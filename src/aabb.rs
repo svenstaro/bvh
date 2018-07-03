@@ -129,8 +129,12 @@ impl AABB {
     /// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
     ///
     pub fn contains(&self, p: &Point3<f32>) -> bool {
-        p.x >= self.min.x && p.x <= self.max.x && p.y >= self.min.y && p.y <= self.max.y &&
-        p.z >= self.min.z && p.z <= self.max.z
+        p.x >= self.min.x
+            && p.x <= self.max.x
+            && p.y >= self.min.y
+            && p.y <= self.max.y
+            && p.z >= self.min.z
+            && p.z <= self.max.z
     }
 
     /// Returns true if the [`Point3`] is approximately inside the [`AABB`]
@@ -154,9 +158,12 @@ impl AABB {
     /// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
     ///
     pub fn approx_contains_eps(&self, p: &Point3<f32>, epsilon: f32) -> bool {
-        (p.x - self.min.x) > -epsilon && (p.x - self.max.x) < epsilon &&
-        (p.y - self.min.y) > -epsilon && (p.y - self.max.y) < epsilon &&
-        (p.z - self.min.z) > -epsilon && (p.z - self.max.z) < epsilon
+        (p.x - self.min.x) > -epsilon
+            && (p.x - self.max.x) < epsilon
+            && (p.y - self.min.y) > -epsilon
+            && (p.y - self.max.y) < epsilon
+            && (p.z - self.min.z) > -epsilon
+            && (p.z - self.max.z) < epsilon
     }
 
     /// Returns true if the `other` [`AABB`] is approximately inside this [`AABB`]
@@ -178,8 +185,8 @@ impl AABB {
     ///
     /// [`AABB`]: struct.AABB.html
     pub fn approx_contains_aabb_eps(&self, other: &AABB, epsilon: f32) -> bool {
-        self.approx_contains_eps(&other.min, epsilon) &&
-        self.approx_contains_eps(&other.max, epsilon)
+        self.approx_contains_eps(&other.min, epsilon)
+            && self.approx_contains_eps(&other.max, epsilon)
     }
 
     /// Returns true if the `other` [`AABB`] is approximately equal to this [`AABB`]
@@ -201,8 +208,8 @@ impl AABB {
     ///
     /// [`AABB`]: struct.AABB.html
     pub fn relative_eq(&self, other: &AABB, epsilon: f32) -> bool {
-        relative_eq!(self.min, other.min, epsilon = epsilon) &&
-        relative_eq!(self.max, other.max, epsilon = epsilon)
+        relative_eq!(self.min, other.min, epsilon = epsilon)
+            && relative_eq!(self.max, other.max, epsilon = epsilon)
     }
 
     /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and `other`.
@@ -237,12 +244,18 @@ impl AABB {
     /// [`AABB`]: struct.AABB.html
     ///
     pub fn join(&self, other: &AABB) -> AABB {
-        AABB::with_bounds(Point3::new(self.min.x.min(other.min.x),
-                                      self.min.y.min(other.min.y),
-                                      self.min.z.min(other.min.z)),
-                          Point3::new(self.max.x.max(other.max.x),
-                                      self.max.y.max(other.max.y),
-                                      self.max.z.max(other.max.z)))
+        AABB::with_bounds(
+            Point3::new(
+                self.min.x.min(other.min.x),
+                self.min.y.min(other.min.y),
+                self.min.z.min(other.min.z),
+            ),
+            Point3::new(
+                self.max.x.max(other.max.x),
+                self.max.y.max(other.max.y),
+                self.max.z.max(other.max.z),
+            ),
+        )
     }
 
     /// Mutable version of [`AABB::join`].
@@ -281,12 +294,16 @@ impl AABB {
     /// [`AABB::join`]: struct.AABB.html
     ///
     pub fn join_mut(&mut self, other: &AABB) {
-        self.min = Point3::new(self.min.x.min(other.min.x),
-                               self.min.y.min(other.min.y),
-                               self.min.z.min(other.min.z));
-        self.max = Point3::new(self.max.x.max(other.max.x),
-                               self.max.y.max(other.max.y),
-                               self.max.z.max(other.max.z));
+        self.min = Point3::new(
+            self.min.x.min(other.min.x),
+            self.min.y.min(other.min.y),
+            self.min.z.min(other.min.z),
+        );
+        self.max = Point3::new(
+            self.max.x.max(other.max.x),
+            self.max.y.max(other.max.y),
+            self.max.z.max(other.max.z),
+        );
     }
 
     /// Returns a new minimal [`AABB`] which contains both
@@ -316,12 +333,18 @@ impl AABB {
     /// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
     ///
     pub fn grow(&self, other: &Point3<f32>) -> AABB {
-        AABB::with_bounds(Point3::new(self.min.x.min(other.x),
-                                      self.min.y.min(other.y),
-                                      self.min.z.min(other.z)),
-                          Point3::new(self.max.x.max(other.x),
-                                      self.max.y.max(other.y),
-                                      self.max.z.max(other.z)))
+        AABB::with_bounds(
+            Point3::new(
+                self.min.x.min(other.x),
+                self.min.y.min(other.y),
+                self.min.z.min(other.z),
+            ),
+            Point3::new(
+                self.max.x.max(other.x),
+                self.max.y.max(other.y),
+                self.max.z.max(other.z),
+            ),
+        )
     }
 
     /// Mutable version of [`AABB::grow`].
@@ -351,12 +374,16 @@ impl AABB {
     /// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
     ///
     pub fn grow_mut(&mut self, other: &Point3<f32>) {
-        self.min = Point3::new(self.min.x.min(other.x),
-                               self.min.y.min(other.y),
-                               self.min.z.min(other.z));
-        self.max = Point3::new(self.max.x.max(other.x),
-                               self.max.y.max(other.y),
-                               self.max.z.max(other.z));
+        self.min = Point3::new(
+            self.min.x.min(other.x),
+            self.min.y.min(other.y),
+            self.min.z.min(other.z),
+        );
+        self.max = Point3::new(
+            self.max.x.max(other.x),
+            self.max.y.max(other.y),
+            self.max.z.max(other.z),
+        );
     }
 
     /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and the [`Bounded`]
@@ -563,7 +590,11 @@ impl Index<usize> for AABB {
     type Output = Point3<f32>;
 
     fn index(&self, index: usize) -> &Point3<f32> {
-        if index == 0 { &self.min } else { &self.max }
+        if index == 0 {
+            &self.min
+        } else {
+            &self.max
+        }
     }
 }
 
@@ -617,11 +648,11 @@ impl Bounded for Point3<f32> {
 
 #[cfg(test)]
 mod tests {
-    use EPSILON;
-    use aabb::{AABB, Bounded};
+    use aabb::{Bounded, AABB};
     use nalgebra::{Point3, Vector3};
+    use EPSILON;
 
-    use testbase::{TupleVec, tuple_to_point, tuple_to_vector};
+    use testbase::{tuple_to_point, tuple_to_vector, TupleVec};
 
     /// Test whether an empty `AABB` does not contains anything.
     quickcheck!{

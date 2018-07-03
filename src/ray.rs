@@ -2,7 +2,7 @@
 //! for axis aligned bounding boxes and triangles.
 
 use aabb::AABB;
-use nalgebra::{Vector3, Point3};
+use nalgebra::{Point3, Vector3};
 use std::f32::INFINITY;
 use EPSILON;
 
@@ -78,9 +78,11 @@ impl Ray {
             origin: origin,
             direction: direction,
             inv_direction: Vector3::new(1.0 / direction.x, 1.0 / direction.y, 1.0 / direction.z),
-            sign: Vector3::new((direction.x < 0.0) as usize,
-                               (direction.y < 0.0) as usize,
-                               (direction.z < 0.0) as usize),
+            sign: Vector3::new(
+                (direction.x < 0.0) as usize,
+                (direction.y < 0.0) as usize,
+                (direction.z < 0.0) as usize,
+            ),
         }
     }
 
@@ -247,11 +249,12 @@ impl Ray {
     /// the u and v coordinates of the intersection.
     /// The distance is set to +INFINITY if the ray does not intersect the triangle, or hits
     /// it from behind.
-    pub fn intersects_triangle(&self,
-                               a: &Point3<f32>,
-                               b: &Point3<f32>,
-                               c: &Point3<f32>)
-                               -> Intersection {
+    pub fn intersects_triangle(
+        &self,
+        a: &Point3<f32>,
+        b: &Point3<f32>,
+        c: &Point3<f32>,
+    ) -> Intersection {
         let a_to_b = *b - *a;
         let a_to_c = *c - *a;
 
@@ -307,16 +310,16 @@ impl Ray {
 
 #[cfg(test)]
 mod tests {
-    use std::f32::INFINITY;
     use std::cmp;
+    use std::f32::INFINITY;
 
-    use rand::{Rng, StdRng, SeedableRng};
+    use rand::{Rng, SeedableRng, StdRng};
 
-    use EPSILON;
     use aabb::AABB;
     use ray::Ray;
+    use EPSILON;
 
-    use testbase::{TupleVec, tuple_to_point, tuple_to_vector};
+    use testbase::{tuple_to_point, tuple_to_vector, TupleVec};
 
     /// Generates a random `Ray` which points at at a random `AABB`.
     fn gen_ray_to_aabb(data: (TupleVec, TupleVec, TupleVec)) -> (Ray, AABB) {
