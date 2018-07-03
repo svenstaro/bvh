@@ -2,18 +2,17 @@
 #![cfg(test)]
 
 use std::collections::HashSet;
+use std::f32;
 use std::fs::File;
 use std::io::BufReader;
-use std::f32;
 
 use nalgebra::{Point3, Vector3};
-use obj::*;
 use obj::raw::object::Polygon;
+use obj::*;
 use rand::{Rng, SeedableRng, StdRng};
 
-use axis::Axis;
-use aabb::{AABB, Bounded};
-use bounding_hierarchy::{BoundingHierarchy, BHShape};
+use aabb::{Bounded, AABB};
+use bounding_hierarchy::{BHShape, BoundingHierarchy};
 use ray::Ray;
 
 /// A vector represented as a tuple
@@ -85,11 +84,13 @@ pub fn build_some_bh<BH: BoundingHierarchy>() -> (Vec<UnitBox>, BH) {
 
 /// Given a ray, a bounding hierarchy, the complete list of shapes in the scene and a list of
 /// expected hits, verifies, whether the ray hits only the expected shapes.
-fn traverse_and_verify<BH: BoundingHierarchy>(ray_origin: Point3<f32>,
-                                              ray_direction: Vector3<f32>,
-                                              all_shapes: &Vec<UnitBox>,
-                                              bh: &BH,
-                                              expected_shapes: &HashSet<i32>) {
+fn traverse_and_verify<BH: BoundingHierarchy>(
+    ray_origin: Point3<f32>,
+    ray_direction: Vector3<f32>,
+    all_shapes: &Vec<UnitBox>,
+    bh: &BH,
+    expected_shapes: &HashSet<i32>,
+) {
     let ray = Ray::new(ray_origin, ray_direction);
     let hit_shapes = bh.traverse(&ray, all_shapes);
 
@@ -180,10 +181,11 @@ impl BHShape for Triangle {
 }
 
 impl FromRawVertex for Triangle {
-    fn process(vertices: Vec<(f32, f32, f32, f32)>,
-               _: Vec<(f32, f32, f32)>,
-               polygons: Vec<Polygon>)
-               -> ObjResult<(Vec<Self>, Vec<u16>)> {
+    fn process(
+        vertices: Vec<(f32, f32, f32, f32)>,
+        _: Vec<(f32, f32, f32)>,
+        polygons: Vec<Polygon>,
+    ) -> ObjResult<(Vec<Self>, Vec<u16>)> {
         // Convert the vertices to `Point3`s.
         let points = vertices
             .into_iter()
@@ -208,8 +210,7 @@ impl FromRawVertex for Triangle {
             for polygon in polygons.into_iter() {
                 match polygon {
                     Polygon::P(ref vec) => push_triangle(vec),
-                    Polygon::PT(ref vec) |
-                    Polygon::PN(ref vec) => {
+                    Polygon::PT(ref vec) | Polygon::PN(ref vec) => {
                         push_triangle(&vec.iter().map(|vertex| vertex.0).collect())
                     }
                     Polygon::PTN(ref vec) => {
@@ -233,18 +234,62 @@ fn push_cube(pos: Point3<f32>, shapes: &mut Vec<Triangle>) {
     let bottom_back_left = pos + Vector3::new(-0.5, -0.5, 0.5);
     let bottom_front_left = pos + Vector3::new(-0.5, -0.5, -0.5);
 
-    shapes.push(Triangle::new(top_back_right, top_front_right, top_front_left));
+    shapes.push(Triangle::new(
+        top_back_right,
+        top_front_right,
+        top_front_left,
+    ));
     shapes.push(Triangle::new(top_front_left, top_back_left, top_back_right));
-    shapes.push(Triangle::new(bottom_front_left, bottom_front_right, bottom_back_right));
-    shapes.push(Triangle::new(bottom_back_right, bottom_back_left, bottom_front_left));
-    shapes.push(Triangle::new(top_back_left, top_front_left, bottom_front_left));
-    shapes.push(Triangle::new(bottom_front_left, bottom_back_left, top_back_left));
-    shapes.push(Triangle::new(bottom_front_right, top_front_right, top_back_right));
-    shapes.push(Triangle::new(top_back_right, bottom_back_right, bottom_front_right));
-    shapes.push(Triangle::new(top_front_left, top_front_right, bottom_front_right));
-    shapes.push(Triangle::new(bottom_front_right, bottom_front_left, top_front_left));
-    shapes.push(Triangle::new(bottom_back_right, top_back_right, top_back_left));
-    shapes.push(Triangle::new(top_back_left, bottom_back_left, bottom_back_right));
+    shapes.push(Triangle::new(
+        bottom_front_left,
+        bottom_front_right,
+        bottom_back_right,
+    ));
+    shapes.push(Triangle::new(
+        bottom_back_right,
+        bottom_back_left,
+        bottom_front_left,
+    ));
+    shapes.push(Triangle::new(
+        top_back_left,
+        top_front_left,
+        bottom_front_left,
+    ));
+    shapes.push(Triangle::new(
+        bottom_front_left,
+        bottom_back_left,
+        top_back_left,
+    ));
+    shapes.push(Triangle::new(
+        bottom_front_right,
+        top_front_right,
+        top_back_right,
+    ));
+    shapes.push(Triangle::new(
+        top_back_right,
+        bottom_back_right,
+        bottom_front_right,
+    ));
+    shapes.push(Triangle::new(
+        top_front_left,
+        top_front_right,
+        bottom_front_right,
+    ));
+    shapes.push(Triangle::new(
+        bottom_front_right,
+        bottom_front_left,
+        top_front_left,
+    ));
+    shapes.push(Triangle::new(
+        bottom_back_right,
+        top_back_right,
+        top_back_left,
+    ));
+    shapes.push(Triangle::new(
+        top_back_left,
+        bottom_back_left,
+        bottom_back_right,
+    ));
 }
 
 /// Implementation of splitmix64.
@@ -270,26 +315,31 @@ pub fn next_point3_raw(seed: &mut u64) -> (i32, i32, i32) {
 pub fn next_point3(seed: &mut u64, aabb: &AABB) -> Point3<f32> {
     let (a, b, c) = next_point3_raw(seed);
     use std::i32;
-    let float_vector = Vector3::new((a as f32 / i32::MAX as f32) + 1.0,
-                                    (b as f32 / i32::MAX as f32) + 1.0,
-                                    (c as f32 / i32::MAX as f32) + 1.0) *
-                       0.5;
+    let float_vector = Vector3::new(
+        (a as f32 / i32::MAX as f32) + 1.0,
+        (b as f32 / i32::MAX as f32) + 1.0,
+        (c as f32 / i32::MAX as f32) + 1.0,
+    ) * 0.5;
 
     assert!(float_vector.x >= 0.0 && float_vector.x <= 1.0);
     assert!(float_vector.y >= 0.0 && float_vector.y <= 1.0);
     assert!(float_vector.z >= 0.0 && float_vector.z <= 1.0);
 
     let size = aabb.size();
-    let offset = Vector3::new(float_vector[Axis::X] * size[Axis::X],
-                              float_vector[Axis::Y] * size[Axis::Y],
-                              float_vector[Axis::Z] * size[Axis::Z]);
+    let offset = Vector3::new(
+        float_vector.x * size.x,
+        float_vector.y * size.y,
+        float_vector.z * size.z,
+    );
     aabb.min + offset
 }
 
 /// Returns an `AABB` which defines the default testing space bounds.
 pub fn default_bounds() -> AABB {
-    AABB::with_bounds(Point3::new(-100_000.0, -100_000.0, -100_000.0),
-                      Point3::new(100_000.0, 100_000.0, 100_000.0))
+    AABB::with_bounds(
+        Point3::new(-100_000.0, -100_000.0, -100_000.0),
+        Point3::new(100_000.0, 100_000.0, 100_000.0),
+    )
 }
 
 /// Creates `n` deterministic random cubes. Returns the `Vec` of surface `Triangle`s.
@@ -321,12 +371,13 @@ pub fn load_sponza_scene() -> (Vec<Triangle>, AABB) {
 /// `bounds`. If `max_offset_option` is not `None` then the wrapped value is used as the maximum
 /// offset of a shape. This is used to simulate a realistic scene.
 /// Returns a `HashSet` of indices of modified triangles.
-pub fn randomly_transform_scene(triangles: &mut Vec<Triangle>,
-                                amount: usize,
-                                bounds: &AABB,
-                                max_offset_option: Option<f32>,
-                                seed: &mut u64)
-                                -> HashSet<usize> {
+pub fn randomly_transform_scene(
+    triangles: &mut Vec<Triangle>,
+    amount: usize,
+    bounds: &AABB,
+    max_offset_option: Option<f32>,
+    seed: &mut u64,
+) -> HashSet<usize> {
     let mut indices: Vec<usize> = (0..triangles.len()).collect();
     let mut rng: StdRng = SeedableRng::from_seed([*seed as usize].as_ref());
     rng.shuffle(&mut indices);
@@ -351,9 +402,11 @@ pub fn randomly_transform_scene(triangles: &mut Vec<Triangle>,
 
         let triangle = &mut triangles[*index];
         let old_index = triangle.bh_node_index();
-        *triangle = Triangle::new(triangle.a + random_offset,
-                                  triangle.b + random_offset,
-                                  triangle.c + random_offset);
+        *triangle = Triangle::new(
+            triangle.a + random_offset,
+            triangle.b + random_offset,
+            triangle.c + random_offset,
+        );
         triangle.set_bh_node_index(old_index);
     }
 
@@ -373,7 +426,9 @@ pub fn create_ray(seed: &mut u64, bounds: &AABB) -> Ray {
 fn build_n_triangles_bh<T: BoundingHierarchy>(n: usize, b: &mut ::test::Bencher) {
     let bounds = default_bounds();
     let mut triangles = create_n_cubes(n, &bounds);
-    b.iter(|| { T::build(&mut triangles); });
+    b.iter(|| {
+        T::build(&mut triangles);
+    });
 }
 
 /// Benchmark the construction of a `BoundingHierarchy` with 1,200 triangles.
@@ -451,10 +506,12 @@ fn bench_intersect_sponza_list_aabb(b: &mut ::test::Bencher) {
     intersect_list_aabb(&triangles, &bounds, b);
 }
 
-pub fn intersect_bh<T: BoundingHierarchy>(bh: &T,
-                                          triangles: &[Triangle],
-                                          bounds: &AABB,
-                                          b: &mut ::test::Bencher) {
+pub fn intersect_bh<T: BoundingHierarchy>(
+    bh: &T,
+    triangles: &[Triangle],
+    bounds: &AABB,
+    b: &mut ::test::Bencher,
+) {
     let mut seed = 0;
     b.iter(|| {
         let ray = create_ray(&mut seed, bounds);

@@ -1,7 +1,7 @@
 [package]
 name = "bvh"
 description = "A fast BVH using SAH"
-version = "0.2.1"
+version = "0.2.2"
 authors = [
     "Sven-Hendrik Haase <svenstaro@gmail.com>",
     "Alexander Dmitriev <alexander.dmitriev2580@gmail.com>"
@@ -13,8 +13,8 @@ keywords = ["bvh", "bounding", "volume", "sah", "aabb"]
 license = "MIT"
 
 [dependencies]
-approx = "0.1.1"
-nalgebra = "0.12.1"
+approx = "0.2"
+nalgebra = "0.15.3"
 rand = "0.3.14"
 log = "0.3.7"
 
