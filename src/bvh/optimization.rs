@@ -327,19 +327,14 @@ impl BVH {
             *self.nodes[node_index].child_l_aabb_mut() = child_l_aabb;
             *self.nodes[node_index].child_r_aabb_mut() = child_r_aabb;
 
-            /// Returns true randomly, with a chance given by the parameter.
-            fn chance(chance: f32) -> bool {
-                let mut rng = thread_rng();
-                rng.next_f32() < chance
-            }
-
             // Only execute the following block, if `node_index` does not reference the root node.
             if node_index != 0 {
                 // Even with no rotation being useful for this node, a parent node's rotation
                 // could be beneficial, so queue the parent *sometimes*. For reference see:
                 // https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH_Node.cs#L307
                 // TODO Evaluate whether this is a smart thing to do.
-                if chance(0.01f32) {
+                let mut rng = thread_rng();
+                if rng.gen_bool(0.01) {
                     Some(OptimizationIndex::Refit(parent_index))
                 } else {
                     // Otherwise, we still have to fix the parent's AABBs
