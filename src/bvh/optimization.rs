@@ -683,7 +683,7 @@ pub mod tests {
             shape_index: 3,
         });
 
-        (shapes, BVH { nodes: nodes })
+        (shapes, BVH { nodes })
     }
 
     #[test]

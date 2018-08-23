@@ -244,9 +244,9 @@ impl BVHNode {
             let shape_index = indices[0];
             let node_index = nodes.len();
             nodes.push(BVHNode::Leaf {
-                parent_index: parent_index,
-                depth: depth,
-                shape_index: shape_index,
+                parent_index,
+                depth,
+                shape_index,
             });
             // Let the shape know the index of the node that represents it.
             shapes[shape_index].set_bh_node_index(node_index);
@@ -341,12 +341,12 @@ impl BVHNode {
         assert!(!child_l_aabb.is_empty());
         assert!(!child_r_aabb.is_empty());
         nodes[node_index] = BVHNode::Node {
-            parent_index: parent_index,
-            depth: depth,
-            child_l_aabb: child_l_aabb,
-            child_l_index: child_l_index,
-            child_r_aabb: child_r_aabb,
-            child_r_index: child_r_index,
+            parent_index,
+            depth,
+            child_l_aabb,
+            child_l_index,
+            child_r_aabb,
+            child_r_index,
         };
 
         node_index
@@ -409,7 +409,7 @@ impl BVH {
         let expected_node_count = shapes.len() * 2;
         let mut nodes = Vec::with_capacity(expected_node_count);
         BVHNode::build(shapes, &indices, &mut nodes, 0, 0);
-        BVH { nodes: nodes }
+        BVH { nodes }
     }
 
     /// Traverses the [`BVH`].

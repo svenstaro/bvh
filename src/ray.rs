@@ -46,9 +46,9 @@ impl Intersection {
     /// if the intersection does not occur.
     pub fn new(distance: f32, u: f32, v: f32) -> Intersection {
         Intersection {
-            distance: distance,
-            u: u,
-            v: v,
+            distance,
+            u,
+            v,
         }
     }
 }
@@ -75,8 +75,8 @@ impl Ray {
     pub fn new(origin: Point3<f32>, direction: Vector3<f32>) -> Ray {
         let direction = direction.normalize();
         Ray {
-            origin: origin,
-            direction: direction,
+            origin,
+            direction,
             inv_direction: Vector3::new(1.0 / direction.x, 1.0 / direction.y, 1.0 / direction.z),
             sign: Vector3::new(
                 (direction.x < 0.0) as usize,
