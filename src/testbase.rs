@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use std::f32;
 use std::fs::File;
 use std::io::BufReader;
+use std::mem::transmute;
 
 use nalgebra::{Point3, Vector3};
 use obj::raw::object::Polygon;
@@ -381,7 +382,8 @@ pub fn randomly_transform_scene(
     let mut indices: Vec<usize> = (0..triangles.len()).collect();
     let mut seed_array = [0u8; 32];
     for i in 0..seed_array.len() {
-        seed_array[i] = seed.to_bytes()[i % 8];
+        let bytes: [u8; 8] = unsafe { transmute(seed.to_be()) };
+        seed_array[i] = bytes[i % 8];
     }
     let mut rng: StdRng = SeedableRng::from_seed(seed_array);
     rng.shuffle(&mut indices);
