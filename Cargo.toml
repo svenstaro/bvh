@@ -19,7 +19,7 @@ rand = "0.5"
 log = "0.4"
 
 [dev-dependencies]
-quickcheck = "0.6"
+quickcheck = "0.7"
 obj-rs = "0.4"
 
 [profile.release]
