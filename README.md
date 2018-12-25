@@ -6,8 +6,8 @@
 [![Crates.io](https://img.shields.io/crates/v/bvh.svg)](https://crates.io/crates/bvh)
 [![Crates.io](https://img.shields.io/crates/d/bvh.svg)](https://crates.io/crates/bvh)
 
-A crate which exports rays, axis-aligned bounding boxes, and binary bounding
-volume hierarchies.
+**A crate which exports rays, axis-aligned bounding boxes, and binary bounding
+volume hierarchies.**
 
 ## About
 
