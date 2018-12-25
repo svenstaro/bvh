@@ -15,11 +15,11 @@ license = "MIT"
 [dependencies]
 approx = "0.3"
 nalgebra = "0.16"
-rand = "0.5"
+rand = "0.6"
 log = "0.4"
 
 [dev-dependencies]
-quickcheck = "0.6"
+quickcheck = "0.7"
 obj-rs = "0.4"
 
 [profile.release]
