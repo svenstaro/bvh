@@ -58,7 +58,7 @@ pub fn joint_aabb_of_shapes<Shape: BHShape>(indices: &[usize], shapes: &[Shape])
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use utils::concatenate_vectors;
 
     #[test]

@@ -69,7 +69,7 @@
 //!
 
 #![deny(missing_docs)]
-#![feature(test)]
+#![cfg_attr(feature = "nightly", feature(test))]
 
 #[macro_use]
 extern crate approx;
@@ -77,7 +77,7 @@ extern crate approx;
 extern crate log;
 #[cfg(test)]
 extern crate obj;
-#[cfg(test)]
+#[cfg(all(feature = "nightly", test))]
 extern crate test;
 #[cfg(test)]
 #[macro_use]

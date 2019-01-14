@@ -427,14 +427,8 @@ impl BoundingHierarchy for FlatBVH {
 
 #[cfg(test)]
 mod tests {
-    use bvh::BVH;
     use flat_bvh::FlatBVH;
-
-    use testbase::{
-        build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh, build_some_bh,
-        create_n_cubes, default_bounds, intersect_1200_triangles_bh, intersect_120k_triangles_bh,
-        intersect_12k_triangles_bh, traverse_some_bh,
-    };
+    use testbase::{build_some_bh, traverse_some_bh};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -448,6 +442,18 @@ mod tests {
     fn test_traverse_flat_bvh() {
         traverse_some_bh::<FlatBVH>();
     }
+}
+
+#[cfg(all(feature = "nightly", test))]
+mod bench {
+    use bvh::BVH;
+    use flat_bvh::FlatBVH;
+
+    use testbase::{
+        build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh, create_n_cubes,
+        default_bounds, intersect_1200_triangles_bh, intersect_120k_triangles_bh,
+        intersect_12k_triangles_bh,
+    };
 
     #[bench]
     /// Benchmark the flattening of a BVH with 120,000 triangles.
@@ -460,7 +466,6 @@ mod tests {
             bvh.flatten();
         });
     }
-
     #[bench]
     /// Benchmark the construction of a `FlatBVH` with 1,200 triangles.
     fn bench_build_1200_triangles_flat_bvh(mut b: &mut ::test::Bencher) {

@@ -510,15 +510,14 @@ impl BVH {
 }
 
 #[cfg(test)]
-pub mod tests {
-    use aabb::{Bounded, AABB};
+mod tests {
+    use aabb::Bounded;
     use bounding_hierarchy::BHShape;
     use bvh::{BVHNode, BVH};
     use nalgebra::Point3;
     use std::collections::HashSet;
     use testbase::{
-        build_some_bh, create_n_cubes, default_bounds, intersect_bh, load_sponza_scene,
-        randomly_transform_scene, Triangle, UnitBox,
+        build_some_bh, create_n_cubes, default_bounds, randomly_transform_scene, UnitBox,
     };
     use EPSILON;
 
@@ -714,26 +713,18 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 1);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert!(
-            nodes[1]
-                .child_l_aabb()
-                .relative_eq(&shapes[2].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[1]
-                .child_r_aabb()
-                .relative_eq(&shapes[1].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[2]
-                .child_l_aabb()
-                .relative_eq(&shapes[0].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[2]
-                .child_r_aabb()
-                .relative_eq(&shapes[3].aabb(), EPSILON)
-        );
+        assert!(nodes[1]
+            .child_l_aabb()
+            .relative_eq(&shapes[2].aabb(), EPSILON));
+        assert!(nodes[1]
+            .child_r_aabb()
+            .relative_eq(&shapes[1].aabb(), EPSILON));
+        assert!(nodes[2]
+            .child_l_aabb()
+            .relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[2]
+            .child_r_aabb()
+            .relative_eq(&shapes[3].aabb(), EPSILON));
     }
 
     #[test]
@@ -764,26 +755,18 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 0);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert!(
-            nodes[0]
-                .child_l_aabb()
-                .relative_eq(&shapes[2].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[2]
-                .child_r_aabb()
-                .relative_eq(&shapes[3].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[1]
-                .child_l_aabb()
-                .relative_eq(&shapes[0].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[1]
-                .child_r_aabb()
-                .relative_eq(&shapes[1].aabb(), EPSILON)
-        );
+        assert!(nodes[0]
+            .child_l_aabb()
+            .relative_eq(&shapes[2].aabb(), EPSILON));
+        assert!(nodes[2]
+            .child_r_aabb()
+            .relative_eq(&shapes[3].aabb(), EPSILON));
+        assert!(nodes[1]
+            .child_l_aabb()
+            .relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[1]
+            .child_r_aabb()
+            .relative_eq(&shapes[1].aabb(), EPSILON));
     }
 
     #[test]
@@ -813,26 +796,18 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 1);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert!(
-            nodes[1]
-                .child_l_aabb()
-                .relative_eq(&shapes[2].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[1]
-                .child_r_aabb()
-                .relative_eq(&shapes[1].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[2]
-                .child_l_aabb()
-                .relative_eq(&shapes[0].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[2]
-                .child_r_aabb()
-                .relative_eq(&shapes[3].aabb(), EPSILON)
-        );
+        assert!(nodes[1]
+            .child_l_aabb()
+            .relative_eq(&shapes[2].aabb(), EPSILON));
+        assert!(nodes[1]
+            .child_r_aabb()
+            .relative_eq(&shapes[1].aabb(), EPSILON));
+        assert!(nodes[2]
+            .child_l_aabb()
+            .relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[2]
+            .child_r_aabb()
+            .relative_eq(&shapes[3].aabb(), EPSILON));
     }
 
     #[test]
@@ -862,26 +837,18 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 0);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert!(
-            nodes[0]
-                .child_l_aabb()
-                .relative_eq(&shapes[2].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[2]
-                .child_r_aabb()
-                .relative_eq(&shapes[3].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[1]
-                .child_l_aabb()
-                .relative_eq(&shapes[0].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[1]
-                .child_r_aabb()
-                .relative_eq(&shapes[1].aabb(), EPSILON)
-        );
+        assert!(nodes[0]
+            .child_l_aabb()
+            .relative_eq(&shapes[2].aabb(), EPSILON));
+        assert!(nodes[2]
+            .child_r_aabb()
+            .relative_eq(&shapes[3].aabb(), EPSILON));
+        assert!(nodes[1]
+            .child_l_aabb()
+            .relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[1]
+            .child_r_aabb()
+            .relative_eq(&shapes[1].aabb(), EPSILON));
     }
 
     #[test]
@@ -917,36 +884,26 @@ pub mod tests {
         assert_eq!(nodes[5].parent(), 0);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert!(
-            nodes[0]
-                .child_l_aabb()
-                .relative_eq(&shapes[2].aabb(), EPSILON)
-        );
+        assert!(nodes[0]
+            .child_l_aabb()
+            .relative_eq(&shapes[2].aabb(), EPSILON));
         let right_subtree_aabb = &shapes[0]
             .aabb()
             .join(&shapes[1].aabb())
             .join(&shapes[3].aabb());
-        assert!(
-            nodes[0]
-                .child_r_aabb()
-                .relative_eq(&right_subtree_aabb, EPSILON)
-        );
+        assert!(nodes[0]
+            .child_r_aabb()
+            .relative_eq(&right_subtree_aabb, EPSILON));
 
-        assert!(
-            nodes[2]
-                .child_r_aabb()
-                .relative_eq(&shapes[3].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[1]
-                .child_l_aabb()
-                .relative_eq(&shapes[0].aabb(), EPSILON)
-        );
-        assert!(
-            nodes[1]
-                .child_r_aabb()
-                .relative_eq(&shapes[1].aabb(), EPSILON)
-        );
+        assert!(nodes[2]
+            .child_r_aabb()
+            .relative_eq(&shapes[3].aabb(), EPSILON));
+        assert!(nodes[1]
+            .child_l_aabb()
+            .relative_eq(&shapes[0].aabb(), EPSILON));
+        assert!(nodes[1]
+            .child_r_aabb()
+            .relative_eq(&shapes[1].aabb(), EPSILON));
     }
 
     #[test]
@@ -973,6 +930,16 @@ pub mod tests {
         bvh.assert_consistent(&triangles);
         bvh.assert_tight(&triangles);
     }
+}
+
+#[cfg(all(feature = "nightly", test))]
+mod bench {
+    use aabb::AABB;
+    use bvh::BVH;
+    use testbase::{
+        create_n_cubes, default_bounds, intersect_bh, load_sponza_scene, randomly_transform_scene,
+        Triangle,
+    };
 
     #[bench]
     /// Benchmark randomizing 50% of the shapes in a `BVH`.
