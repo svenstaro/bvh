@@ -1,9 +1,9 @@
 //! This module exports methods to flatten the `BVH` and traverse it iteratively.
 
-use aabb::{Bounded, AABB};
-use bounding_hierarchy::{BHShape, BoundingHierarchy};
-use bvh::{BVHNode, BVH};
-use ray::Ray;
+use crate::aabb::{Bounded, AABB};
+use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use crate::bvh::{BVHNode, BVH};
+use crate::ray::Ray;
 
 /// A structure of a node of a flat [`BVH`]. The structure of the nodes allows for an
 /// iterative traversal approach without the necessity to maintain a stack or queue.
@@ -427,8 +427,8 @@ impl BoundingHierarchy for FlatBVH {
 
 #[cfg(test)]
 mod tests {
-    use flat_bvh::FlatBVH;
-    use testbase::{build_some_bh, traverse_some_bh};
+    use crate::flat_bvh::FlatBVH;
+    use crate::testbase::{build_some_bh, traverse_some_bh};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -446,10 +446,10 @@ mod tests {
 
 #[cfg(all(feature = "bench", test))]
 mod bench {
-    use bvh::BVH;
-    use flat_bvh::FlatBVH;
+    use crate::bvh::BVH;
+    use crate::flat_bvh::FlatBVH;
 
-    use testbase::{
+    use crate::testbase::{
         build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh, create_n_cubes,
         default_bounds, intersect_1200_triangles_bh, intersect_120k_triangles_bh,
         intersect_12k_triangles_bh,

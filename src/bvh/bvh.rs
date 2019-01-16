@@ -4,14 +4,14 @@
 //! [`BVHNode`]: struct.BVHNode.html
 //!
 
-use aabb::{Bounded, AABB};
-use bounding_hierarchy::{BHShape, BoundingHierarchy};
+use crate::aabb::{Bounded, AABB};
+use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use crate::ray::Ray;
+use crate::utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
+use crate::EPSILON;
 use nalgebra::Point3;
-use ray::Ray;
 use std::f32;
 use std::iter::repeat;
-use utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
-use EPSILON;
 
 /// The [`BVHNode`] enum that describes a node in a [`BVH`].
 /// It's either a leaf node and references a shape (by holding its index)
@@ -701,8 +701,8 @@ impl BoundingHierarchy for BVH {
 
 #[cfg(test)]
 mod tests {
-    use bvh::BVH;
-    use testbase::{build_some_bh, traverse_some_bh};
+    use crate::bvh::BVH;
+    use crate::testbase::{build_some_bh, traverse_some_bh};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.

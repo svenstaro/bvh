@@ -1,10 +1,10 @@
 //! This module defines a Ray structure and intersection algorithms
 //! for axis aligned bounding boxes and triangles.
 
-use aabb::AABB;
+use crate::aabb::AABB;
+use crate::EPSILON;
 use nalgebra::{Point3, Vector3};
 use std::f32::INFINITY;
-use EPSILON;
 
 /// A struct which defines a ray and some of its cached values.
 #[derive(Debug)]
@@ -309,11 +309,12 @@ mod tests {
     use std::cmp;
     use std::f32::INFINITY;
 
-    use aabb::AABB;
-    use ray::Ray;
-    use EPSILON;
+    use crate::aabb::AABB;
+    use crate::ray::Ray;
+    use crate::testbase::{tuple_to_point, TupleVec};
+    use crate::EPSILON;
 
-    use testbase::{tuple_to_point, TupleVec};
+    use quickcheck::quickcheck;
 
     /// Generates a random `Ray` which points at at a random `AABB`.
     fn gen_ray_to_aabb(data: (TupleVec, TupleVec, TupleVec)) -> (Ray, AABB) {
@@ -470,10 +471,10 @@ mod bench {
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
 
-    use aabb::AABB;
-    use ray::Ray;
+    use crate::aabb::AABB;
+    use crate::ray::Ray;
 
-    use testbase::{tuple_to_point, tuple_to_vector, TupleVec};
+    use crate::testbase::{tuple_to_point, tuple_to_vector, TupleVec};
 
     /// Generates some random deterministic `Ray`/`AABB` pairs.
     fn gen_random_ray_aabb(rng: &mut StdRng) -> (Ray, AABB) {

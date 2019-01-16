@@ -2,6 +2,7 @@
 name = "bvh"
 description = "A fast BVH using SAH"
 version = "0.2.4"
+edition = "2018"
 authors = [
     "Sven-Hendrik Haase <svenstaro@gmail.com>",
     "Alexander Dmitriev <alexander.dmitriev2580@gmail.com>"

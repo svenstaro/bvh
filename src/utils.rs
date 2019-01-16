@@ -1,7 +1,7 @@
 //! Utilities module.
 
-use aabb::AABB;
-use bounding_hierarchy::BHShape;
+use crate::aabb::AABB;
+use crate::bounding_hierarchy::BHShape;
 
 /// Concatenates the list of vectors into a single vector.
 /// Drains the elements from the source `vectors`.
@@ -59,7 +59,7 @@ pub fn joint_aabb_of_shapes<Shape: BHShape>(indices: &[usize], shapes: &[Shape])
 
 #[cfg(test)]
 mod tests {
-    use utils::concatenate_vectors;
+    use crate::utils::concatenate_vectors;
 
     #[test]
     /// Test if concatenating no `Vec`s yields an empty `Vec`.
