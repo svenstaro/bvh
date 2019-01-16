@@ -1,7 +1,7 @@
 //! This module defines the `BoundingHierarchy` trait.
 
-use aabb::Bounded;
-use ray::Ray;
+use crate::aabb::Bounded;
+use crate::ray::Ray;
 
 /// Describes a shape as referenced by a [`BoundingHierarchy`] leaf node.
 /// Knows the index of the node in the [`BoundingHierarchy`] it is in.
@@ -13,7 +13,7 @@ pub trait BHShape: Bounded {
     ///
     /// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
     ///
-    fn set_bh_node_index(&mut self, usize);
+    fn set_bh_node_index(&mut self, _: usize);
 
     /// Gets the index of the referenced [`BoundingHierarchy`] node.
     ///

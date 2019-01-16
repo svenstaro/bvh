@@ -6,9 +6,11 @@
 //! [`BVH`]: struct.BVH.html
 //!
 
-use aabb::AABB;
-use bounding_hierarchy::BHShape;
-use bvh::*;
+use crate::aabb::AABB;
+use crate::bounding_hierarchy::BHShape;
+use crate::bvh::*;
+
+use log::info;
 use rand::{thread_rng, Rng};
 use std::collections::HashSet;
 
@@ -511,15 +513,15 @@ impl BVH {
 
 #[cfg(test)]
 mod tests {
-    use aabb::Bounded;
-    use bounding_hierarchy::BHShape;
-    use bvh::{BVHNode, BVH};
-    use nalgebra::Point3;
-    use std::collections::HashSet;
-    use testbase::{
+    use crate::aabb::Bounded;
+    use crate::bounding_hierarchy::BHShape;
+    use crate::bvh::{BVHNode, BVH};
+    use crate::testbase::{
         build_some_bh, create_n_cubes, default_bounds, randomly_transform_scene, UnitBox,
     };
-    use EPSILON;
+    use crate::EPSILON;
+    use nalgebra::Point3;
+    use std::collections::HashSet;
 
     #[test]
     /// Tests if `optimize` does not modify a fresh `BVH`.
@@ -934,9 +936,9 @@ mod tests {
 
 #[cfg(all(feature = "bench", test))]
 mod bench {
-    use aabb::AABB;
-    use bvh::BVH;
-    use testbase::{
+    use crate::aabb::AABB;
+    use crate::bvh::BVH;
+    use crate::testbase::{
         create_n_cubes, default_bounds, intersect_bh, load_sponza_scene, randomly_transform_scene,
         Triangle,
     };

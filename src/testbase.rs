@@ -12,9 +12,9 @@ use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
 
-use aabb::{Bounded, AABB};
-use bounding_hierarchy::{BHShape, BoundingHierarchy};
-use ray::Ray;
+use crate::aabb::{Bounded, AABB};
+use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use crate::ray::Ray;
 
 /// A vector represented as a tuple
 pub type TupleVec = (f32, f32, f32);

@@ -71,20 +71,10 @@
 #![deny(missing_docs)]
 #![cfg_attr(feature = "bench", feature(test))]
 
-#[macro_use]
-extern crate approx;
-#[macro_use]
-extern crate log;
-#[cfg(test)]
-extern crate obj;
 #[cfg(all(feature = "bench", test))]
 extern crate test;
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
 
-pub extern crate nalgebra;
-extern crate rand;
+pub use nalgebra;
 
 /// A minimal floating value used as a lower bound.
 /// TODO: replace by/add ULPS/relative float comparison methods.
