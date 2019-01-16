@@ -465,7 +465,7 @@ mod tests {
     }
 }
 
-#[cfg(all(feature = "nightly", test))]
+#[cfg(all(feature = "bench", test))]
 mod bench {
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};

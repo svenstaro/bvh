@@ -444,7 +444,7 @@ mod tests {
     }
 }
 
-#[cfg(all(feature = "nightly", test))]
+#[cfg(all(feature = "bench", test))]
 mod bench {
     use bvh::BVH;
     use flat_bvh::FlatBVH;

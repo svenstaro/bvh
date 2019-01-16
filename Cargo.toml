@@ -23,8 +23,7 @@ quickcheck = "0.8"
 obj-rs = "0.4"
 
 [features]
-default = ["nightly"]
-nightly = []
+bench = []
 
 [profile.release]
 lto = true

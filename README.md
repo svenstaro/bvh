@@ -187,3 +187,7 @@ which has a maximum offset distance for shapes. This simulates a more realistic 
 We also see that the *Sponza* scene by itself contains some structures which can be tightly wrapped in a BVH.
 By mowing those structures around we destroy the locality of the triangle groups which leads to more branches in the
 BVH requiring a check, thus leading to a higher intersection duration.
+
+### Running the benchmark suite
+The benchmark suite uses features from the [test crate](https://doc.rust-lang.org/unstable-book/library-features/test.html) and therefore cannot be run on stable rust.
+Using a nightly toolchain, run with `cargo test --features bench` to enable them.

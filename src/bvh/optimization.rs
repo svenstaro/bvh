@@ -932,7 +932,7 @@ mod tests {
     }
 }
 
-#[cfg(all(feature = "nightly", test))]
+#[cfg(all(feature = "bench", test))]
 mod bench {
     use aabb::AABB;
     use bvh::BVH;
