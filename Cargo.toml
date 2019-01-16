@@ -22,6 +22,9 @@ log = "0.4"
 quickcheck = "0.8"
 obj-rs = "0.4"
 
+[features]
+bench = []
+
 [profile.release]
 lto = true
 

@@ -700,13 +700,9 @@ impl BoundingHierarchy for BVH {
 }
 
 #[cfg(test)]
-pub mod tests {
+mod tests {
     use bvh::BVH;
-    use testbase::{
-        build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh, build_some_bh,
-        intersect_1200_triangles_bh, intersect_120k_triangles_bh, intersect_12k_triangles_bh,
-        intersect_bh, load_sponza_scene, traverse_some_bh,
-    };
+    use testbase::{build_some_bh, traverse_some_bh};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -719,6 +715,16 @@ pub mod tests {
     fn test_traverse_bvh() {
         traverse_some_bh::<BVH>();
     }
+}
+
+#[cfg(all(features = "nightly", test))]
+mod bench {
+    use bvh::BVH;
+    use testbase::{
+        build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh, build_some_bh,
+        intersect_1200_triangles_bh, intersect_120k_triangles_bh, intersect_12k_triangles_bh,
+        intersect_bh, load_sponza_scene, traverse_some_bh,
+    };
 
     #[bench]
     /// Benchmark the construction of a `BVH` with 1,200 triangles.

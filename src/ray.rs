@@ -45,11 +45,7 @@ impl Intersection {
     /// Constructs an `Intersection`. `distance` should be set to positive infinity,
     /// if the intersection does not occur.
     pub fn new(distance: f32, u: f32, v: f32) -> Intersection {
-        Intersection {
-            distance,
-            u,
-            v,
-        }
+        Intersection { distance, u, v }
     }
 }
 
@@ -313,13 +309,11 @@ mod tests {
     use std::cmp;
     use std::f32::INFINITY;
 
-    use rand::{Rng, SeedableRng, StdRng};
-
     use aabb::AABB;
     use ray::Ray;
     use EPSILON;
 
-    use testbase::{tuple_to_point, tuple_to_vector, TupleVec};
+    use testbase::{tuple_to_point, TupleVec};
 
     /// Generates a random `Ray` which points at at a random `AABB`.
     fn gen_ray_to_aabb(data: (TupleVec, TupleVec, TupleVec)) -> (Ray, AABB) {
@@ -339,7 +333,7 @@ mod tests {
 
     /// Test whether a `Ray` which points at the center of an `AABB` intersects it.
     /// Uses the optimized algorithm.
-    quickcheck!{
+    quickcheck! {
         fn test_ray_points_at_aabb_center(data: (TupleVec, TupleVec, TupleVec)) -> bool {
             let (ray, aabb) = gen_ray_to_aabb(data);
             ray.intersects_aabb(&aabb)
@@ -348,7 +342,7 @@ mod tests {
 
     /// Test whether a `Ray` which points at the center of an `AABB` intersects it.
     /// Uses the naive algorithm.
-    quickcheck!{
+    quickcheck! {
         fn test_ray_points_at_aabb_center_naive(data: (TupleVec, TupleVec, TupleVec)) -> bool {
             let (ray, aabb) = gen_ray_to_aabb(data);
             ray.intersects_aabb_naive(&aabb)
@@ -357,7 +351,7 @@ mod tests {
 
     /// Test whether a `Ray` which points at the center of an `AABB` intersects it.
     /// Uses the branchless algorithm.
-    quickcheck!{
+    quickcheck! {
         fn test_ray_points_at_aabb_center_branchless(data: (TupleVec, TupleVec, TupleVec)) -> bool {
             let (ray, aabb) = gen_ray_to_aabb(data);
             ray.intersects_aabb_branchless(&aabb)
@@ -367,7 +361,7 @@ mod tests {
     /// Test whether a `Ray` which points away from the center of an `AABB`
     /// does not intersect it, unless its origin is inside the `AABB`.
     /// Uses the optimized algorithm.
-    quickcheck!{
+    quickcheck! {
         fn test_ray_points_from_aabb_center(data: (TupleVec, TupleVec, TupleVec)) -> bool {
             let (mut ray, aabb) = gen_ray_to_aabb(data);
 
@@ -381,7 +375,7 @@ mod tests {
     /// Test whether a `Ray` which points away from the center of an `AABB`
     /// does not intersect it, unless its origin is inside the `AABB`.
     /// Uses the naive algorithm.
-    quickcheck!{
+    quickcheck! {
         fn test_ray_points_from_aabb_center_naive(data: (TupleVec, TupleVec, TupleVec)) -> bool {
             let (mut ray, aabb) = gen_ray_to_aabb(data);
 
@@ -395,7 +389,7 @@ mod tests {
     /// Test whether a `Ray` which points away from the center of an `AABB`
     /// does not intersect it, unless its origin is inside the `AABB`.
     /// Uses the branchless algorithm.
-    quickcheck!{
+    quickcheck! {
         fn test_ray_points_from_aabb_center_branchless(data: (TupleVec, TupleVec, TupleVec))
                                                        -> bool {
             let (mut ray, aabb) = gen_ray_to_aabb(data);
@@ -408,7 +402,7 @@ mod tests {
 
     /// Test whether a `Ray` which points at the center of a triangle
     /// intersects it, unless it sees the back face, which is culled.
-    quickcheck!{
+    quickcheck! {
         fn test_ray_hits_triangle(a: TupleVec,
                                   b: TupleVec,
                                   c: TupleVec,
@@ -469,6 +463,17 @@ mod tests {
             }
         }
     }
+}
+
+#[cfg(all(feature = "bench", test))]
+mod bench {
+    use rand::rngs::StdRng;
+    use rand::{Rng, SeedableRng};
+
+    use aabb::AABB;
+    use ray::Ray;
+
+    use testbase::{tuple_to_point, tuple_to_vector, TupleVec};
 
     /// Generates some random deterministic `Ray`/`AABB` pairs.
     fn gen_random_ray_aabb(rng: &mut StdRng) -> (Ray, AABB) {
