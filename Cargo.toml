@@ -15,7 +15,7 @@ license = "MIT"
 
 [dependencies]
 approx = "0.3"
-nalgebra = "0.16"
+nalgebra = "0.17"
 rand = "0.6"
 log = "0.4"
 
