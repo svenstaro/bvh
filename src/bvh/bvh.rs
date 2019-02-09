@@ -709,7 +709,7 @@ impl BoundingHierarchy for BVH {
 
 #[cfg(test)]
 mod tests {
-    use crate::bvh::BVH;
+    use crate::bvh::{BVHNode, BVH};
     use crate::testbase::{build_some_bh, traverse_some_bh};
 
     #[test]
@@ -722,6 +722,26 @@ mod tests {
     /// Runs some primitive tests for intersections of a ray with a fixed scene given as a BVH.
     fn test_traverse_bvh() {
         traverse_some_bh::<BVH>();
+    }
+
+    #[test]
+    /// Verify contents of the bounding hierarchy for a fixed scene structure
+    fn test_bvh_shape_indices() {
+        use std::collections::HashSet;
+
+        let (all_shapes, bh) = build_some_bh::<BVH>();
+
+        // It should find all shape indices.
+        let expected_shapes: HashSet<_> = (0..all_shapes.len()).collect();
+        let mut found_shapes = HashSet::new();
+
+        for node in bh.nodes.iter() {
+            if let BVHNode::Leaf { .. } = node {
+                found_shapes.insert(node.shape_index());
+            }
+        }
+
+        assert_eq!(expected_shapes, found_shapes);
     }
 }
 
