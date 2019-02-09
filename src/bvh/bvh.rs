@@ -200,6 +200,15 @@ impl BVHNode {
         }
     }
 
+    /// Returns the index of the shape contained within the node if is a leaf,
+    /// or `None` if it is an interior node.
+    pub fn shape_index(&self) -> Option<usize> {
+        match *self {
+            BVHNode::Leaf { shape_index, .. } => Some(shape_index),
+            _ => None,
+        }
+    }
+
     /// The build function sometimes needs to add nodes while their data is not available yet.
     /// A dummy cerated by this function serves the purpose of being changed later on.
     fn create_dummy() -> BVHNode {
@@ -701,7 +710,7 @@ impl BoundingHierarchy for BVH {
 
 #[cfg(test)]
 mod tests {
-    use crate::bvh::BVH;
+    use crate::bvh::{BVHNode, BVH};
     use crate::testbase::{build_some_bh, traverse_some_bh};
 
     #[test]
@@ -714,6 +723,34 @@ mod tests {
     /// Runs some primitive tests for intersections of a ray with a fixed scene given as a BVH.
     fn test_traverse_bvh() {
         traverse_some_bh::<BVH>();
+    }
+
+    #[test]
+    /// Verify contents of the bounding hierarchy for a fixed scene structure
+    fn test_bvh_shape_indices() {
+        use std::collections::HashSet;
+
+        let (all_shapes, bh) = build_some_bh::<BVH>();
+
+        // It should find all shape indices.
+        let expected_shapes: HashSet<_> = (0..all_shapes.len()).collect();
+        let mut found_shapes = HashSet::new();
+
+        for node in bh.nodes.iter() {
+            match *node {
+                BVHNode::Node { .. } => {
+                    assert_eq!(node.shape_index(), None);
+                }
+                BVHNode::Leaf { .. } => {
+                    found_shapes.insert(
+                        node.shape_index()
+                            .expect("getting a shape index from a leaf node"),
+                    );
+                }
+            }
+        }
+
+        assert_eq!(expected_shapes, found_shapes);
     }
 }
 
