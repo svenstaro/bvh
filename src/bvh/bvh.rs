@@ -200,6 +200,14 @@ impl BVHNode {
         }
     }
 
+    /// Returns the index of the shape contained in the node, assuming it is a leaf.
+    pub fn shape_index(&self) -> usize {
+        match *self {
+            BVHNode::Leaf { shape_index, .. } => shape_index,
+            _ => panic!("Tried to get the shape index of an interior node."),
+        }
+    }
+
     /// The build function sometimes needs to add nodes while their data is not available yet.
     /// A dummy cerated by this function serves the purpose of being changed later on.
     fn create_dummy() -> BVHNode {
