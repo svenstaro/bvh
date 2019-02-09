@@ -710,7 +710,7 @@ impl BoundingHierarchy for BVH {
 
 #[cfg(test)]
 mod tests {
-    use crate::bvh::BVH;
+    use crate::bvh::{BVHNode, BVH};
     use crate::testbase::{build_some_bh, traverse_some_bh};
 
     #[test]
@@ -737,8 +737,16 @@ mod tests {
         let mut found_shapes = HashSet::new();
 
         for node in bh.nodes.iter() {
-            if let Some(shape_index) = node.shape_index() {
-                found_shapes.insert(shape_index);
+            match *node {
+                BVHNode::Node { .. } => {
+                    assert_eq!(node.shape_index(), None);
+                }
+                BVHNode::Leaf { .. } => {
+                    found_shapes.insert(
+                        node.shape_index()
+                            .expect("getting a shape index from a leaf node"),
+                    );
+                }
             }
         }
 
