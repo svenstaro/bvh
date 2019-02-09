@@ -201,7 +201,7 @@ impl BVHNode {
     }
 
     /// Returns the index of the shape contained within the node if is a leaf,
-    /// or None if it is an interior node.
+    /// or `None` if it is an interior node.
     pub fn shape_index(&self) -> Option<usize> {
         match *self {
             BVHNode::Leaf { shape_index, .. } => Some(shape_index),
