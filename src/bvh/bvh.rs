@@ -200,11 +200,12 @@ impl BVHNode {
         }
     }
 
-    /// Returns the index of the shape contained in the node, assuming it is a leaf.
-    pub fn shape_index(&self) -> usize {
+    /// Returns the index of the shape contained within the node if is a leaf,
+    /// or None if it is an interior node.
+    pub fn shape_index(&self) -> Option<usize> {
         match *self {
-            BVHNode::Leaf { shape_index, .. } => shape_index,
-            _ => panic!("Tried to get the shape index of an interior node."),
+            BVHNode::Leaf { shape_index, .. } => Some(shape_index),
+            _ => None,
         }
     }
 
@@ -709,7 +710,7 @@ impl BoundingHierarchy for BVH {
 
 #[cfg(test)]
 mod tests {
-    use crate::bvh::{BVHNode, BVH};
+    use crate::bvh::BVH;
     use crate::testbase::{build_some_bh, traverse_some_bh};
 
     #[test]
@@ -736,8 +737,8 @@ mod tests {
         let mut found_shapes = HashSet::new();
 
         for node in bh.nodes.iter() {
-            if let BVHNode::Leaf { .. } = node {
-                found_shapes.insert(node.shape_index());
+            if let Some(shape_index) = node.shape_index() {
+                found_shapes.insert(shape_index);
             }
         }
 
