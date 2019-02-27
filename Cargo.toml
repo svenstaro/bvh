@@ -18,6 +18,7 @@ approx = "0.3"
 nalgebra = "0.17"
 rand = "0.6"
 log = "0.4"
+num = "0.2"
 
 [dev-dependencies]
 quickcheck = "0.8"

@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use std::f32;
 use std::mem::transmute;
 
+use num::{FromPrimitive, Integer};
 use nalgebra::{Point3, Vector3};
 use obj::raw::object::Polygon;
 use obj::*;
@@ -181,12 +182,12 @@ impl BHShape for Triangle {
     }
 }
 
-impl FromRawVertex for Triangle {
+impl<I: FromPrimitive + Integer> FromRawVertex<I> for Triangle {
     fn process(
         vertices: Vec<(f32, f32, f32, f32)>,
         _: Vec<(f32, f32, f32)>,
         polygons: Vec<Polygon>,
-    ) -> ObjResult<(Vec<Self>, Vec<u16>)> {
+    ) -> ObjResult<(Vec<Self>, Vec<I>)> {
         // Convert the vertices to `Point3`s.
         let points = vertices
             .into_iter()
