@@ -186,6 +186,7 @@ impl<I: FromPrimitive + Integer> FromRawVertex<I> for Triangle {
     fn process(
         vertices: Vec<(f32, f32, f32, f32)>,
         _: Vec<(f32, f32, f32)>,
+        _: Vec<(f32, f32, f32)>,
         polygons: Vec<Polygon>,
     ) -> ObjResult<(Vec<Self>, Vec<I>)> {
         // Convert the vertices to `Point3`s.
