@@ -8,7 +8,7 @@ use crate::ray::Ray;
 /// A structure of a node of a flat [`BVH`]. The structure of the nodes allows for an
 /// iterative traversal approach without the necessity to maintain a stack or queue.
 ///
-/// [`BVH`]: struct.BVH.html
+/// [`BVH`]: ../bvh/struct.BVH.html
 ///
 pub struct FlatNode {
     /// The [`AABB`] of the [`BVH`] node. Prior to testing the [`AABB`] bounds,
@@ -16,10 +16,10 @@ pub struct FlatNode {
     /// the [`AABB`] is undefined.
     ///
     /// [`AABB`]: ../aabb/struct.AABB.html
-    /// [`BVH`]: struct.BVH.html
+    /// [`BVH`]: ../bvh/struct.BVH.html
     /// [`u32::max_value()`]: https://doc.rust-lang.org/std/u32/constant.MAX.html
     ///
-    aabb: AABB,
+    pub aabb: AABB,
 
     /// The index of the `FlatNode` to jump to, if the [`AABB`] test is positive.
     /// If this value is [`u32::max_value()`] then the current node is a leaf node.
@@ -29,16 +29,16 @@ pub struct FlatNode {
     /// [`AABB`]: ../aabb/struct.AABB.html
     /// [`u32::max_value()`]: https://doc.rust-lang.org/std/u32/constant.MAX.html
     ///
-    entry_index: u32,
+    pub entry_index: u32,
 
     /// The index of the `FlatNode` to jump to, if the [`AABB`] test is negative.
     ///
     /// [`AABB`]: ../aabb/struct.AABB.html
     ///
-    exit_index: u32,
+    pub exit_index: u32,
 
     /// The index of the shape in the shapes array.
-    shape_index: u32,
+    pub shape_index: u32,
 }
 
 impl BVHNode {
@@ -79,7 +79,7 @@ impl BVHNode {
     /// Flattens the [`BVH`], so that it can be traversed in an iterative manner.
     /// This method constructs custom flat nodes using the `constructor`.
     ///
-    /// [`BVH`]: struct.BVH.html
+    /// [`BVH`]: ../bvh/struct.BVH.html
     ///
     pub fn flatten_custom<F, FNodeType>(
         &self,
@@ -134,7 +134,7 @@ impl BVHNode {
 /// A flat [`BVH`]. Represented by a vector of [`FlatNode`]s. The [`FlatBVH`] is designed for use
 /// where a recursive traversal of a data structure is not possible, for example shader programs.
 ///
-/// [`BVH`]: struct.BVH.html
+/// [`BVH`]: ../bvh/struct.BVH.html
 /// [`FlatNode`]: struct.FlatNode.html
 /// [`FlatBVH`]: struct.FlatBVH.html
 ///
@@ -152,7 +152,7 @@ impl BVH {
     /// 3 - u32: The exit index
     /// 4 - u32: The shape index
     ///
-    /// [`BVH`]: struct.BVH.html
+    /// [`BVH`]: ../bvh/struct.BVH.html
     ///
     /// # Example
     ///
@@ -236,7 +236,7 @@ impl BVH {
 
     /// Flattens the [`BVH`] so that it can be traversed iteratively.
     ///
-    /// [`BVH`]: struct.BVH.html
+    /// [`BVH`]: ../bvh/struct.BVH.html
     ///
     /// # Example
     ///
@@ -307,7 +307,7 @@ impl BoundingHierarchy for FlatBVH {
     /// A [`FlatBVH`] is built from a regular [`BVH`] using the [`flatten`] method.
     ///
     /// [`FlatBVH`]: struct.FlatBVH.html
-    /// [`BVH`]: struct.BVH.html
+    /// [`BVH`]: ../bvh/struct.BVH.html
     ///
     fn build<T: BHShape>(shapes: &mut [T]) -> FlatBVH {
         let bvh = BVH::build(shapes);
