@@ -22,7 +22,7 @@ num = "0.2"
 
 [dev-dependencies]
 quickcheck = "0.9"
-obj-rs = "0.5"
+obj-rs = "0.6"
 
 [features]
 bench = []
