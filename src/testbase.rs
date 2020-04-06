@@ -5,8 +5,8 @@ use std::collections::HashSet;
 use std::f32;
 use std::mem::transmute;
 
-use num::{FromPrimitive, Integer};
 use nalgebra::{Point3, Vector3};
+use num::{FromPrimitive, Integer};
 use obj::raw::object::Polygon;
 use obj::*;
 use rand::rngs::StdRng;

@@ -754,13 +754,13 @@ mod tests {
     }
 }
 
-#[cfg(all(features = "nightly", test))]
+#[cfg(all(feature = "bench", test))]
 mod bench {
-    use bvh::BVH;
-    use testbase::{
-        build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh, build_some_bh,
+    use crate::bvh::BVH;
+    use crate::testbase::{
+        build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh,
         intersect_1200_triangles_bh, intersect_120k_triangles_bh, intersect_12k_triangles_bh,
-        intersect_bh, load_sponza_scene, traverse_some_bh,
+        intersect_bh, load_sponza_scene,
     };
 
     #[bench]
