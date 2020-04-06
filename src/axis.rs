@@ -134,7 +134,7 @@ mod test {
     use crate::axis::Axis;
     use quickcheck::quickcheck;
 
-    /// Test whether accessing arrays by index is the same as accessing them by `Axis`.
+    // Test whether accessing arrays by index is the same as accessing them by `Axis`.
     quickcheck! {
         fn test_index_by_axis(tpl: (f32, f32, f32)) -> bool {
             let a = [tpl.0, tpl.1, tpl.2];
@@ -143,7 +143,7 @@ mod test {
         }
     }
 
-    /// Test whether arrays can be mutably set, by indexing via `Axis`.
+    // Test whether arrays can be mutably set, by indexing via `Axis`.
     quickcheck! {
         fn test_set_by_axis(tpl: (f32, f32, f32)) -> bool {
             let mut a = [0.0, 0.0, 0.0];

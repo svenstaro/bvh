@@ -332,8 +332,8 @@ mod tests {
         (ray, aabb)
     }
 
-    /// Test whether a `Ray` which points at the center of an `AABB` intersects it.
-    /// Uses the optimized algorithm.
+    // Test whether a `Ray` which points at the center of an `AABB` intersects it.
+    // Uses the optimized algorithm.
     quickcheck! {
         fn test_ray_points_at_aabb_center(data: (TupleVec, TupleVec, TupleVec)) -> bool {
             let (ray, aabb) = gen_ray_to_aabb(data);
@@ -341,8 +341,8 @@ mod tests {
         }
     }
 
-    /// Test whether a `Ray` which points at the center of an `AABB` intersects it.
-    /// Uses the naive algorithm.
+    // Test whether a `Ray` which points at the center of an `AABB` intersects it.
+    // Uses the naive algorithm.
     quickcheck! {
         fn test_ray_points_at_aabb_center_naive(data: (TupleVec, TupleVec, TupleVec)) -> bool {
             let (ray, aabb) = gen_ray_to_aabb(data);
@@ -350,8 +350,8 @@ mod tests {
         }
     }
 
-    /// Test whether a `Ray` which points at the center of an `AABB` intersects it.
-    /// Uses the branchless algorithm.
+    // Test whether a `Ray` which points at the center of an `AABB` intersects it.
+    // Uses the branchless algorithm.
     quickcheck! {
         fn test_ray_points_at_aabb_center_branchless(data: (TupleVec, TupleVec, TupleVec)) -> bool {
             let (ray, aabb) = gen_ray_to_aabb(data);
@@ -359,9 +359,9 @@ mod tests {
         }
     }
 
-    /// Test whether a `Ray` which points away from the center of an `AABB`
-    /// does not intersect it, unless its origin is inside the `AABB`.
-    /// Uses the optimized algorithm.
+    // Test whether a `Ray` which points away from the center of an `AABB`
+    // does not intersect it, unless its origin is inside the `AABB`.
+    // Uses the optimized algorithm.
     quickcheck! {
         fn test_ray_points_from_aabb_center(data: (TupleVec, TupleVec, TupleVec)) -> bool {
             let (mut ray, aabb) = gen_ray_to_aabb(data);
@@ -373,9 +373,9 @@ mod tests {
         }
     }
 
-    /// Test whether a `Ray` which points away from the center of an `AABB`
-    /// does not intersect it, unless its origin is inside the `AABB`.
-    /// Uses the naive algorithm.
+    // Test whether a `Ray` which points away from the center of an `AABB`
+    // does not intersect it, unless its origin is inside the `AABB`.
+    // Uses the naive algorithm.
     quickcheck! {
         fn test_ray_points_from_aabb_center_naive(data: (TupleVec, TupleVec, TupleVec)) -> bool {
             let (mut ray, aabb) = gen_ray_to_aabb(data);
@@ -387,9 +387,9 @@ mod tests {
         }
     }
 
-    /// Test whether a `Ray` which points away from the center of an `AABB`
-    /// does not intersect it, unless its origin is inside the `AABB`.
-    /// Uses the branchless algorithm.
+    // Test whether a `Ray` which points away from the center of an `AABB`
+    // does not intersect it, unless its origin is inside the `AABB`.
+    // Uses the branchless algorithm.
     quickcheck! {
         fn test_ray_points_from_aabb_center_branchless(data: (TupleVec, TupleVec, TupleVec))
                                                        -> bool {
@@ -401,8 +401,8 @@ mod tests {
         }
     }
 
-    /// Test whether a `Ray` which points at the center of a triangle
-    /// intersects it, unless it sees the back face, which is culled.
+    // Test whether a `Ray` which points at the center of a triangle
+    // intersects it, unless it sees the back face, which is culled.
     quickcheck! {
         fn test_ray_hits_triangle(a: TupleVec,
                                   b: TupleVec,
@@ -488,8 +488,8 @@ mod bench {
         (ray, aabb)
     }
 
-    #[bench]
     /// Benchmark for the optimized intersection algorithm.
+    #[bench]
     fn bench_intersects_aabb(b: &mut ::test::Bencher) {
         let seed = [0; 32];
         let mut rng = StdRng::from_seed(seed);
@@ -503,8 +503,8 @@ mod bench {
         });
     }
 
-    #[bench]
     /// Benchmark for the naive intersection algorithm.
+    #[bench]
     fn bench_intersects_aabb_naive(b: &mut ::test::Bencher) {
         let seed = [0; 32];
         let mut rng = StdRng::from_seed(seed);
@@ -518,8 +518,8 @@ mod bench {
         });
     }
 
-    #[bench]
     /// Benchmark for the branchless intersection algorithm.
+    #[bench]
     fn bench_intersects_aabb_branchless(b: &mut ::test::Bencher) {
         let seed = [0; 32];
         let mut rng = StdRng::from_seed(seed);

@@ -656,7 +656,7 @@ mod tests {
     use nalgebra::{Point3, Vector3};
     use quickcheck::quickcheck;
 
-    /// Test whether an empty `AABB` does not contains anything.
+    // Test whether an empty `AABB` does not contains anything.
     quickcheck! {
         fn test_empty_contains_nothing(tpl: TupleVec) -> bool {
             // Define a random Point
@@ -670,7 +670,7 @@ mod tests {
         }
     }
 
-    /// Test whether a default `AABB` is empty.
+    // Test whether a default `AABB` is empty.
     quickcheck! {
         fn test_default_is_empty(tpl: TupleVec) -> bool {
             // Define a random Point
@@ -684,7 +684,7 @@ mod tests {
         }
     }
 
-    /// Test whether an `AABB` always contains its center.
+    // Test whether an `AABB` always contains its center.
     quickcheck! {
         fn test_aabb_contains_center(a: TupleVec, b: TupleVec) -> bool {
             // Define two points which will be the corners of the `AABB`
@@ -699,7 +699,7 @@ mod tests {
         }
     }
 
-    /// Test whether the joint of two point-sets contains all the points.
+    // Test whether the joint of two point-sets contains all the points.
     quickcheck! {
         fn test_join_two_aabbs(a: (TupleVec, TupleVec, TupleVec, TupleVec, TupleVec),
                                b: (TupleVec, TupleVec, TupleVec, TupleVec, TupleVec))
@@ -735,7 +735,7 @@ mod tests {
         }
     }
 
-    /// Test whether some points relative to the center of an AABB are classified correctly.
+    // Test whether some points relative to the center of an AABB are classified correctly.
     quickcheck! {
         fn test_points_relative_to_center_and_size(a: TupleVec, b: TupleVec) -> bool {
             // Generate some nonempty AABB
@@ -765,7 +765,7 @@ mod tests {
         }
     }
 
-    /// Test whether the surface of a nonempty AABB is always positive.
+    // Test whether the surface of a nonempty AABB is always positive.
     quickcheck! {
         fn test_surface_always_positive(a: TupleVec, b: TupleVec) -> bool {
             let aabb = AABB::empty()
@@ -775,7 +775,7 @@ mod tests {
         }
     }
 
-    /// Compute and compare the surface area of an AABB by hand.
+    // Compute and compare the surface area of an AABB by hand.
     quickcheck! {
         fn test_surface_area_cube(pos: TupleVec, size: f32) -> bool {
             // Generate some non-empty AABB
@@ -790,7 +790,7 @@ mod tests {
         }
     }
 
-    /// Test whether the volume of a nonempty AABB is always positive.
+    // Test whether the volume of a nonempty AABB is always positive.
     quickcheck! {
         fn test_volume_always_positive(a: TupleVec, b: TupleVec) -> bool {
             let aabb = AABB::empty()
@@ -800,7 +800,7 @@ mod tests {
         }
     }
 
-    /// Compute and compare the volume of an AABB by hand.
+    // Compute and compare the volume of an AABB by hand.
     quickcheck! {
         fn test_volume_by_hand(pos: TupleVec, size: TupleVec) -> bool {
             // Generate some non-empty AABB
@@ -815,7 +815,7 @@ mod tests {
         }
     }
 
-    /// Test whether generating an `AABB` from the min and max bounds yields the same `AABB`.
+    // Test whether generating an `AABB` from the min and max bounds yields the same `AABB`.
     quickcheck! {
         fn test_create_aabb_from_indexable(a: TupleVec, b: TupleVec, p: TupleVec) -> bool {
             // Create a random point
