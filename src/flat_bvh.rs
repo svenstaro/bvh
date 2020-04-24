@@ -4,6 +4,7 @@ use crate::aabb::{Bounded, AABB};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
 use crate::bvh::{BVHNode, BVH};
 use crate::ray::Ray;
+use nalgebra::Point3;
 
 /// A structure of a node of a flat [`BVH`]. The structure of the nodes allows for an
 /// iterative traversal approach without the necessity to maintain a stack or queue.
@@ -411,6 +412,44 @@ impl BoundingHierarchy for FlatBVH {
         hit_shapes
     }
 
+    /// Traverses a [`FlatBVH`] structure iteratively, returning shapes that contain `pt`.
+    ///
+    /// [`FlatBVH`]: struct.FlatBVH.html
+    ///
+    fn traverse_pt<'a, T: Bounded>(&'a self, pt: &Point3<f32>, shapes: &'a [T]) -> Vec<&T> {
+        let mut hit_shapes = Vec::new();
+        let mut index = 0;
+
+        // The traversal loop should terminate when `max_length` is set as the next node index.
+        let max_length = self.len();
+
+        // Iterate while the node index is valid.
+        while index < max_length {
+            let node = &self[index];
+
+            if node.entry_index == u32::max_value() {
+                // If the entry_index is MAX_UINT32, then it's a leaf node.
+                let shape = &shapes[node.shape_index as usize];
+                if shape.aabb().contains(pt) {
+                    hit_shapes.push(shape);
+                }
+
+                // Exit the current node.
+                index = node.exit_index as usize;
+            } else if node.aabb.contains(pt) {
+                // If entry_index is not MAX_UINT32 and the AABB test passes, then
+                // proceed to the node in entry_index (which goes down the bvh branch).
+                index = node.entry_index as usize;
+            } else {
+                // If entry_index is not MAX_UINT32 and the AABB test fails, then
+                // proceed to the node in exit_index (which defines the next untested partition).
+                index = node.exit_index as usize;
+            }
+        }
+
+        hit_shapes
+    }
+
     /// Prints a textual representation of a [`FlatBVH`].
     ///
     /// [`FlatBVH`]: struct.FlatBVH.html
@@ -428,7 +467,7 @@ impl BoundingHierarchy for FlatBVH {
 #[cfg(test)]
 mod tests {
     use crate::flat_bvh::FlatBVH;
-    use crate::testbase::{build_some_bh, traverse_some_bh};
+    use crate::testbase::{build_some_bh, traverse_some_bh, traverse_pt_some_bh};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -441,6 +480,13 @@ mod tests {
     /// as a `FlatBVH`.
     fn test_traverse_flat_bvh() {
         traverse_some_bh::<FlatBVH>();
+    }
+
+    #[test]
+    /// Runs some primitive tests for intersections of pt with a fixed scene given
+    /// as a `FlatBVH`.
+    fn test_traverse_pt_flat_bvh() {
+        traverse_pt_some_bh::<FlatBVH>();
     }
 }
 

@@ -394,6 +394,39 @@ impl BVHNode {
             }
         }
     }
+
+    /// Traverses the [`BVH`] recursively and returns all shapes whose [`AABB`] is
+    /// intersected by the given `nalgebra::Point3`.
+    ///
+    /// [`AABB`]: ../aabb/struct.AABB.html
+    /// [`BVH`]: struct.BVH.html
+    ///
+    pub fn traverse_pt_recursive(
+        nodes: &[BVHNode],
+        node_index: usize,
+        pt: &Point3<f32>,
+        indices: &mut Vec<usize>,
+    ) {
+        match nodes[node_index] {
+            BVHNode::Node {
+                ref child_l_aabb,
+                child_l_index,
+                ref child_r_aabb,
+                child_r_index,
+                ..
+            } => {
+                if child_l_aabb.contains(pt) {
+                    BVHNode::traverse_pt_recursive(nodes, child_l_index, pt, indices);
+                }
+                if child_r_aabb.contains(pt) {
+                    BVHNode::traverse_pt_recursive(nodes, child_r_index, pt, indices);
+                }
+            }
+            BVHNode::Leaf { shape_index, .. } => {
+                indices.push(shape_index);
+            }
+        }
+    }
 }
 
 /// The [`BVH`] data structure. Contains the list of [`BVHNode`]s.
@@ -430,6 +463,21 @@ impl BVH {
     pub fn traverse<'a, Shape: Bounded>(&'a self, ray: &Ray, shapes: &'a [Shape]) -> Vec<&Shape> {
         let mut indices = Vec::new();
         BVHNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
+        indices
+            .iter()
+            .map(|index| &shapes[*index])
+            .collect::<Vec<_>>()
+    }
+
+    /// Traverses the [`BVH`].
+    /// Returns a subset of `shapes`, in which the [`AABB`]s of the elements contain `pt`.
+    ///
+    /// [`BVH`]: struct.BVH.html
+    /// [`AABB`]: ../aabb/struct.AABB.html
+    ///
+    pub fn traverse_pt<'a, Shape: Bounded>(&'a self, pt: &Point3<f32>, shapes: &'a [Shape]) -> Vec<&Shape> {
+        let mut indices = Vec::new();
+        BVHNode::traverse_pt_recursive(&self.nodes, 0, pt, &mut indices);
         indices
             .iter()
             .map(|index| &shapes[*index])
@@ -703,6 +751,10 @@ impl BoundingHierarchy for BVH {
         self.traverse(ray, shapes)
     }
 
+    fn traverse_pt<'a, Shape: Bounded>(&'a self, pt: &Point3<f32>, shapes: &'a [Shape]) -> Vec<&Shape> {
+        self.traverse_pt(pt, shapes)
+    }
+
     fn pretty_print(&self) {
         self.pretty_print();
     }
@@ -711,7 +763,7 @@ impl BoundingHierarchy for BVH {
 #[cfg(test)]
 mod tests {
     use crate::bvh::{BVHNode, BVH};
-    use crate::testbase::{build_some_bh, traverse_some_bh};
+    use crate::testbase::{build_some_bh, traverse_some_bh, traverse_pt_some_bh};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -723,6 +775,12 @@ mod tests {
     /// Runs some primitive tests for intersections of a ray with a fixed scene given as a BVH.
     fn test_traverse_bvh() {
         traverse_some_bh::<BVH>();
+    }
+
+    #[test]
+    /// Runs some primitive tests for containing of a point with a fixed scene given as a BVH.
+    fn test_traverse_pt_bvh() {
+        traverse_pt_some_bh::<BVH>();
     }
 
     #[test]
