@@ -102,6 +102,22 @@ fn traverse_and_verify<BH: BoundingHierarchy>(
     }
 }
 
+/// Given a point, a bounding hierarchy, the complete list of shapes in the scene and a list of
+/// expected hits, verifies, whether the point is contained only within the expected shapes.
+fn traverse_pt_and_verify<BH: BoundingHierarchy>(
+    pt: Point3<f32>,
+    all_shapes: &Vec<UnitBox>,
+    bh: &BH,
+    expected_shapes: &HashSet<i32>,
+) {
+    let hit_shapes = bh.traverse_pt(&pt, all_shapes);
+
+    assert_eq!(expected_shapes.len(), hit_shapes.len());
+    for shape in hit_shapes {
+        assert!(expected_shapes.contains(&shape.id));
+    }
+}
+
 /// Perform some fixed intersection tests on BH structures.
 pub fn traverse_some_bh<BH: BoundingHierarchy>() {
     let (all_shapes, bh) = build_some_bh::<BH>();
@@ -142,6 +158,19 @@ pub fn traverse_some_bh<BH: BoundingHierarchy>() {
         expected_shapes.insert(6);
         traverse_and_verify(origin, direction, &all_shapes, &bh, &expected_shapes);
     }
+}
+
+/// Perform some fixed intersection tests on BH structures.
+pub fn traverse_pt_some_bh<BH: BoundingHierarchy>() {
+    let (all_shapes, bh) = build_some_bh::<BH>();
+
+    // Define a ray which traverses the x-axis from afar.
+    let pt = Point3::new(5.0, 0.0, 0.0);
+    let mut expected_shapes = HashSet::new();
+
+    // It should hit a single box
+    expected_shapes.insert(5);
+    traverse_pt_and_verify(pt, &all_shapes, &bh, &expected_shapes);
 }
 
 /// A triangle struct. Instance of a more complex `Bounded` primitive.
