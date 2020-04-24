@@ -164,7 +164,7 @@ pub fn traverse_some_bh<BH: BoundingHierarchy>() {
 pub fn traverse_pt_some_bh<BH: BoundingHierarchy>() {
     let (all_shapes, bh) = build_some_bh::<BH>();
 
-    // Define a ray which traverses the x-axis from afar.
+    // Define a point which is contained inside one of the boxes
     let pt = Point3::new(5.0, 0.0, 0.0);
     let mut expected_shapes = HashSet::new();
 
