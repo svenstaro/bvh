@@ -3,8 +3,8 @@
 //! [`BVH`]: struct.BVH.html
 //!
 
-mod bvh;
+mod bvh_impl;
 mod optimization;
 
-pub use self::bvh::*;
+pub use self::bvh_impl::*;
 pub use self::optimization::*;
