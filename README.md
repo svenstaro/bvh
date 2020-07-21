@@ -1,5 +1,5 @@
 # bvh
-[![Build Status](https://travis-ci.org/svenstaro/bvh.svg?branch=master)](https://travis-ci.org/svenstaro/bvh)
+[![CI](https://github.com/svenstaro/bvh/workflows/CI/badge.svg)](https://github.com/svenstaro/bvh/actions)
 [![Docs Status](https://docs.rs/bvh/badge.svg)](https://docs.rs/bvh)
 [![codecov](https://codecov.io/gh/svenstaro/bvh/branch/master/graph/badge.svg)](https://codecov.io/gh/svenstaro/bvh)
 [![license](http://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/svenstaro/bvh/blob/master/LICENSE)
