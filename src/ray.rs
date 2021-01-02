@@ -281,7 +281,7 @@ impl Ray {
         let u = a_to_origin.dot(&u_vec) * inv_det;
 
         // Test bounds: u < 0 || u > 1 => outside of triangle
-        if u < 0.0 || u > 1.0 {
+        if !(0.0..=1.0).contains(&u) {
             return Intersection::new(INFINITY, u, 0.0);
         }
 
