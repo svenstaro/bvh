@@ -21,7 +21,7 @@ log = "0.4"
 num = "0.3"
 
 [dev-dependencies]
-quickcheck = "0.9"
+quickcheck = "1.0"
 obj-rs = "0.6"
 
 [features]
