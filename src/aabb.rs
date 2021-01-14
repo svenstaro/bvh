@@ -556,6 +556,45 @@ impl AABB {
             Axis::Z
         }
     }
+
+    /// Returns the corner of the [`AABB`] furthest from query point.
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::aabb::AABB;
+    /// use bvh::axis::Axis;
+    /// use bvh::nalgebra::Point3;
+    ///
+    /// let min = Point3::new(-1.0,-1.0,-1.0);
+    /// let max = Point3::new(1.0,1.0,1.0);
+    /// let query = Point3::new(-2.4, -4.5, 3.3);
+    ///
+    /// let aabb = AABB::with_bounds(min, max);
+    /// let corner = aabb.furthest_corner(&query);
+    /// assert!(corner == Point3::new(1.0,1.0,-1.0));
+    /// ```
+    ///
+    /// [`AABB`]: struct.AABB.html
+    ///
+    pub fn furthest_corner(&self, query: &Point3<f32>) -> Point3<f32> {
+        // This is based on an idea from
+        // "Fast Algorithm for Finding Maximum Distance with Space Subdivision in
+        // E2" by Vaclav Skala, Zuzana Majdisova
+        //
+        // Find which octant the query point lies in relative to the AABB
+        // center. Then we know that the opposite octant's corner is the furthest
+        // point. We just calculate the opposite quadrant directly
+        let offset = query - self.center();
+        let mut result = Point3::new(0.0, 0.0, 0.0);
+        for i in 0..3 {
+            if offset[i] > 0.0 {
+                result[i] = self.min[i];
+            } else {
+                result[i] = self.max[i];
+            }
+        }
+        result
+    }
 }
 
 /// Default instance for [`AABB`]s. Returns an [`AABB`] which is [`empty()`].
@@ -831,6 +870,51 @@ mod tests {
 
             // The AABBs should be the same
             aabb.contains(&point) == aabb_by_index.contains(&point)
+        }
+    }
+
+    #[test]
+    fn test_furthest_corner_hardcoded() {
+        // Default
+        let min = Point3::new(0.0, 0.0, 0.0);
+        let max = Point3::new(1.0, 1.0, 1.0);
+        let unit_aabb = AABB::with_bounds(min, max);
+
+        assert!(
+            unit_aabb.furthest_corner(&Point3::new(-1.0, -1.0, -1.0)) == Point3::new(1.0, 1.0, 1.0)
+        );
+        assert!(
+            unit_aabb.furthest_corner(&Point3::new(-1.0, 1.0, 1.0)) == Point3::new(1.0, 0.0, 0.0)
+        );
+        assert!(
+            unit_aabb.furthest_corner(&Point3::new(3.0, 2.0, 1.0)) == Point3::new(0.0, 0.0, 0.0)
+        );
+        assert!(
+            unit_aabb.furthest_corner(&Point3::new(0.75, 1.5, 0.22)) == Point3::new(0.0, 0.0, 1.0)
+        );
+        assert!(
+            unit_aabb.furthest_corner(&Point3::new(-0.4, -3.5, -0.01))
+                == Point3::new(1.0, 1.0, 1.0)
+        );
+    }
+
+    // Test whether furthest point is correct by hand, with different method than implementation
+    quickcheck! {
+        fn test_furthest_corner_by_hand(min: TupleVec, max: TupleVec, q: TupleVec) -> bool {
+            let aabb = AABB::with_bounds(tuple_to_point(&min), tuple_to_point(&max));
+            let center = aabb.center();
+            let query = tuple_to_point(&q);
+            let furthest_corner = aabb.furthest_corner(&query);
+
+            let mut result = true;
+            for i in 0..3 {
+                if center[i] > query[i] {
+                    result &= furthest_corner[i] == aabb.max[i];
+                } else {
+                    result &= furthest_corner[i] == aabb.min[i];
+                }
+            }
+            result
         }
     }
 }
