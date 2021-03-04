@@ -400,6 +400,7 @@ impl BVHNode {
 ///
 /// [`BVH`]: struct.BVH.html
 ///
+#[allow(clippy::upper_case_acronyms)]
 pub struct BVH {
     /// The list of nodes of the [`BVH`].
     ///
