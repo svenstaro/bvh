@@ -23,6 +23,7 @@ use std::iter::repeat;
 /// [`BVH`]: struct.BVHNode.html
 ///
 #[derive(Debug, Copy, Clone)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum BVHNode {
     /// Leaf node.
     Leaf {
