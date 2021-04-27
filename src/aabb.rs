@@ -11,6 +11,7 @@ use crate::axis::Axis;
 
 /// AABB struct.
 #[derive(Debug, Copy, Clone)]
+#[allow(clippy::upper_case_acronyms)]
 pub struct AABB {
     /// Minimum coordinates
     pub min: Point3<f32>,

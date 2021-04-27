@@ -138,6 +138,7 @@ impl BVHNode {
 /// [`FlatNode`]: struct.FlatNode.html
 /// [`FlatBVH`]: struct.FlatBVH.html
 ///
+#[allow(clippy::upper_case_acronyms)]
 pub type FlatBVH = Vec<FlatNode>;
 
 impl BVH {

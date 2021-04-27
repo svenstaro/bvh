@@ -8,6 +8,7 @@ use crate::ray::Ray;
 ///
 /// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
 ///
+#[allow(clippy::upper_case_acronyms)]
 pub trait BHShape: Bounded {
     /// Sets the index of the referenced [`BoundingHierarchy`] node.
     ///
