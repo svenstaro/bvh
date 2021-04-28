@@ -2,47 +2,42 @@ use crate::aabb::Bounded;
 use crate::bvh::{BVHNode, BVH};
 use crate::ray::Ray;
 
-/// Iterator traverse a BVH without memory allocations
+/// Iterator to traverse a [`BVH`] without memory allocations
+#[allow(clippy::upper_case_acronyms)]
 pub struct BVHIterator<'a, Shape: Bounded> {
+    /// Reference to the BVH to traverse
     bvh: &'a BVH,
+    /// Reference to the input ray
     ray: &'a Ray,
+    /// Reference to the input shapes array
     shapes: &'a [Shape],
+    /// Traversal stack. 4 billion items seems enough?
     stack: [usize; 32],
+    /// Position of the iterator in bvh.nodes
     node_index: usize,
+    /// Size of the traversal stack
     stack_size: usize,
+    /// Whether or not we have a valid node (or leaf)
     has_node: bool,
 }
 
 impl<'a, Shape: Bounded> BVHIterator<'a, Shape> {
-    /// Creates a new BVHIterator
+    /// Creates a new `BVHIterator`
     pub fn new(bvh: &'a BVH, ray: &'a Ray, shapes: &'a [Shape]) -> Self {
         BVHIterator {
-            /// Reference to the BVH to traverse
-            bvh: bvh,
-
-            /// Reference to the input ray
-            ray: ray,
-
-            /// Reference to the input shapes array
-            shapes: shapes,
-
-            /// Traversal stack. 4 billion items seems enough?
+            bvh,
+            ray,
+            shapes,
             stack: [0; 32],
-
-            /// Position of the iterator in bvh.nodes
             node_index: 0,
-
-            /// Size of the traversal stack
             stack_size: 0,
-
-            /// Whether or not we have a valid node (or leaf)
             has_node: true,
         }
     }
 
     /// Test if stack is empty.
     fn is_stack_empty(&self) -> bool {
-        return self.stack_size == 0;
+        self.stack_size == 0
     }
 
     /// Push node onto stack. Not guarded against overflow.
@@ -54,7 +49,7 @@ impl<'a, Shape: Bounded> BVHIterator<'a, Shape> {
     /// Pop the stack and return the node. Not guarded against underflow.
     fn stack_pop(&mut self) -> usize {
         self.stack_size -= 1;
-        return self.stack[self.stack_size];
+        self.stack[self.stack_size]
     }
 
     /// Attempt to move to the left child of the current node.
@@ -123,14 +118,14 @@ impl<'a, Shape: Bounded> Iterator for BVHIterator<'a, Shape> {
                     }
                     BVHNode::Leaf { shape_index, .. } => {
                         // We previously pushed a leaf node. This is the "visit" of the in-order traverse.
-                        // Next time we call next we try to pop the stack again.
+                        // Next time we call `next()` we try to pop the stack again.
                         self.has_node = false;
                         return Some(&self.shapes[shape_index]);
                     }
                 }
             }
         }
-        return None;
+        None
     }
 }
 
