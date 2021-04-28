@@ -326,3 +326,58 @@ mod tests {
         assert_eq!(expected_shapes, found_shapes);
     }
 }
+
+#[cfg(all(feature = "bench", test))]
+mod bench {
+    use crate::bvh::BVH;
+    use crate::testbase::{
+        load_sponza_scene, create_ray,
+    };
+
+    #[bench]
+    /// Benchmark the traversal of a `BVH` with the Sponza scene with Vec return.
+    fn bench_intersect_128rays_sponza_vec(b: &mut ::test::Bencher) {
+        let (mut triangles, bounds) = load_sponza_scene();
+        let bvh = BVH::build(&mut triangles);
+
+        let mut seed = 0;
+        b.iter(|| {
+            for _ in 0..128
+            {
+                let ray = create_ray(&mut seed, &bounds);
+    
+                // Traverse the `BVH` recursively.
+                let hits = bvh.traverse(&ray, &triangles);
+        
+                // Traverse the resulting list of positive `AABB` tests
+                for triangle in &hits {
+                    ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
+                }
+            }
+        });
+    }
+
+
+    #[bench]
+    /// Benchmark the traversal of a `BVH` with the Sponza scene with `BVHIterator`.
+    fn bench_intersect_128rays_sponza_iter(b: &mut ::test::Bencher) {
+        let (mut triangles, bounds) = load_sponza_scene();
+        let bvh = BVH::build(&mut triangles);
+
+        let mut seed = 0;
+        b.iter(|| {
+            for _ in 0..128
+            {
+                let ray = create_ray(&mut seed, &bounds);
+        
+                // Traverse the `BVH` recursively.
+                let hits = bvh.traverse_iterator(&ray, &triangles);
+        
+                // Traverse the resulting list of positive `AABB` tests
+                for triangle in hits {
+                    ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
+                }
+            }
+        });
+    }
+}
