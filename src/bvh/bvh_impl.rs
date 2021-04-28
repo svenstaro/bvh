@@ -9,6 +9,7 @@ use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
 use crate::ray::Ray;
 use crate::utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
 use crate::EPSILON;
+use crate::bvh::iter::BVHIterator;
 use nalgebra::Point3;
 use std::f32;
 use std::iter::repeat;
@@ -436,6 +437,17 @@ impl BVH {
             .iter()
             .map(|index| &shapes[*index])
             .collect::<Vec<_>>()
+    }
+
+    /// Creates a [`BVHIterator`] to traverse the [`BVH`].
+    /// Returns a subset of `shapes`, in which the [`AABB`]s of the elements were hit by `ray`.
+    ///
+    /// [`BVH`]: struct.BVH.html
+    /// [`AABB`]: ../aabb/struct.AABB.html
+    ///
+    pub fn traverse_iterator<'a, Shape: Bounded>(&'a self, ray: &'a Ray, shapes: &'a [Shape]) -> BVHIterator<Shape>
+    {
+        BVHIterator::new(self, ray, shapes)
     }
 
     /// Prints the [`BVH`] in a tree-like visualization.
