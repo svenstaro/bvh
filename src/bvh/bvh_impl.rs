@@ -6,10 +6,10 @@
 
 use crate::aabb::{Bounded, AABB};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use crate::bvh::iter::BVHIterator;
 use crate::ray::Ray;
 use crate::utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
 use crate::EPSILON;
-use crate::bvh::iter::BVHIterator;
 use nalgebra::Point3;
 use std::f32;
 use std::iter::repeat;
@@ -445,8 +445,11 @@ impl BVH {
     /// [`BVH`]: struct.BVH.html
     /// [`AABB`]: ../aabb/struct.AABB.html
     ///
-    pub fn traverse_iterator<'a, Shape: Bounded>(&'a self, ray: &'a Ray, shapes: &'a [Shape]) -> BVHIterator<Shape>
-    {
+    pub fn traverse_iterator<'a, Shape: Bounded>(
+        &'a self,
+        ray: &'a Ray,
+        shapes: &'a [Shape],
+    ) -> BVHIterator<Shape> {
         BVHIterator::new(self, ray, shapes)
     }
 

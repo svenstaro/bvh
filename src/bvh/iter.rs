@@ -1,5 +1,5 @@
 use crate::aabb::Bounded;
-use crate::bvh::{BVH, BVHNode};
+use crate::bvh::{BVHNode, BVH};
 use crate::ray::Ray;
 
 /// Iterator traverse a BVH without memory allocations
@@ -25,7 +25,7 @@ impl<'a, Shape: Bounded> BVHIterator<'a, Shape> {
 
             /// Reference to the input shapes array
             shapes: shapes,
-            
+
             /// Traversal stack. 4 billion items seems enough?
             stack: [0; 32],
 
@@ -141,9 +141,9 @@ mod tests {
     use crate::bvh::{BVHNode, BVH};
     use std::collections::HashSet;
     use std::f32;
-    
+
     use nalgebra::{Point3, Vector3};
-    
+
     use crate::aabb::{Bounded, AABB};
     use crate::bounding_hierarchy::BHShape;
     use crate::ray::Ray;
@@ -291,7 +291,6 @@ mod tests {
         }
     }
 
-
     #[test]
     /// Runs some primitive tests for intersections of a ray with a fixed scene given as a BVH.
     fn test_traverse_bvh() {
@@ -330,9 +329,7 @@ mod tests {
 #[cfg(all(feature = "bench", test))]
 mod bench {
     use crate::bvh::BVH;
-    use crate::testbase::{
-        load_sponza_scene, create_ray,
-    };
+    use crate::testbase::{create_ray, load_sponza_scene};
 
     #[bench]
     /// Benchmark the traversal of a `BVH` with the Sponza scene with Vec return.
@@ -342,13 +339,12 @@ mod bench {
 
         let mut seed = 0;
         b.iter(|| {
-            for _ in 0..128
-            {
+            for _ in 0..128 {
                 let ray = create_ray(&mut seed, &bounds);
-    
+
                 // Traverse the `BVH` recursively.
                 let hits = bvh.traverse(&ray, &triangles);
-        
+
                 // Traverse the resulting list of positive `AABB` tests
                 for triangle in &hits {
                     ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
@@ -356,7 +352,6 @@ mod bench {
             }
         });
     }
-
 
     #[bench]
     /// Benchmark the traversal of a `BVH` with the Sponza scene with `BVHIterator`.
@@ -366,13 +361,12 @@ mod bench {
 
         let mut seed = 0;
         b.iter(|| {
-            for _ in 0..128
-            {
+            for _ in 0..128 {
                 let ray = create_ray(&mut seed, &bounds);
-        
+
                 // Traverse the `BVH` recursively.
                 let hits = bvh.traverse_iterator(&ray, &triangles);
-        
+
                 // Traverse the resulting list of positive `AABB` tests
                 for triangle in hits {
                     ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
