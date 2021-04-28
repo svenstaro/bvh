@@ -40,19 +40,28 @@ impl<'a, Shape: Bounded> BVHIterator<'a, Shape> {
         self.stack_size == 0
     }
 
-    /// Push node onto stack. Not guarded against overflow.
+    /// Push node onto stack.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `stack[stack_size]` is out of bounds.
     fn stack_push(&mut self, node: usize) {
         self.stack[self.stack_size] = node;
         self.stack_size += 1;
     }
 
-    /// Pop the stack and return the node. Not guarded against underflow.
+    /// Pop the stack and return the node.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `stack_size` underflows.
     fn stack_pop(&mut self) -> usize {
         self.stack_size -= 1;
         self.stack[self.stack_size]
     }
 
-    /// Attempt to move to the left child of the current node.
+    /// Attempt to move to the left node child of the current node.
+    /// If it is a leaf, or the ray does not intersect the node `AABB`, `has_node` will become false.
     fn move_left(&mut self) {
         match self.bvh.nodes[self.node_index] {
             BVHNode::Node {
@@ -73,7 +82,8 @@ impl<'a, Shape: Bounded> BVHIterator<'a, Shape> {
         }
     }
 
-    /// Attempt to move to the right child of the current node.
+    /// Attempt to move to the right node child of the current node.
+    /// If it is a leaf, or the ray does not intersect the node `AABB`, `has_node` will become false.
     fn move_right(&mut self) {
         match self.bvh.nodes[self.node_index] {
             BVHNode::Node {
