@@ -6,7 +6,7 @@
 
 use crate::aabb::{Bounded, AABB};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
-use crate::bvh::iter::BVHIterator;
+use crate::bvh::iter::BVHTraverseIterator;
 use crate::ray::Ray;
 use crate::utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
 use crate::EPSILON;
@@ -439,7 +439,7 @@ impl BVH {
             .collect::<Vec<_>>()
     }
 
-    /// Creates a [`BVHIterator`] to traverse the [`BVH`].
+    /// Creates a [`BVHTraverseIterator`] to traverse the [`BVH`].
     /// Returns a subset of `shapes`, in which the [`AABB`]s of the elements were hit by `ray`.
     ///
     /// [`BVH`]: struct.BVH.html
@@ -449,8 +449,8 @@ impl BVH {
         &'a self,
         ray: &'a Ray,
         shapes: &'a [Shape],
-    ) -> BVHIterator<Shape> {
-        BVHIterator::new(self, ray, shapes)
+    ) -> BVHTraverseIterator<Shape> {
+        BVHTraverseIterator::new(self, ray, shapes)
     }
 
     /// Prints the [`BVH`] in a tree-like visualization.

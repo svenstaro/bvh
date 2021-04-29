@@ -4,7 +4,7 @@ use crate::ray::Ray;
 
 /// Iterator to traverse a [`BVH`] without memory allocations
 #[allow(clippy::upper_case_acronyms)]
-pub struct BVHIterator<'a, Shape: Bounded> {
+pub struct BVHTraverseIterator<'a, Shape: Bounded> {
     /// Reference to the BVH to traverse
     bvh: &'a BVH,
     /// Reference to the input ray
@@ -21,10 +21,10 @@ pub struct BVHIterator<'a, Shape: Bounded> {
     has_node: bool,
 }
 
-impl<'a, Shape: Bounded> BVHIterator<'a, Shape> {
-    /// Creates a new `BVHIterator`
+impl<'a, Shape: Bounded> BVHTraverseIterator<'a, Shape> {
+    /// Creates a new `BVHTraverseIterator`
     pub fn new(bvh: &'a BVH, ray: &'a Ray, shapes: &'a [Shape]) -> Self {
-        BVHIterator {
+        BVHTraverseIterator {
             bvh,
             ray,
             shapes,
@@ -105,7 +105,7 @@ impl<'a, Shape: Bounded> BVHIterator<'a, Shape> {
     }
 }
 
-impl<'a, Shape: Bounded> Iterator for BVHIterator<'a, Shape> {
+impl<'a, Shape: Bounded> Iterator for BVHTraverseIterator<'a, Shape> {
     type Item = &'a Shape;
 
     fn next(&mut self) -> Option<&'a Shape> {
@@ -359,7 +359,7 @@ mod bench {
     }
 
     #[bench]
-    /// Benchmark the traversal of a `BVH` with the Sponza scene with `BVHIterator`.
+    /// Benchmark the traversal of a `BVH` with the Sponza scene with `BVHTraverseIterator`.
     fn bench_intersect_128rays_sponza_iter(b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();
         let bvh = BVH::build(&mut triangles);
