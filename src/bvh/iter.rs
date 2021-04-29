@@ -143,64 +143,13 @@ impl<'a, Shape: Bounded> Iterator for BVHTraverseIterator<'a, Shape> {
 // TODO: Once iterators are part of the BoundingHierarchy trait we can move all this to testbase.
 #[cfg(test)]
 mod tests {
-    use crate::bvh::{BVHNode, BVH};
-    use std::collections::HashSet;
-    use std::f32;
-
-    use nalgebra::{Point3, Vector3};
-
-    use crate::aabb::{Bounded, AABB};
-    use crate::bounding_hierarchy::BHShape;
+    use crate::bvh::BVH;
     use crate::ray::Ray;
+    use crate::testbase::{generate_aligned_boxes, UnitBox};
+    use nalgebra::{Point3, Vector3};
+    use std::collections::HashSet;
 
-    /// Define some `Bounded` structure.
-    pub struct UnitBox {
-        pub id: i32,
-        pub pos: Point3<f32>,
-        node_index: usize,
-    }
-
-    impl UnitBox {
-        pub fn new(id: i32, pos: Point3<f32>) -> UnitBox {
-            UnitBox {
-                id: id,
-                pos: pos,
-                node_index: 0,
-            }
-        }
-    }
-
-    /// `UnitBox`'s `AABB`s are unit `AABB`s centered on the box's position.
-    impl Bounded for UnitBox {
-        fn aabb(&self) -> AABB {
-            let min = self.pos + Vector3::new(-0.5, -0.5, -0.5);
-            let max = self.pos + Vector3::new(0.5, 0.5, 0.5);
-            AABB::with_bounds(min, max)
-        }
-    }
-
-    impl BHShape for UnitBox {
-        fn set_bh_node_index(&mut self, index: usize) {
-            self.node_index = index;
-        }
-
-        fn bh_node_index(&self) -> usize {
-            self.node_index
-        }
-    }
-
-    /// Generate 21 `UnitBox`s along the X axis centered on whole numbers (-10,9,..,10).
-    /// The index is set to the rounded x-coordinate of the box center.
-    pub fn generate_aligned_boxes() -> Vec<UnitBox> {
-        // Create 21 boxes along the x-axis
-        let mut shapes = Vec::new();
-        for x in -10..11 {
-            shapes.push(UnitBox::new(x, Point3::new(x as f32, 0.0, 0.0)));
-        }
-        shapes
-    }
-
-    /// Creates a `BoundingHierarchy` for a fixed scene structure.
+    /// Creates a `BVH` for a fixed scene structure.
     pub fn build_some_bvh() -> (Vec<UnitBox>, BVH) {
         let mut boxes = generate_aligned_boxes();
         let bvh = BVH::build(&mut boxes);
@@ -256,7 +205,7 @@ mod tests {
 
     /// Perform some fixed intersection tests on BH structures.
     pub fn traverse_some_bvh() {
-        let (all_shapes, bh) = build_some_bvh();
+        let (all_shapes, bvh) = build_some_bvh();
 
         {
             // Define a ray which traverses the x-axis from afar.
@@ -268,7 +217,7 @@ mod tests {
             for id in -10..11 {
                 expected_shapes.insert(id);
             }
-            traverse_and_verify_base(origin, direction, &all_shapes, &bh, &expected_shapes);
+            traverse_and_verify_base(origin, direction, &all_shapes, &bvh, &expected_shapes);
         }
 
         {
@@ -279,7 +228,7 @@ mod tests {
             // It should hit only one box.
             let mut expected_shapes = HashSet::new();
             expected_shapes.insert(0);
-            traverse_and_verify_base(origin, direction, &all_shapes, &bh, &expected_shapes);
+            traverse_and_verify_base(origin, direction, &all_shapes, &bvh, &expected_shapes);
         }
 
         {
@@ -292,7 +241,7 @@ mod tests {
             expected_shapes.insert(4);
             expected_shapes.insert(5);
             expected_shapes.insert(6);
-            traverse_and_verify_base(origin, direction, &all_shapes, &bh, &expected_shapes);
+            traverse_and_verify_base(origin, direction, &all_shapes, &bvh, &expected_shapes);
         }
     }
 
@@ -300,34 +249,6 @@ mod tests {
     /// Runs some primitive tests for intersections of a ray with a fixed scene given as a BVH.
     fn test_traverse_bvh() {
         traverse_some_bvh();
-    }
-
-    #[test]
-    /// Verify contents of the bounding hierarchy for a fixed scene structure
-    fn test_bvh_shape_indices() {
-        use std::collections::HashSet;
-
-        let (all_shapes, bh) = build_some_bvh();
-
-        // It should find all shape indices.
-        let expected_shapes: HashSet<_> = (0..all_shapes.len()).collect();
-        let mut found_shapes = HashSet::new();
-
-        for node in bh.nodes.iter() {
-            match *node {
-                BVHNode::Node { .. } => {
-                    assert_eq!(node.shape_index(), None);
-                }
-                BVHNode::Leaf { .. } => {
-                    found_shapes.insert(
-                        node.shape_index()
-                            .expect("getting a shape index from a leaf node"),
-                    );
-                }
-            }
-        }
-
-        assert_eq!(expected_shapes, found_shapes);
     }
 }
 
