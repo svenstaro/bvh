@@ -209,12 +209,12 @@ impl AABB {
     ///
     /// [`AABB`]: struct.AABB.html
     pub fn relative_eq(&self, other: &AABB, epsilon: f32) -> bool {
-        f32::abs(self.min.x - other.min.x) < epsilon &&
-            f32::abs(self.min.y - other.min.y) < epsilon &&
-            f32::abs(self.min.z - other.min.z) < epsilon &&
-            f32::abs(self.max.x - other.max.x) < epsilon &&
-            f32::abs(self.max.y - other.max.y) < epsilon &&
-            f32::abs(self.max.z - other.max.z) < epsilon
+        f32::abs(self.min.x - other.min.x) < epsilon
+            && f32::abs(self.min.y - other.min.y) < epsilon
+            && f32::abs(self.min.z - other.min.z) < epsilon
+            && f32::abs(self.max.x - other.max.x) < epsilon
+            && f32::abs(self.max.y - other.max.y) < epsilon
+            && f32::abs(self.max.z - other.max.z) < epsilon
     }
 
     /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and `other`.

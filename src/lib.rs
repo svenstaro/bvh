@@ -71,8 +71,6 @@
 #[cfg(all(feature = "bench", test))]
 extern crate test;
 
-use glam;
-
 /// A minimal floating value used as a lower bound.
 /// TODO: replace by/add ULPS/relative float comparison methods.
 pub const EPSILON: f32 = 0.00001;

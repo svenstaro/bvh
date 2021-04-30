@@ -258,12 +258,7 @@ impl Ray {
     /// The distance is set to +INFINITY if the ray does not intersect the triangle, or hits
     /// it from behind.
     #[allow(clippy::many_single_char_names)]
-    pub fn intersects_triangle(
-        &self,
-        a: &Point3,
-        b: &Point3,
-        c: &Point3,
-    ) -> Intersection {
+    pub fn intersects_triangle(&self, a: &Point3, b: &Point3, c: &Point3) -> Intersection {
         let a_to_b = *b - *a;
         let a_to_c = *c - *a;
 
