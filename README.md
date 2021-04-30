@@ -18,7 +18,6 @@ intersection test complexity is reduced from O(n) to O(log2(n)) at the cost of b
 the BVH once in advance. This technique is especially useful in ray/path tracers. For
 use in a shader this module also exports a flattening procedure, which allows for
 iterative traversal of the BVH.
-This library is built on top of [nalgebra](http://nalgebra.org/).
 
 ## Example
 

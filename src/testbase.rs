@@ -20,12 +20,12 @@ use crate::ray::Ray;
 /// A vector represented as a tuple
 pub type TupleVec = (f32, f32, f32);
 
-/// Convert a `TupleVec` to a `nalgebra` point.
+/// Convert a `TupleVec` to a [`Point3`].
 pub fn tuple_to_point(tpl: &TupleVec) -> Point3 {
     Point3::new(tpl.0, tpl.1, tpl.2)
 }
 
-/// Convert a `TupleVec` to a `nalgebra` vector.
+/// Convert a `TupleVec` to a [`Vector3`].
 pub fn tuple_to_vector(tpl: &TupleVec) -> Vector3 {
     Vector3::new(tpl.0, tpl.1, tpl.2)
 }

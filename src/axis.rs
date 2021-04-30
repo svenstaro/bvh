@@ -20,9 +20,7 @@ struct MyType<T>(T);
 /// assert_eq!(position[Axis::Y], 2.0);
 /// ```
 ///
-/// `nalgebra` structures are also indexable using `Axis`.
-/// For reference see [the documentation]
-/// (http://nalgebra.org/doc/nalgebra/struct.Vector3.html#method.index).
+/// [`Point3`] and [`Vector3`] are also indexable using `Axis`.
 ///
 /// ```
 /// extern crate bvh;

@@ -10,7 +10,6 @@
 //! the BVH once in advance. This technique is especially useful in ray/path tracers. For
 //! use in a shader this module also exports a flattening procedure, which allows for
 //! iterative traversal of the BVH.
-//! This library is built on top of [`nalgebra`].
 //!
 //! ## Example
 //!
@@ -64,8 +63,6 @@
 //! let bvh = BVH::build(&mut spheres);
 //! let hit_sphere_aabbs = bvh.traverse(&ray, &spheres);
 //! ```
-//!
-//! [`nalgebra`]: http://nalgebra.org/doc/nalgebra/
 //!
 
 #![deny(missing_docs)]

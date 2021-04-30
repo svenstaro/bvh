@@ -127,7 +127,7 @@ impl AABB {
     /// ```
     ///
     /// [`AABB`]: struct.AABB.html
-    /// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
+    /// [`Point3`]: glam::Vec3
     ///
     pub fn contains(&self, p: &Point3) -> bool {
         p.x >= self.min.x
@@ -156,7 +156,7 @@ impl AABB {
     /// ```
     ///
     /// [`AABB`]: struct.AABB.html
-    /// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
+    /// [`Point3`]: glam::Vec3
     ///
     pub fn approx_contains_eps(&self, p: &Point3, epsilon: f32) -> bool {
         (p.x - self.min.x) > -epsilon
@@ -335,7 +335,7 @@ impl AABB {
     /// ```
     ///
     /// [`AABB`]: struct.AABB.html
-    /// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
+    /// [`Point3`]: glam::Vec3
     ///
     pub fn grow(&self, other: &Point3) -> AABB {
         AABB::with_bounds(
@@ -376,7 +376,7 @@ impl AABB {
     /// ```
     ///
     /// [`AABB::grow`]: struct.AABB.html
-    /// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
+    /// [`Point3`]: glam::Vec3
     ///
     pub fn grow_mut(&mut self, other: &Point3) {
         self.min = Point3::new(
@@ -458,7 +458,7 @@ impl AABB {
     /// ```
     ///
     /// [`AABB`]: struct.AABB.html
-    /// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
+    /// [`Point3`]: glam::Vec3
     ///
     pub fn center(&self) -> Point3 {
         self.min + (self.size() / 2.0)
@@ -643,7 +643,7 @@ impl Bounded for AABB {
 /// ```
 ///
 /// [`Bounded`]: trait.Bounded.html
-/// [`Point3`]: http://nalgebra.org/doc/nalgebra/struct.Point3.html
+/// [`Point3`]: glam::Vec3
 ///
 impl Bounded for Point3 {
     fn aabb(&self) -> AABB {
