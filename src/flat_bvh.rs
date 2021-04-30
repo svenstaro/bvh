@@ -160,17 +160,17 @@ impl BVH {
     /// ```
     /// use bvh::aabb::{AABB, Bounded};
     /// use bvh::bvh::BVH;
-    /// use bvh::nalgebra::{Point3, Vector3};
+    /// use bvh::{Point3, Vector3};
     /// use bvh::ray::Ray;
     /// # use bvh::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
-    /// #     pub pos: Point3<f32>,
+    /// #     pub pos: Point3,
     /// #     node_index: usize,
     /// # }
     /// #
     /// # impl UnitBox {
-    /// #     pub fn new(id: i32, pos: Point3<f32>) -> UnitBox {
+    /// #     pub fn new(id: i32, pos: Point3) -> UnitBox {
     /// #         UnitBox {
     /// #             id: id,
     /// #             pos: pos,
@@ -244,17 +244,17 @@ impl BVH {
     /// ```
     /// use bvh::aabb::{AABB, Bounded};
     /// use bvh::bvh::BVH;
-    /// use bvh::nalgebra::{Point3, Vector3};
+    /// use bvh::{Point3, Vector3};
     /// use bvh::ray::Ray;
     /// # use bvh::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
-    /// #     pub pos: Point3<f32>,
+    /// #     pub pos: Point3,
     /// #     node_index: usize,
     /// # }
     /// #
     /// # impl UnitBox {
-    /// #     pub fn new(id: i32, pos: Point3<f32>) -> UnitBox {
+    /// #     pub fn new(id: i32, pos: Point3) -> UnitBox {
     /// #         UnitBox {
     /// #             id: id,
     /// #             pos: pos,
@@ -325,17 +325,17 @@ impl BoundingHierarchy for FlatBVH {
     /// use bvh::aabb::{AABB, Bounded};
     /// use bvh::bounding_hierarchy::BoundingHierarchy;
     /// use bvh::flat_bvh::FlatBVH;
-    /// use bvh::nalgebra::{Point3, Vector3};
+    /// use bvh::{Point3, Vector3};
     /// use bvh::ray::Ray;
     /// # use bvh::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
-    /// #     pub pos: Point3<f32>,
+    /// #     pub pos: Point3,
     /// #     node_index: usize,
     /// # }
     /// #
     /// # impl UnitBox {
-    /// #     pub fn new(id: i32, pos: Point3<f32>) -> UnitBox {
+    /// #     pub fn new(id: i32, pos: Point3) -> UnitBox {
     /// #         UnitBox {
     /// #             id: id,
     /// #             pos: pos,

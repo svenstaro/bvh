@@ -521,7 +521,7 @@ mod tests {
         build_some_bh, create_n_cubes, default_bounds, randomly_transform_scene, UnitBox,
     };
     use crate::EPSILON;
-    use nalgebra::Point3;
+    use crate::Point3;
     use std::collections::HashSet;
 
     #[test]

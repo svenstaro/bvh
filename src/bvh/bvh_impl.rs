@@ -10,7 +10,7 @@ use crate::bvh::iter::BVHTraverseIterator;
 use crate::ray::Ray;
 use crate::utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
 use crate::EPSILON;
-use nalgebra::Point3;
+use crate::Point3;
 use std::f32;
 use std::iter::repeat;
 

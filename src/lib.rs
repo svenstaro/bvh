@@ -18,7 +18,7 @@
 //! use bvh::aabb::{AABB, Bounded};
 //! use bvh::bounding_hierarchy::{BoundingHierarchy, BHShape};
 //! use bvh::bvh::BVH;
-//! use bvh::nalgebra::{Point3, Vector3};
+//! use bvh::{Point3, Vector3};
 //! use bvh::ray::Ray;
 //!
 //! let origin = Point3::new(0.0,0.0,0.0);
@@ -26,7 +26,7 @@
 //! let ray = Ray::new(origin, direction);
 //!
 //! struct Sphere {
-//!     position: Point3<f32>,
+//!     position: Point3,
 //!     radius: f32,
 //!     node_index: usize,
 //! }
@@ -74,11 +74,17 @@
 #[cfg(all(feature = "bench", test))]
 extern crate test;
 
-pub use nalgebra;
+use glam;
 
 /// A minimal floating value used as a lower bound.
 /// TODO: replace by/add ULPS/relative float comparison methods.
 pub const EPSILON: f32 = 0.00001;
+
+/// Point math type used by this crate. Type alias for [`glam::Vec3`].
+pub type Point3 = glam::Vec3;
+
+/// Vector math type used by this crate. Type alias for [`glam::Vec3`].
+pub type Vector3 = glam::Vec3;
 
 pub mod aabb;
 pub mod axis;

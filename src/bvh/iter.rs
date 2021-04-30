@@ -146,7 +146,7 @@ mod tests {
     use crate::bvh::BVH;
     use crate::ray::Ray;
     use crate::testbase::{generate_aligned_boxes, UnitBox};
-    use nalgebra::{Point3, Vector3};
+    use crate::{Point3, Vector3};
     use std::collections::HashSet;
 
     /// Creates a `BVH` for a fixed scene structure.
@@ -159,8 +159,8 @@ mod tests {
     /// Given a ray, a bounding hierarchy, the complete list of shapes in the scene and a list of
     /// expected hits, verifies, whether the ray hits only the expected shapes.
     fn traverse_and_verify_vec(
-        ray_origin: Point3<f32>,
-        ray_direction: Vector3<f32>,
+        ray_origin: Point3,
+        ray_direction: Vector3,
         all_shapes: &Vec<UnitBox>,
         bvh: &BVH,
         expected_shapes: &HashSet<i32>,
@@ -175,8 +175,8 @@ mod tests {
     }
 
     fn traverse_and_verify_iterator(
-        ray_origin: Point3<f32>,
-        ray_direction: Vector3<f32>,
+        ray_origin: Point3,
+        ray_direction: Vector3,
         all_shapes: &Vec<UnitBox>,
         bvh: &BVH,
         expected_shapes: &HashSet<i32>,
@@ -193,8 +193,8 @@ mod tests {
     }
 
     fn traverse_and_verify_base(
-        ray_origin: Point3<f32>,
-        ray_direction: Vector3<f32>,
+        ray_origin: Point3,
+        ray_direction: Vector3,
         all_shapes: &Vec<UnitBox>,
         bvh: &BVH,
         expected_shapes: &HashSet<i32>,
