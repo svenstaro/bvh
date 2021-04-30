@@ -18,14 +18,13 @@ intersection test complexity is reduced from O(n) to O(log2(n)) at the cost of b
 the BVH once in advance. This technique is especially useful in ray/path tracers. For
 use in a shader this module also exports a flattening procedure, which allows for
 iterative traversal of the BVH.
-This library is built on top of [nalgebra](http://nalgebra.org/).
 
 ## Example
 
 ```rust
 use bvh::aabb::{AABB, Bounded};
 use bvh::bvh::BVH;
-use bvh::nalgebra::{Point3, Vector3};
+use bvh::{Point3, Vector3};
 use bvh::ray::Ray;
 
 let origin = Point3::new(0.0,0.0,0.0);
@@ -33,7 +32,7 @@ let direction = Vector3::new(1.0,0.0,0.0);
 let ray = Ray::new(origin, direction);
 
 struct Sphere {
-    position: Point3<f32>,
+    position: Point3,
     radius: f32,
 }
 

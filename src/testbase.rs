@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use std::f32;
 use std::mem::transmute;
 
-use nalgebra::{Point3, Vector3};
+use crate::{Point3, Vector3};
 use num::{FromPrimitive, Integer};
 use obj::raw::object::Polygon;
 use obj::*;
@@ -20,25 +20,25 @@ use crate::ray::Ray;
 /// A vector represented as a tuple
 pub type TupleVec = (f32, f32, f32);
 
-/// Convert a `TupleVec` to a `nalgebra` point.
-pub fn tuple_to_point(tpl: &TupleVec) -> Point3<f32> {
+/// Convert a `TupleVec` to a [`Point3`].
+pub fn tuple_to_point(tpl: &TupleVec) -> Point3 {
     Point3::new(tpl.0, tpl.1, tpl.2)
 }
 
-/// Convert a `TupleVec` to a `nalgebra` vector.
-pub fn tuple_to_vector(tpl: &TupleVec) -> Vector3<f32> {
+/// Convert a `TupleVec` to a [`Vector3`].
+pub fn tuple_to_vector(tpl: &TupleVec) -> Vector3 {
     Vector3::new(tpl.0, tpl.1, tpl.2)
 }
 
 /// Define some `Bounded` structure.
 pub struct UnitBox {
     pub id: i32,
-    pub pos: Point3<f32>,
+    pub pos: Point3,
     node_index: usize,
 }
 
 impl UnitBox {
-    pub fn new(id: i32, pos: Point3<f32>) -> UnitBox {
+    pub fn new(id: i32, pos: Point3) -> UnitBox {
         UnitBox {
             id: id,
             pos: pos,
@@ -87,8 +87,8 @@ pub fn build_some_bh<BH: BoundingHierarchy>() -> (Vec<UnitBox>, BH) {
 /// Given a ray, a bounding hierarchy, the complete list of shapes in the scene and a list of
 /// expected hits, verifies, whether the ray hits only the expected shapes.
 fn traverse_and_verify<BH: BoundingHierarchy>(
-    ray_origin: Point3<f32>,
-    ray_direction: Vector3<f32>,
+    ray_origin: Point3,
+    ray_direction: Vector3,
     all_shapes: &Vec<UnitBox>,
     bh: &BH,
     expected_shapes: &HashSet<i32>,
@@ -147,15 +147,15 @@ pub fn traverse_some_bh<BH: BoundingHierarchy>() {
 /// A triangle struct. Instance of a more complex `Bounded` primitive.
 #[derive(Debug)]
 pub struct Triangle {
-    pub a: Point3<f32>,
-    pub b: Point3<f32>,
-    pub c: Point3<f32>,
+    pub a: Point3,
+    pub b: Point3,
+    pub c: Point3,
     aabb: AABB,
     node_index: usize,
 }
 
 impl Triangle {
-    pub fn new(a: Point3<f32>, b: Point3<f32>, c: Point3<f32>) -> Triangle {
+    pub fn new(a: Point3, b: Point3, c: Point3) -> Triangle {
         Triangle {
             a: a,
             b: b,
@@ -227,7 +227,7 @@ impl<I: FromPrimitive + Integer> FromRawVertex<I> for Triangle {
 }
 
 /// Creates a unit size cube centered at `pos` and pushes the triangles to `shapes`.
-fn push_cube(pos: Point3<f32>, shapes: &mut Vec<Triangle>) {
+fn push_cube(pos: Point3, shapes: &mut Vec<Triangle>) {
     let top_front_right = pos + Vector3::new(0.5, 0.5, -0.5);
     let top_back_right = pos + Vector3::new(0.5, 0.5, 0.5);
     let top_back_left = pos + Vector3::new(-0.5, 0.5, 0.5);
@@ -315,7 +315,7 @@ pub fn next_point3_raw(seed: &mut u64) -> (i32, i32, i32) {
 }
 
 /// Generates a new `Point3`, which will lie inside the given `aabb`. Mutates the seed.
-pub fn next_point3(seed: &mut u64, aabb: &AABB) -> Point3<f32> {
+pub fn next_point3(seed: &mut u64, aabb: &AABB) -> Point3 {
     let (a, b, c) = next_point3_raw(seed);
     use std::i32;
     let float_vector = Vector3::new(
@@ -403,11 +403,11 @@ pub fn randomly_transform_scene(
 
     for index in &indices {
         let aabb = triangles[*index].aabb();
-        let min_move_bound = bounds.min - aabb.min.coords;
-        let max_move_bound = bounds.max - aabb.max.coords;
+        let min_move_bound = bounds.min - aabb.min;
+        let max_move_bound = bounds.max - aabb.max;
         let movement_bounds = AABB::with_bounds(min_move_bound, max_move_bound);
 
-        let mut random_offset = next_point3(seed, &movement_bounds).coords;
+        let mut random_offset = next_point3(seed, &movement_bounds);
         random_offset.x = max_offset.min((-max_offset).max(random_offset.x));
         random_offset.y = max_offset.min((-max_offset).max(random_offset.y));
         random_offset.z = max_offset.min((-max_offset).max(random_offset.z));
@@ -431,7 +431,7 @@ pub fn randomly_transform_scene(
 #[cfg(feature = "bench")]
 pub fn create_ray(seed: &mut u64, bounds: &AABB) -> Ray {
     let origin = next_point3(seed, bounds);
-    let direction = next_point3(seed, bounds).coords;
+    let direction = next_point3(seed, bounds);
     Ray::new(origin, direction)
 }
 
