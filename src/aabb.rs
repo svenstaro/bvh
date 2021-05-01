@@ -657,7 +657,6 @@ mod tests {
     use crate::testbase::{tuple_to_point,
                           tuple_to_vector,
                           TupleVec,
-                          tuplevec_small_strategy,
                           tuplevec_large_strategy};
     use crate::EPSILON;
     use crate::{Point3, Vector3};
@@ -749,9 +748,10 @@ mod tests {
     }
 
     // Test whether some points relative to the center of an AABB are classified correctly.
+    // Currently doesn't test `approx_contains_eps` or `contains` very well due to scaling by 0.9 and 1.1.
     proptest! {
         #[test]
-        fn test_points_relative_to_center_and_size(a in tuplevec_small_strategy(), b in tuplevec_small_strategy()) {
+        fn test_points_relative_to_center_and_size(a in tuplevec_large_strategy(), b in tuplevec_large_strategy()) {
             // Generate some nonempty AABB
             let aabb = AABB::empty()
                 .grow(&tuple_to_point(&a))
@@ -763,12 +763,12 @@ mod tests {
             let center = aabb.center();
 
             // Compute the min and the max corners of the AABB by hand
-            let inside_ppp = center + size_half;
-            let inside_mmm = center - size_half;
+            let inside_ppp = center + size_half * 0.9;
+            let inside_mmm = center - size_half * 0.9;
 
             // Generate two points which are outside the AABB
-            let outside_ppp = inside_ppp + Vector3::new(0.1, 0.1, 0.1);
-            let outside_mmm = inside_mmm - Vector3::new(0.1, 0.1, 0.1);
+            let outside_ppp = inside_ppp + size_half * 1.1;
+            let outside_mmm = inside_mmm - size_half * 1.1;
 
             assert!(aabb.approx_contains_eps(&inside_ppp, EPSILON));
             assert!(aabb.approx_contains_eps(&inside_mmm, EPSILON));
