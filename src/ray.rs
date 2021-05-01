@@ -319,10 +319,10 @@ mod tests {
 
     use crate::aabb::AABB;
     use crate::ray::Ray;
-    use crate::testbase::{tuple_to_point, TupleVec};
+    use crate::testbase::{tuple_to_point, tuplevec_small_strategy, TupleVec};
     use crate::EPSILON;
 
-    use quickcheck::quickcheck;
+    use proptest::prelude::*;
 
     /// Generates a random `Ray` which points at at a random `AABB`.
     fn gen_ray_to_aabb(data: (TupleVec, TupleVec, TupleVec)) -> (Ray, AABB) {
@@ -340,85 +340,90 @@ mod tests {
         (ray, aabb)
     }
 
-    // Test whether a `Ray` which points at the center of an `AABB` intersects it.
-    // Uses the optimized algorithm.
-    quickcheck! {
-        fn test_ray_points_at_aabb_center(data: (TupleVec, TupleVec, TupleVec)) -> bool {
+    proptest! {
+        // Test whether a `Ray` which points at the center of an `AABB` intersects it.
+        // Uses the optimized algorithm.
+        #[test]
+        fn test_ray_points_at_aabb_center(data in (tuplevec_small_strategy(),
+                                                   tuplevec_small_strategy(),
+                                                   tuplevec_small_strategy())) {
             let (ray, aabb) = gen_ray_to_aabb(data);
-            ray.intersects_aabb(&aabb)
+            assert!(ray.intersects_aabb(&aabb));
         }
-    }
 
-    // Test whether a `Ray` which points at the center of an `AABB` intersects it.
-    // Uses the naive algorithm.
-    quickcheck! {
-        fn test_ray_points_at_aabb_center_naive(data: (TupleVec, TupleVec, TupleVec)) -> bool {
+        // Test whether a `Ray` which points at the center of an `AABB` intersects it.
+        // Uses the naive algorithm.
+        #[test]
+        fn test_ray_points_at_aabb_center_naive(data in (tuplevec_small_strategy(),
+                                                         tuplevec_small_strategy(),
+                                                         tuplevec_small_strategy())) {
             let (ray, aabb) = gen_ray_to_aabb(data);
-            ray.intersects_aabb_naive(&aabb)
+            assert!(ray.intersects_aabb_naive(&aabb));
         }
-    }
 
-    // Test whether a `Ray` which points at the center of an `AABB` intersects it.
-    // Uses the branchless algorithm.
-    quickcheck! {
-        fn test_ray_points_at_aabb_center_branchless(data: (TupleVec, TupleVec, TupleVec)) -> bool {
+        // Test whether a `Ray` which points at the center of an `AABB` intersects it.
+        // Uses the branchless algorithm.
+        #[test]
+        fn test_ray_points_at_aabb_center_branchless(data in (tuplevec_small_strategy(),
+                                                              tuplevec_small_strategy(),
+                                                              tuplevec_small_strategy())) {
             let (ray, aabb) = gen_ray_to_aabb(data);
-            ray.intersects_aabb_branchless(&aabb)
+            assert!(ray.intersects_aabb_branchless(&aabb));
         }
-    }
 
-    // Test whether a `Ray` which points away from the center of an `AABB`
-    // does not intersect it, unless its origin is inside the `AABB`.
-    // Uses the optimized algorithm.
-    quickcheck! {
-        fn test_ray_points_from_aabb_center(data: (TupleVec, TupleVec, TupleVec)) -> bool {
+        // Test whether a `Ray` which points away from the center of an `AABB`
+        // does not intersect it, unless its origin is inside the `AABB`.
+        // Uses the optimized algorithm.
+        #[test]
+        fn test_ray_points_from_aabb_center(data in (tuplevec_small_strategy(),
+                                                     tuplevec_small_strategy(),
+                                                     tuplevec_small_strategy())) {
             let (mut ray, aabb) = gen_ray_to_aabb(data);
 
             // Invert the direction of the ray
             ray.direction = -ray.direction;
             ray.inv_direction = -ray.inv_direction;
-            !ray.intersects_aabb(&aabb) || aabb.contains(&ray.origin)
+            assert!(!ray.intersects_aabb(&aabb) || aabb.contains(&ray.origin));
         }
-    }
 
-    // Test whether a `Ray` which points away from the center of an `AABB`
-    // does not intersect it, unless its origin is inside the `AABB`.
-    // Uses the naive algorithm.
-    quickcheck! {
-        fn test_ray_points_from_aabb_center_naive(data: (TupleVec, TupleVec, TupleVec)) -> bool {
+        // Test whether a `Ray` which points away from the center of an `AABB`
+        // does not intersect it, unless its origin is inside the `AABB`.
+        // Uses the naive algorithm.
+        #[test]
+        fn test_ray_points_from_aabb_center_naive(data in (tuplevec_small_strategy(),
+                                                           tuplevec_small_strategy(),
+                                                           tuplevec_small_strategy())) {
             let (mut ray, aabb) = gen_ray_to_aabb(data);
 
             // Invert the ray direction
             ray.direction = -ray.direction;
             ray.inv_direction = -ray.inv_direction;
-            !ray.intersects_aabb_naive(&aabb) || aabb.contains(&ray.origin)
+            assert!(!ray.intersects_aabb_naive(&aabb) || aabb.contains(&ray.origin));
         }
-    }
 
-    // Test whether a `Ray` which points away from the center of an `AABB`
-    // does not intersect it, unless its origin is inside the `AABB`.
-    // Uses the branchless algorithm.
-    quickcheck! {
-        fn test_ray_points_from_aabb_center_branchless(data: (TupleVec, TupleVec, TupleVec))
-                                                       -> bool {
+        // Test whether a `Ray` which points away from the center of an `AABB`
+        // does not intersect it, unless its origin is inside the `AABB`.
+        // Uses the branchless algorithm.
+        #[test]
+        fn test_ray_points_from_aabb_center_branchless(data in (tuplevec_small_strategy(),
+                                                                tuplevec_small_strategy(),
+                                                                tuplevec_small_strategy())) {
             let (mut ray, aabb) = gen_ray_to_aabb(data);
             // Invert the ray direction
             ray.direction = -ray.direction;
             ray.inv_direction = -ray.inv_direction;
-            !ray.intersects_aabb_branchless(&aabb) || aabb.contains(&ray.origin)
+            assert!(!ray.intersects_aabb_branchless(&aabb) || aabb.contains(&ray.origin));
         }
-    }
 
-    // Test whether a `Ray` which points at the center of a triangle
-    // intersects it, unless it sees the back face, which is culled.
-    quickcheck! {
-        fn test_ray_hits_triangle(a: TupleVec,
-                                  b: TupleVec,
-                                  c: TupleVec,
-                                  origin: TupleVec,
+        // Test whether a `Ray` which points at the center of a triangle
+        // intersects it, unless it sees the back face, which is culled.
+        #[test]
+        fn test_ray_hits_triangle(a in tuplevec_small_strategy(),
+                                  b in tuplevec_small_strategy(),
+                                  c in tuplevec_small_strategy(),
+                                  origin in tuplevec_small_strategy(),
                                   u: u16,
-                                  v: u16)
-                                  -> bool {
+                                  v: u16) {
             // Define a triangle, u/v vectors and its normal
             let triangle = (tuple_to_point(&a), tuple_to_point(&b), tuple_to_point(&c));
             let u_vec = triangle.1 - triangle.0;
@@ -446,7 +451,7 @@ mod tests {
             // Either the intersection is in the back side (including the triangle-plane)
             if on_back_side {
                 // Intersection must be INFINITY, u and v are undefined
-                intersects.distance == INFINITY
+                assert!(intersects.distance == INFINITY);
             } else {
                 // Or it is on the front side
                 // Either the intersection is inside the triangle, which it should be
@@ -468,7 +473,7 @@ mod tests {
                     println!("v {}", v);
                 }
 
-                intersection_inside || close_to_border
+                assert!(intersection_inside || close_to_border);
             }
         }
     }
