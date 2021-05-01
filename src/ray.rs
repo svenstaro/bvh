@@ -340,9 +340,10 @@ mod tests {
         (ray, aabb)
     }
 
-    // Test whether a `Ray` which points at the center of an `AABB` intersects it.
-    // Uses the optimized algorithm.
+
     proptest! {
+        // Test whether a `Ray` which points at the center of an `AABB` intersects it.
+        // Uses the optimized algorithm.
         #[test]
         fn test_ray_points_at_aabb_center(data in (tuplevec_small_strategy(),
                                                    tuplevec_small_strategy(),
@@ -350,11 +351,9 @@ mod tests {
             let (ray, aabb) = gen_ray_to_aabb(data);
             assert!(ray.intersects_aabb(&aabb));
         }
-    }
 
-    // Test whether a `Ray` which points at the center of an `AABB` intersects it.
-    // Uses the naive algorithm.
-    proptest! {
+        // Test whether a `Ray` which points at the center of an `AABB` intersects it.
+        // Uses the naive algorithm.
         #[test]
         fn test_ray_points_at_aabb_center_naive(data in (tuplevec_small_strategy(),
                                                          tuplevec_small_strategy(),
@@ -362,11 +361,9 @@ mod tests {
             let (ray, aabb) = gen_ray_to_aabb(data);
             assert!(ray.intersects_aabb_naive(&aabb));
         }
-    }
 
-    // Test whether a `Ray` which points at the center of an `AABB` intersects it.
-    // Uses the branchless algorithm.
-    proptest! {
+        // Test whether a `Ray` which points at the center of an `AABB` intersects it.
+        // Uses the branchless algorithm.
         #[test]
         fn test_ray_points_at_aabb_center_branchless(data in (tuplevec_small_strategy(),
                                                               tuplevec_small_strategy(),
@@ -374,12 +371,10 @@ mod tests {
             let (ray, aabb) = gen_ray_to_aabb(data);
             assert!(ray.intersects_aabb_branchless(&aabb));
         }
-    }
 
-    // Test whether a `Ray` which points away from the center of an `AABB`
-    // does not intersect it, unless its origin is inside the `AABB`.
-    // Uses the optimized algorithm.
-    proptest! {
+        // Test whether a `Ray` which points away from the center of an `AABB`
+        // does not intersect it, unless its origin is inside the `AABB`.
+        // Uses the optimized algorithm.
         #[test]
         fn test_ray_points_from_aabb_center(data in (tuplevec_small_strategy(),
                                                      tuplevec_small_strategy(),
@@ -391,12 +386,10 @@ mod tests {
             ray.inv_direction = -ray.inv_direction;
             assert!(!ray.intersects_aabb(&aabb) || aabb.contains(&ray.origin));
         }
-    }
 
-    // Test whether a `Ray` which points away from the center of an `AABB`
-    // does not intersect it, unless its origin is inside the `AABB`.
-    // Uses the naive algorithm.
-    proptest! {
+        // Test whether a `Ray` which points away from the center of an `AABB`
+        // does not intersect it, unless its origin is inside the `AABB`.
+        // Uses the naive algorithm.
         #[test]
         fn test_ray_points_from_aabb_center_naive(data in (tuplevec_small_strategy(),
                                                            tuplevec_small_strategy(),
@@ -408,12 +401,10 @@ mod tests {
             ray.inv_direction = -ray.inv_direction;
             assert!(!ray.intersects_aabb_naive(&aabb) || aabb.contains(&ray.origin));
         }
-    }
 
-    // Test whether a `Ray` which points away from the center of an `AABB`
-    // does not intersect it, unless its origin is inside the `AABB`.
-    // Uses the branchless algorithm.
-    proptest! {
+        // Test whether a `Ray` which points away from the center of an `AABB`
+        // does not intersect it, unless its origin is inside the `AABB`.
+        // Uses the branchless algorithm.
         #[test]
         fn test_ray_points_from_aabb_center_branchless(data in (tuplevec_small_strategy(),
                                                                 tuplevec_small_strategy(),
@@ -424,11 +415,9 @@ mod tests {
             ray.inv_direction = -ray.inv_direction;
             assert!(!ray.intersects_aabb_branchless(&aabb) || aabb.contains(&ray.origin));
         }
-    }
 
-    // Test whether a `Ray` which points at the center of a triangle
-    // intersects it, unless it sees the back face, which is culled.
-    proptest! {
+        // Test whether a `Ray` which points at the center of a triangle
+        // intersects it, unless it sees the back face, which is culled.
         #[test]
         fn test_ray_hits_triangle(a in tuplevec_small_strategy(),
                                   b in tuplevec_small_strategy(),

@@ -131,18 +131,16 @@ mod test {
     use crate::axis::Axis;
     use proptest::prelude::*;
 
-    // Test whether accessing arrays by index is the same as accessing them by `Axis`.
     proptest! {
+        // Test whether accessing arrays by index is the same as accessing them by `Axis`.
         #[test]
         fn test_index_by_axis(tpl: (f32, f32, f32)) {
             let a = [tpl.0, tpl.1, tpl.2];
 
             assert!(a[0] == a[Axis::X] && a[1] == a[Axis::Y] && a[2] == a[Axis::Z]);
         }
-    }
 
-    // Test whether arrays can be mutably set, by indexing via `Axis`.
-    proptest! {
+        // Test whether arrays can be mutably set, by indexing via `Axis`.
         #[test]
         fn test_set_by_axis(tpl: (f32, f32, f32)) {
             let mut a = [0.0, 0.0, 0.0];

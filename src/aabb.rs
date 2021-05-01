@@ -664,8 +664,8 @@ mod tests {
     use float_eq::assert_float_eq;
     use proptest::prelude::*;
 
-    // Test whether an empty `AABB` does not contains anything.
     proptest! {
+        // Test whether an empty `AABB` does not contains anything.
         #[test]
         fn test_empty_contains_nothing(tpl: TupleVec) {
             // Define a random Point
@@ -677,10 +677,8 @@ mod tests {
             // It should not contain anything
             assert!(!aabb.contains(&p));
         }
-    }
 
-    // Test whether a default `AABB` is empty.
-    proptest! {
+        // Test whether a default `AABB` is empty.
         #[test]
         fn test_default_is_empty(tpl: TupleVec) {
             // Define a random Point
@@ -692,10 +690,8 @@ mod tests {
             // It should not contain anything
             assert!(!aabb.contains(&p));
         }
-    }
 
-    // Test whether an `AABB` always contains its center.
-    proptest! {
+        // Test whether an `AABB` always contains its center.
         #[test]
         fn test_aabb_contains_center(a: TupleVec, b: TupleVec) {
             // Define two points which will be the corners of the `AABB`
@@ -708,10 +704,8 @@ mod tests {
             // Its center should be inside the `AABB`
             assert!(aabb.contains(&aabb.center()));
         }
-    }
 
-    // Test whether the joint of two point-sets contains all the points.
-    proptest! {
+        // Test whether the joint of two point-sets contains all the points.
         #[test]
         fn test_join_two_aabbs(a: (TupleVec, TupleVec, TupleVec, TupleVec, TupleVec),
                                b: (TupleVec, TupleVec, TupleVec, TupleVec, TupleVec))
@@ -745,11 +739,9 @@ mod tests {
             // Return the three properties
             assert!(aabb1_contains_init_five && aabb2_contains_last_five && aabbu_contains_all);
         }
-    }
 
-    // Test whether some points relative to the center of an AABB are classified correctly.
-    // Currently doesn't test `approx_contains_eps` or `contains` very well due to scaling by 0.9 and 1.1.
-    proptest! {
+        // Test whether some points relative to the center of an AABB are classified correctly.
+        // Currently doesn't test `approx_contains_eps` or `contains` very well due to scaling by 0.9 and 1.1.
         #[test]
         fn test_points_relative_to_center_and_size(a in tuplevec_large_strategy(), b in tuplevec_large_strategy()) {
             // Generate some nonempty AABB
@@ -775,10 +767,8 @@ mod tests {
             assert!(!aabb.contains(&outside_ppp));
             assert!(!aabb.contains(&outside_mmm));
         }
-    }
 
-    // Test whether the surface of a nonempty AABB is always positive.
-    proptest! {
+        // Test whether the surface of a nonempty AABB is always positive.
         #[test]
         fn test_surface_always_positive(a: TupleVec, b: TupleVec) {
             let aabb = AABB::empty()
@@ -786,10 +776,8 @@ mod tests {
                 .grow(&tuple_to_point(&b));
             assert!(aabb.surface_area() >= 0.0);
         }
-    }
 
-    // Compute and compare the surface area of an AABB by hand.
-    proptest! {
+        // Compute and compare the surface area of an AABB by hand.
         #[test]
         fn test_surface_area_cube(pos: TupleVec, size in EPSILON..10e30_f32) {
             // Generate some non-empty AABB
@@ -802,10 +790,8 @@ mod tests {
             let area_b = 6.0 * size * size;
             assert_float_eq!(area_a, area_b, rmax <= EPSILON);
         }
-    }
 
-    // Test whether the volume of a nonempty AABB is always positive.
-    proptest! {
+        // Test whether the volume of a nonempty AABB is always positive.
         #[test]
         fn test_volume_always_positive(a in tuplevec_large_strategy(), b in tuplevec_large_strategy()) {
             let aabb = AABB::empty()
@@ -813,10 +799,8 @@ mod tests {
                 .grow(&tuple_to_point(&b));
             assert!(aabb.volume() >= 0.0);
         }
-    }
 
-    // Compute and compare the volume of an AABB by hand.
-    proptest! {
+        // Compute and compare the volume of an AABB by hand.
         #[test]
         fn test_volume_by_hand(pos in tuplevec_large_strategy(), size in tuplevec_large_strategy()) {
             // Generate some non-empty AABB
@@ -829,10 +813,8 @@ mod tests {
             let volume_b = (size.x * size.y * size.z).abs();
             assert_float_eq!(volume_a, volume_b, rmax <= EPSILON);
         }
-    }
 
-    // Test whether generating an `AABB` from the min and max bounds yields the same `AABB`.
-    proptest! {
+        // Test whether generating an `AABB` from the min and max bounds yields the same `AABB`.
         #[test]
         fn test_create_aabb_from_indexable(a: TupleVec, b: TupleVec, p: TupleVec) {
             // Create a random point
