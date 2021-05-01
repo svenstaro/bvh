@@ -6,10 +6,3 @@ updates:
     interval: daily
     time: "04:00"
   open-pull-requests-limit: 10
-  ignore:
-  - dependency-name: num
-    versions:
-    - 0.4.0
-  - dependency-name: nalgebra
-    versions:
-    - 0.25.0
