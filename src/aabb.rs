@@ -656,8 +656,9 @@ mod tests {
     use crate::aabb::{Bounded, AABB};
     use crate::testbase::{tuple_to_point, tuple_to_vector, TupleVec};
     use crate::EPSILON;
-
     use crate::{Point3, Vector3};
+
+    use float_eq::assert_float_eq;
     use proptest::prelude::*;
 
     // Test whether an empty `AABB` does not contains anything.
@@ -786,7 +787,7 @@ mod tests {
     // Compute and compare the surface area of an AABB by hand.
     proptest! {
         #[test]
-        fn test_surface_area_cube(pos: TupleVec, size: f32) {
+        fn test_surface_area_cube(pos: TupleVec, size in EPSILON..10e30_f32) {
             // Generate some non-empty AABB
             let pos = tuple_to_point(&pos);
             let size_vec = Vector3::new(size, size, size);
@@ -795,7 +796,7 @@ mod tests {
             // Check its surface area
             let area_a = aabb.surface_area();
             let area_b = 6.0 * size * size;
-            assert!((1.0 - (area_a / area_b)).abs() < EPSILON);
+            assert_float_eq!(area_a, area_b, rmax <= EPSILON);
         }
     }
 
