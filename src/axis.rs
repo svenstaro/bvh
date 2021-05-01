@@ -129,27 +129,29 @@ impl IndexMut<Axis> for MyType<Vector3> {
 #[cfg(test)]
 mod test {
     use crate::axis::Axis;
-    use quickcheck::quickcheck;
+    use proptest::prelude::*;
 
     // Test whether accessing arrays by index is the same as accessing them by `Axis`.
-    quickcheck! {
-        fn test_index_by_axis(tpl: (f32, f32, f32)) -> bool {
+    proptest! {
+        #[test]
+        fn test_index_by_axis(tpl: (f32, f32, f32)) {
             let a = [tpl.0, tpl.1, tpl.2];
 
-            a[0] == a[Axis::X] && a[1] == a[Axis::Y] && a[2] == a[Axis::Z]
+            assert!(a[0] == a[Axis::X] && a[1] == a[Axis::Y] && a[2] == a[Axis::Z]);
         }
     }
 
     // Test whether arrays can be mutably set, by indexing via `Axis`.
-    quickcheck! {
-        fn test_set_by_axis(tpl: (f32, f32, f32)) -> bool {
+    proptest! {
+        #[test]
+        fn test_set_by_axis(tpl: (f32, f32, f32)) {
             let mut a = [0.0, 0.0, 0.0];
 
             a[Axis::X] = tpl.0;
             a[Axis::Y] = tpl.1;
             a[Axis::Z] = tpl.2;
 
-            a[0] == tpl.0 && a[1] == tpl.1 && a[2] == tpl.2
+            assert!(a[0] == tpl.0 && a[1] == tpl.1 && a[2] == tpl.2);
         }
     }
 }

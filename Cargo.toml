@@ -21,7 +21,7 @@ num = "0.4"
 glam = "0.13.0"
 
 [dev-dependencies]
-quickcheck = "0.9"
+proptest = "1.0.0"
 obj-rs = "0.6"
 
 [features]

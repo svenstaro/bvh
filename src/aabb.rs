@@ -658,11 +658,12 @@ mod tests {
     use crate::EPSILON;
 
     use crate::{Point3, Vector3};
-    use quickcheck::quickcheck;
+    use proptest::prelude::*;
 
     // Test whether an empty `AABB` does not contains anything.
-    quickcheck! {
-        fn test_empty_contains_nothing(tpl: TupleVec) -> bool {
+    proptest! {
+        #[test]
+        fn test_empty_contains_nothing(tpl: TupleVec) {
             // Define a random Point
             let p = tuple_to_point(&tpl);
 
@@ -670,13 +671,14 @@ mod tests {
             let aabb = AABB::empty();
 
             // It should not contain anything
-            !aabb.contains(&p)
+            assert!(!aabb.contains(&p));
         }
     }
 
     // Test whether a default `AABB` is empty.
-    quickcheck! {
-        fn test_default_is_empty(tpl: TupleVec) -> bool {
+    proptest! {
+        #[test]
+        fn test_default_is_empty(tpl: TupleVec) {
             // Define a random Point
             let p = tuple_to_point(&tpl);
 
@@ -684,13 +686,14 @@ mod tests {
             let aabb: AABB = Default::default();
 
             // It should not contain anything
-            !aabb.contains(&p)
+            assert!(!aabb.contains(&p));
         }
     }
 
     // Test whether an `AABB` always contains its center.
-    quickcheck! {
-        fn test_aabb_contains_center(a: TupleVec, b: TupleVec) -> bool {
+    proptest! {
+        #[test]
+        fn test_aabb_contains_center(a: TupleVec, b: TupleVec) {
             // Define two points which will be the corners of the `AABB`
             let p1 = tuple_to_point(&a);
             let p2 = tuple_to_point(&b);
@@ -699,15 +702,16 @@ mod tests {
             let aabb = AABB::empty().grow(&p1).join_bounded(&p2);
 
             // Its center should be inside the `AABB`
-            aabb.contains(&aabb.center())
+            assert!(aabb.contains(&aabb.center()));
         }
     }
 
     // Test whether the joint of two point-sets contains all the points.
-    quickcheck! {
+    proptest! {
+        #[test]
         fn test_join_two_aabbs(a: (TupleVec, TupleVec, TupleVec, TupleVec, TupleVec),
                                b: (TupleVec, TupleVec, TupleVec, TupleVec, TupleVec))
-                               -> bool {
+                               {
             // Define an array of ten points
             let points = [a.0, a.1, a.2, a.3, a.4, b.0, b.1, b.2, b.3, b.4];
 
@@ -735,13 +739,14 @@ mod tests {
                 .fold(true, |b, point| b && aabbu.contains(&point));
 
             // Return the three properties
-            aabb1_contains_init_five && aabb2_contains_last_five && aabbu_contains_all
+            assert!(aabb1_contains_init_five && aabb2_contains_last_five && aabbu_contains_all);
         }
     }
 
     // Test whether some points relative to the center of an AABB are classified correctly.
-    quickcheck! {
-        fn test_points_relative_to_center_and_size(a: TupleVec, b: TupleVec) -> bool {
+    proptest! {
+        #[test]
+        fn test_points_relative_to_center_and_size(a: TupleVec, b: TupleVec) {
             // Generate some nonempty AABB
             let aabb = AABB::empty()
                 .grow(&tuple_to_point(&a))
@@ -764,24 +769,24 @@ mod tests {
             assert!(aabb.approx_contains_eps(&inside_mmm, EPSILON));
             assert!(!aabb.contains(&outside_ppp));
             assert!(!aabb.contains(&outside_mmm));
-
-            true
         }
     }
 
     // Test whether the surface of a nonempty AABB is always positive.
-    quickcheck! {
-        fn test_surface_always_positive(a: TupleVec, b: TupleVec) -> bool {
+    proptest! {
+        #[test]
+        fn test_surface_always_positive(a: TupleVec, b: TupleVec) {
             let aabb = AABB::empty()
                 .grow(&tuple_to_point(&a))
                 .grow(&tuple_to_point(&b));
-            aabb.surface_area() >= 0.0
+            assert!(aabb.surface_area() >= 0.0);
         }
     }
 
     // Compute and compare the surface area of an AABB by hand.
-    quickcheck! {
-        fn test_surface_area_cube(pos: TupleVec, size: f32) -> bool {
+    proptest! {
+        #[test]
+        fn test_surface_area_cube(pos: TupleVec, size: f32) {
             // Generate some non-empty AABB
             let pos = tuple_to_point(&pos);
             let size_vec = Vector3::new(size, size, size);
@@ -790,23 +795,25 @@ mod tests {
             // Check its surface area
             let area_a = aabb.surface_area();
             let area_b = 6.0 * size * size;
-            (1.0 - (area_a / area_b)).abs() < EPSILON
+            assert!((1.0 - (area_a / area_b)).abs() < EPSILON);
         }
     }
 
     // Test whether the volume of a nonempty AABB is always positive.
-    quickcheck! {
-        fn test_volume_always_positive(a: TupleVec, b: TupleVec) -> bool {
+    proptest! {
+        #[test]
+        fn test_volume_always_positive(a: TupleVec, b: TupleVec) {
             let aabb = AABB::empty()
                 .grow(&tuple_to_point(&a))
                 .grow(&tuple_to_point(&b));
-            aabb.volume() >= 0.0
+            assert!(aabb.volume() >= 0.0);
         }
     }
 
     // Compute and compare the volume of an AABB by hand.
-    quickcheck! {
-        fn test_volume_by_hand(pos: TupleVec, size: TupleVec) -> bool {
+    proptest! {
+        #[test]
+        fn test_volume_by_hand(pos: TupleVec, size: TupleVec) {
             // Generate some non-empty AABB
             let pos = tuple_to_point(&pos);
             let size = tuple_to_vector(&size);
@@ -815,13 +822,14 @@ mod tests {
             // Check its volume
             let volume_a = aabb.volume();
             let volume_b = (size.x * size.y * size.z).abs();
-            (1.0 - (volume_a / volume_b)).abs() < EPSILON
+            assert!((1.0 - (volume_a / volume_b)).abs() < EPSILON);
         }
     }
 
     // Test whether generating an `AABB` from the min and max bounds yields the same `AABB`.
-    quickcheck! {
-        fn test_create_aabb_from_indexable(a: TupleVec, b: TupleVec, p: TupleVec) -> bool {
+    proptest! {
+        #[test]
+        fn test_create_aabb_from_indexable(a: TupleVec, b: TupleVec, p: TupleVec) {
             // Create a random point
             let point = tuple_to_point(&p);
 
@@ -834,7 +842,7 @@ mod tests {
             let aabb_by_index = AABB::with_bounds(aabb[0], aabb[1]);
 
             // The AABBs should be the same
-            aabb.contains(&point) == aabb_by_index.contains(&point)
+            assert!(aabb.contains(&point) == aabb_by_index.contains(&point));
         }
     }
 }
