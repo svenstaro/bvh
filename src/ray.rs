@@ -340,7 +340,6 @@ mod tests {
         (ray, aabb)
     }
 
-
     proptest! {
         // Test whether a `Ray` which points at the center of an `AABB` intersects it.
         // Uses the optimized algorithm.

@@ -654,10 +654,7 @@ impl Bounded for Point3 {
 #[cfg(test)]
 mod tests {
     use crate::aabb::{Bounded, AABB};
-    use crate::testbase::{tuple_to_point,
-                          tuple_to_vector,
-                          TupleVec,
-                          tuplevec_large_strategy};
+    use crate::testbase::{tuple_to_point, tuple_to_vector, tuplevec_large_strategy, TupleVec};
     use crate::EPSILON;
     use crate::{Point3, Vector3};
 
