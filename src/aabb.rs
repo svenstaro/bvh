@@ -654,7 +654,11 @@ impl Bounded for Point3 {
 #[cfg(test)]
 mod tests {
     use crate::aabb::{Bounded, AABB};
-    use crate::testbase::{tuple_to_point, tuple_to_vector, TupleVec};
+    use crate::testbase::{tuple_to_point,
+                          tuple_to_vector,
+                          TupleVec,
+                          tuplevec_small_strategy,
+                          tuplevec_large_strategy};
     use crate::EPSILON;
     use crate::{Point3, Vector3};
 
@@ -747,7 +751,7 @@ mod tests {
     // Test whether some points relative to the center of an AABB are classified correctly.
     proptest! {
         #[test]
-        fn test_points_relative_to_center_and_size(a: TupleVec, b: TupleVec) {
+        fn test_points_relative_to_center_and_size(a in tuplevec_small_strategy(), b in tuplevec_small_strategy()) {
             // Generate some nonempty AABB
             let aabb = AABB::empty()
                 .grow(&tuple_to_point(&a))
@@ -803,7 +807,7 @@ mod tests {
     // Test whether the volume of a nonempty AABB is always positive.
     proptest! {
         #[test]
-        fn test_volume_always_positive(a: TupleVec, b: TupleVec) {
+        fn test_volume_always_positive(a in tuplevec_large_strategy(), b in tuplevec_large_strategy()) {
             let aabb = AABB::empty()
                 .grow(&tuple_to_point(&a))
                 .grow(&tuple_to_point(&b));
@@ -814,7 +818,7 @@ mod tests {
     // Compute and compare the volume of an AABB by hand.
     proptest! {
         #[test]
-        fn test_volume_by_hand(pos: TupleVec, size: TupleVec) {
+        fn test_volume_by_hand(pos in tuplevec_large_strategy(), size in tuplevec_large_strategy()) {
             // Generate some non-empty AABB
             let pos = tuple_to_point(&pos);
             let size = tuple_to_vector(&size);
@@ -823,7 +827,7 @@ mod tests {
             // Check its volume
             let volume_a = aabb.volume();
             let volume_b = (size.x * size.y * size.z).abs();
-            assert!((1.0 - (volume_a / volume_b)).abs() < EPSILON);
+            assert_float_eq!(volume_a, volume_b, rmax <= EPSILON);
         }
     }
 

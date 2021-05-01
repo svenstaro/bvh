@@ -9,6 +9,7 @@ use crate::{Point3, Vector3};
 use num::{FromPrimitive, Integer};
 use obj::raw::object::Polygon;
 use obj::*;
+use proptest::prelude::*;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
@@ -19,6 +20,27 @@ use crate::ray::Ray;
 
 /// A vector represented as a tuple
 pub type TupleVec = (f32, f32, f32);
+
+/// Generate a `TupleVec` for [`proptest::strategy::Strategy`] from -10e10 to 10e10
+/// A small enough range to prevent most fp32 errors from breaking certain tests
+/// Tests which rely on this strategy should probably be rewritten
+pub fn tuplevec_small_strategy() -> impl Strategy<Value = TupleVec> {
+    (
+        -10e10_f32..10e10_f32,
+        -10e10_f32..10e10_f32,
+        -10e10_f32..10e10_f32,
+    )
+}
+
+/// Generate a `TupleVec` for [`proptest::strategy::Strategy`] from -10e30 to 10e30
+/// A small enough range to prevent `f32::MAX` ranges from breaking certain tests
+pub fn tuplevec_large_strategy() -> impl Strategy<Value = TupleVec> {
+    (
+        -10e30_f32..10e30_f32,
+        -10e30_f32..10e30_f32,
+        -10e30_f32..10e30_f32,
+    )
+}
 
 /// Convert a `TupleVec` to a [`Point3`].
 pub fn tuple_to_point(tpl: &TupleVec) -> Point3 {

@@ -319,7 +319,7 @@ mod tests {
 
     use crate::aabb::AABB;
     use crate::ray::Ray;
-    use crate::testbase::{tuple_to_point, TupleVec};
+    use crate::testbase::{tuple_to_point, tuplevec_small_strategy, TupleVec};
     use crate::EPSILON;
 
     use proptest::prelude::*;
@@ -344,7 +344,9 @@ mod tests {
     // Uses the optimized algorithm.
     proptest! {
         #[test]
-        fn test_ray_points_at_aabb_center(data: (TupleVec, TupleVec, TupleVec)) {
+        fn test_ray_points_at_aabb_center(data in (tuplevec_small_strategy(),
+                                                   tuplevec_small_strategy(),
+                                                   tuplevec_small_strategy())) {
             let (ray, aabb) = gen_ray_to_aabb(data);
             assert!(ray.intersects_aabb(&aabb));
         }
@@ -354,7 +356,9 @@ mod tests {
     // Uses the naive algorithm.
     proptest! {
         #[test]
-        fn test_ray_points_at_aabb_center_naive(data: (TupleVec, TupleVec, TupleVec)) {
+        fn test_ray_points_at_aabb_center_naive(data in (tuplevec_small_strategy(),
+                                                         tuplevec_small_strategy(),
+                                                         tuplevec_small_strategy())) {
             let (ray, aabb) = gen_ray_to_aabb(data);
             assert!(ray.intersects_aabb_naive(&aabb));
         }
@@ -364,7 +368,9 @@ mod tests {
     // Uses the branchless algorithm.
     proptest! {
         #[test]
-        fn test_ray_points_at_aabb_center_branchless(data: (TupleVec, TupleVec, TupleVec)) {
+        fn test_ray_points_at_aabb_center_branchless(data in (tuplevec_small_strategy(),
+                                                              tuplevec_small_strategy(),
+                                                              tuplevec_small_strategy())) {
             let (ray, aabb) = gen_ray_to_aabb(data);
             assert!(ray.intersects_aabb_branchless(&aabb));
         }
@@ -375,7 +381,9 @@ mod tests {
     // Uses the optimized algorithm.
     proptest! {
         #[test]
-        fn test_ray_points_from_aabb_center(data: (TupleVec, TupleVec, TupleVec)) {
+        fn test_ray_points_from_aabb_center(data in (tuplevec_small_strategy(),
+                                                     tuplevec_small_strategy(),
+                                                     tuplevec_small_strategy())) {
             let (mut ray, aabb) = gen_ray_to_aabb(data);
 
             // Invert the direction of the ray
@@ -390,7 +398,9 @@ mod tests {
     // Uses the naive algorithm.
     proptest! {
         #[test]
-        fn test_ray_points_from_aabb_center_naive(data: (TupleVec, TupleVec, TupleVec)) {
+        fn test_ray_points_from_aabb_center_naive(data in (tuplevec_small_strategy(),
+                                                           tuplevec_small_strategy(),
+                                                           tuplevec_small_strategy())) {
             let (mut ray, aabb) = gen_ray_to_aabb(data);
 
             // Invert the ray direction
@@ -405,7 +415,9 @@ mod tests {
     // Uses the branchless algorithm.
     proptest! {
         #[test]
-        fn test_ray_points_from_aabb_center_branchless(data: (TupleVec, TupleVec, TupleVec)) {
+        fn test_ray_points_from_aabb_center_branchless(data in (tuplevec_small_strategy(),
+                                                                tuplevec_small_strategy(),
+                                                                tuplevec_small_strategy())) {
             let (mut ray, aabb) = gen_ray_to_aabb(data);
             // Invert the ray direction
             ray.direction = -ray.direction;
@@ -418,10 +430,10 @@ mod tests {
     // intersects it, unless it sees the back face, which is culled.
     proptest! {
         #[test]
-        fn test_ray_hits_triangle(a: TupleVec,
-                                  b: TupleVec,
-                                  c: TupleVec,
-                                  origin: TupleVec,
+        fn test_ray_hits_triangle(a in tuplevec_small_strategy(),
+                                  b in tuplevec_small_strategy(),
+                                  c in tuplevec_small_strategy(),
+                                  origin in tuplevec_small_strategy(),
                                   u: u16,
                                   v: u16) {
             // Define a triangle, u/v vectors and its normal
