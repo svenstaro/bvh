@@ -18,12 +18,13 @@ approx = "0.4"
 rand = "0.8"
 log = "0.4"
 num = "0.4"
-glam = "0.14.0"
+glam = "0.14"
 
 [dev-dependencies]
-proptest = "1.0.0"
+proptest = "1.0"
 obj-rs = "0.6"
-float_eq = "0.5.0"
+float_eq = "0.5"
+criterion = "0.3"
 
 [features]
 bench = []
