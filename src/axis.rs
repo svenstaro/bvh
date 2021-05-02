@@ -137,7 +137,7 @@ mod test {
         fn test_index_by_axis(tpl: (f32, f32, f32)) {
             let a = [tpl.0, tpl.1, tpl.2];
 
-            assert!(a[0] == a[Axis::X] && a[1] == a[Axis::Y] && a[2] == a[Axis::Z]);
+            assert!((a[0] - a[Axis::X]).abs() < f32::EPSILON && (a[1] - a[Axis::Y]).abs() < f32::EPSILON && (a[2] - a[Axis::Z]).abs() < f32::EPSILON);
         }
 
         // Test whether arrays can be mutably set, by indexing via `Axis`.
@@ -149,7 +149,7 @@ mod test {
             a[Axis::Y] = tpl.1;
             a[Axis::Z] = tpl.2;
 
-            assert!(a[0] == tpl.0 && a[1] == tpl.1 && a[2] == tpl.2);
+            assert!((a[0] - tpl.0).abs() < f32::EPSILON && (a[1] - tpl.1).abs() < f32::EPSILON && (a[2] - tpl.2).abs() < f32::EPSILON);
         }
     }
 }

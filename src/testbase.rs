@@ -62,8 +62,8 @@ pub struct UnitBox {
 impl UnitBox {
     pub fn new(id: i32, pos: Point3) -> UnitBox {
         UnitBox {
-            id: id,
-            pos: pos,
+            id,
+            pos,
             node_index: 0,
         }
     }
@@ -111,7 +111,7 @@ pub fn build_some_bh<BH: BoundingHierarchy>() -> (Vec<UnitBox>, BH) {
 fn traverse_and_verify<BH: BoundingHierarchy>(
     ray_origin: Point3,
     ray_direction: Vector3,
-    all_shapes: &Vec<UnitBox>,
+    all_shapes: &[UnitBox],
     bh: &BH,
     expected_shapes: &HashSet<i32>,
 ) {
@@ -179,9 +179,9 @@ pub struct Triangle {
 impl Triangle {
     pub fn new(a: Point3, b: Point3, c: Point3) -> Triangle {
         Triangle {
-            a: a,
-            b: b,
-            c: c,
+            a,
+            b,
+            c,
             aabb: AABB::empty().grow(&a).grow(&b).grow(&c),
             node_index: 0,
         }

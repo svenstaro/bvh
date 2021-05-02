@@ -161,7 +161,7 @@ mod tests {
     fn traverse_and_verify_vec(
         ray_origin: Point3,
         ray_direction: Vector3,
-        all_shapes: &Vec<UnitBox>,
+        all_shapes: &[UnitBox],
         bvh: &BVH,
         expected_shapes: &HashSet<i32>,
     ) {
@@ -177,7 +177,7 @@ mod tests {
     fn traverse_and_verify_iterator(
         ray_origin: Point3,
         ray_direction: Vector3,
-        all_shapes: &Vec<UnitBox>,
+        all_shapes: &[UnitBox],
         bvh: &BVH,
         expected_shapes: &HashSet<i32>,
     ) {
@@ -195,7 +195,7 @@ mod tests {
     fn traverse_and_verify_base(
         ray_origin: Point3,
         ray_direction: Vector3,
-        all_shapes: &Vec<UnitBox>,
+        all_shapes: &[UnitBox],
         bvh: &BVH,
         expected_shapes: &HashSet<i32>,
     ) {

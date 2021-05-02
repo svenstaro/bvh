@@ -456,8 +456,7 @@ mod tests {
                 // Or it is on the front side
                 // Either the intersection is inside the triangle, which it should be
                 // for all u, v such that u+v <= 1.0
-                let intersection_inside = uv_sum >= 0.0 && uv_sum <= 1.0 &&
-                                          intersects.distance < INFINITY;
+                let intersection_inside = (0.0..=1.0).contains(&uv_sum) && intersects.distance < INFINITY;
 
                 // Or the input data was close to the border
                 let close_to_border =

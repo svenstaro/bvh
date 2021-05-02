@@ -559,10 +559,11 @@ mod tests {
     #[test]
     /// Test whether a simple update on a simple BVH yields the expected optimization result.
     fn test_optimize_simple_update() {
-        let mut shapes = Vec::new();
-        shapes.push(UnitBox::new(0, Point3::new(-50.0, 0.0, 0.0)));
-        shapes.push(UnitBox::new(1, Point3::new(-40.0, 0.0, 0.0)));
-        shapes.push(UnitBox::new(2, Point3::new(50.0, 0.0, 0.0)));
+        let mut shapes = vec![
+            UnitBox::new(0, Point3::new(-50.0, 0.0, 0.0)),
+            UnitBox::new(1, Point3::new(-40.0, 0.0, 0.0)),
+            UnitBox::new(2, Point3::new(50.0, 0.0, 0.0)),
+        ];
 
         let mut bvh = BVH::build(&mut shapes);
         bvh.pretty_print();
@@ -627,63 +628,62 @@ mod tests {
 
     /// Creates a small `BVH` with 4 shapes and 7 nodes.
     fn create_predictable_bvh() -> (Vec<UnitBox>, BVH) {
-        let mut shapes = Vec::new();
-        shapes.push(UnitBox::new(0, Point3::new(0.0, 0.0, 0.0)));
-        shapes.push(UnitBox::new(1, Point3::new(2.0, 0.0, 0.0)));
-        shapes.push(UnitBox::new(2, Point3::new(4.0, 0.0, 0.0)));
-        shapes.push(UnitBox::new(3, Point3::new(6.0, 0.0, 0.0)));
+        let shapes = vec![
+            UnitBox::new(0, Point3::new(0.0, 0.0, 0.0)),
+            UnitBox::new(1, Point3::new(2.0, 0.0, 0.0)),
+            UnitBox::new(2, Point3::new(4.0, 0.0, 0.0)),
+            UnitBox::new(3, Point3::new(6.0, 0.0, 0.0)),
+        ];
 
-        let mut nodes = Vec::new();
-
-        // Root node.
-        nodes.push(BVHNode::Node {
-            parent_index: 0,
-            depth: 0,
-            child_l_aabb: shapes[0].aabb().join(&shapes[1].aabb()),
-            child_l_index: 1,
-            child_r_aabb: shapes[2].aabb().join(&shapes[3].aabb()),
-            child_r_index: 2,
-        });
-
-        // Depth 1 nodes.
-        nodes.push(BVHNode::Node {
-            parent_index: 0,
-            depth: 1,
-            child_l_aabb: shapes[0].aabb(),
-            child_l_index: 3,
-            child_r_aabb: shapes[1].aabb(),
-            child_r_index: 4,
-        });
-        nodes.push(BVHNode::Node {
-            parent_index: 0,
-            depth: 1,
-            child_l_aabb: shapes[2].aabb(),
-            child_l_index: 5,
-            child_r_aabb: shapes[3].aabb(),
-            child_r_index: 6,
-        });
-
-        // Depth 2 nodes (leaves).
-        nodes.push(BVHNode::Leaf {
-            parent_index: 1,
-            depth: 2,
-            shape_index: 0,
-        });
-        nodes.push(BVHNode::Leaf {
-            parent_index: 1,
-            depth: 2,
-            shape_index: 1,
-        });
-        nodes.push(BVHNode::Leaf {
-            parent_index: 2,
-            depth: 2,
-            shape_index: 2,
-        });
-        nodes.push(BVHNode::Leaf {
-            parent_index: 2,
-            depth: 2,
-            shape_index: 3,
-        });
+        let nodes = vec![
+            // Root node.
+            BVHNode::Node {
+                parent_index: 0,
+                depth: 0,
+                child_l_aabb: shapes[0].aabb().join(&shapes[1].aabb()),
+                child_l_index: 1,
+                child_r_aabb: shapes[2].aabb().join(&shapes[3].aabb()),
+                child_r_index: 2,
+            },
+            // Depth 1 nodes.
+            BVHNode::Node {
+                parent_index: 0,
+                depth: 1,
+                child_l_aabb: shapes[0].aabb(),
+                child_l_index: 3,
+                child_r_aabb: shapes[1].aabb(),
+                child_r_index: 4,
+            },
+            BVHNode::Node {
+                parent_index: 0,
+                depth: 1,
+                child_l_aabb: shapes[2].aabb(),
+                child_l_index: 5,
+                child_r_aabb: shapes[3].aabb(),
+                child_r_index: 6,
+            },
+            // Depth 2 nodes (leaves).
+            BVHNode::Leaf {
+                parent_index: 1,
+                depth: 2,
+                shape_index: 0,
+            },
+            BVHNode::Leaf {
+                parent_index: 1,
+                depth: 2,
+                shape_index: 1,
+            },
+            BVHNode::Leaf {
+                parent_index: 2,
+                depth: 2,
+                shape_index: 2,
+            },
+            BVHNode::Leaf {
+                parent_index: 2,
+                depth: 2,
+                shape_index: 3,
+            },
+        ];
 
         (shapes, BVH { nodes })
     }
