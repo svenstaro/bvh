@@ -44,6 +44,7 @@ jobs:
         with:
           command: clippy
           args: --all-targets --all-features -- -D warnings
+        if: matrix.rust == 'nightly'
 
       - name: Run cargo-tarpaulin
         uses: actions-rs/tarpaulin@v0.1
