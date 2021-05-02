@@ -27,6 +27,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
+          args: --workspace
 
       - name: cargo test
         uses: actions-rs/cargo@v1
@@ -43,7 +44,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --all-targets --all-features -- -D warnings
+          args: --workspace --all-targets --all-features -- -D warnings
         if: matrix.rust == 'nightly'
 
       - name: Run cargo-tarpaulin
