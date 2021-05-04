@@ -23,7 +23,7 @@ glam = "0.14"
 [dev-dependencies]
 proptest = "1.0"
 obj-rs = "0.6"
-float_eq = "0.5"
+float_eq = "0.6"
 criterion = "0.3"
 
 [features]
