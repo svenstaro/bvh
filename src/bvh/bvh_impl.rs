@@ -12,7 +12,6 @@ use crate::utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
 use crate::Point3;
 use crate::EPSILON;
 use std::f32;
-use std::iter::repeat;
 
 /// The [`BVHNode`] enum that describes a node in a [`BVH`].
 /// It's either a leaf node and references a shape (by holding its index)
@@ -469,7 +468,7 @@ impl BVH {
                     child_r_aabb,
                     ..
                 } => {
-                    let padding: String = repeat(" ").take(depth as usize).collect();
+                    let padding: String = " ".repeat(depth as usize);
                     println!("{}child_l {}", padding, child_l_aabb);
                     print_node(nodes, child_l_index);
                     println!("{}child_r {}", padding, child_r_aabb);
@@ -478,7 +477,7 @@ impl BVH {
                 BVHNode::Leaf {
                     shape_index, depth, ..
                 } => {
-                    let padding: String = repeat(" ").take(depth as usize).collect();
+                    let padding: String = " ".repeat(depth as usize);
                     println!("{}shape\t{:?}", padding, shape_index);
                 }
             }
