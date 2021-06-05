@@ -896,7 +896,7 @@ mod tests {
             .join(&shapes[3].aabb());
         assert!(nodes[0]
             .child_r_aabb()
-            .relative_eq(&right_subtree_aabb, EPSILON));
+            .relative_eq(right_subtree_aabb, EPSILON));
 
         assert!(nodes[2]
             .child_r_aabb()
@@ -1009,11 +1009,11 @@ mod bench {
 
         for _ in 0..iterations {
             let updated =
-                randomly_transform_scene(&mut triangles, num_move, &bounds, max_offset, &mut seed);
-            bvh.optimize(&updated, &triangles);
+                randomly_transform_scene(&mut triangles, num_move, bounds, max_offset, &mut seed);
+            bvh.optimize(&updated, triangles);
         }
 
-        intersect_bh(&bvh, &triangles, &bounds, b);
+        intersect_bh(&bvh, triangles, bounds, b);
     }
 
     #[bench]
@@ -1059,11 +1059,11 @@ mod bench {
         let num_move = (triangles.len() as f32 * percent) as usize;
         let mut seed = 0;
         for _ in 0..iterations {
-            randomly_transform_scene(&mut triangles, num_move, &bounds, max_offset, &mut seed);
+            randomly_transform_scene(&mut triangles, num_move, bounds, max_offset, &mut seed);
         }
 
         let bvh = BVH::build(&mut triangles);
-        intersect_bh(&bvh, &triangles, &bounds, b);
+        intersect_bh(&bvh, triangles, bounds, b);
     }
 
     #[bench]

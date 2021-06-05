@@ -490,7 +490,7 @@ pub fn build_120k_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
 pub fn intersect_list(triangles: &[Triangle], bounds: &AABB, b: &mut ::test::Bencher) {
     let mut seed = 0;
     b.iter(|| {
-        let ray = create_ray(&mut seed, &bounds);
+        let ray = create_ray(&mut seed, bounds);
 
         // Iterate over the list of triangles.
         for triangle in triangles {
@@ -522,7 +522,7 @@ fn bench_intersect_sponza_list(b: &mut ::test::Bencher) {
 pub fn intersect_list_aabb(triangles: &[Triangle], bounds: &AABB, b: &mut ::test::Bencher) {
     let mut seed = 0;
     b.iter(|| {
-        let ray = create_ray(&mut seed, &bounds);
+        let ray = create_ray(&mut seed, bounds);
 
         // Iterate over the list of triangles.
         for triangle in triangles {

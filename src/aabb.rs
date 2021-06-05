@@ -715,23 +715,23 @@ mod tests {
 
             // Create two `AABB`s. One spanned the first five points,
             // the other by the last five points
-            let aabb1 = points.iter().take(5).fold(AABB::empty(), |aabb, point| aabb.grow(&point));
-            let aabb2 = points.iter().skip(5).fold(AABB::empty(), |aabb, point| aabb.grow(&point));
+            let aabb1 = points.iter().take(5).fold(AABB::empty(), |aabb, point| aabb.grow(point));
+            let aabb2 = points.iter().skip(5).fold(AABB::empty(), |aabb, point| aabb.grow(point));
 
             // The `AABB`s should contain the points by which they are spanned
             let aabb1_contains_init_five = points.iter()
                 .take(5)
-                .all(|point| aabb1.contains(&point));
+                .all(|point| aabb1.contains(point));
             let aabb2_contains_last_five = points.iter()
                 .skip(5)
-                .all(|point| aabb2.contains(&point));
+                .all(|point| aabb2.contains(point));
 
             // Build the joint of the two `AABB`s
             let aabbu = aabb1.join(&aabb2);
 
             // The joint should contain all points
             let aabbu_contains_all = points.iter()
-                .all(|point| aabbu.contains(&point));
+                .all(|point| aabbu.contains(point));
 
             // Return the three properties
             assert!(aabb1_contains_init_five && aabb2_contains_last_five && aabbu_contains_all);
