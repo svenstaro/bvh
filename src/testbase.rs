@@ -2,7 +2,7 @@
 #![cfg(test)]
 
 use std::collections::HashSet;
-use std::f32;
+use std::f64;
 use std::mem::transmute;
 
 use crate::{Point3, Vector3};
@@ -19,26 +19,26 @@ use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
 use crate::ray::Ray;
 
 /// A vector represented as a tuple
-pub type TupleVec = (f32, f32, f32);
+pub type TupleVec = (f64, f64, f64);
 
 /// Generate a `TupleVec` for [`proptest::strategy::Strategy`] from -10e10 to 10e10
 /// A small enough range to prevent most fp32 errors from breaking certain tests
 /// Tests which rely on this strategy should probably be rewritten
 pub fn tuplevec_small_strategy() -> impl Strategy<Value = TupleVec> {
     (
-        -10e10_f32..10e10_f32,
-        -10e10_f32..10e10_f32,
-        -10e10_f32..10e10_f32,
+        -10e10_f64..10e10_f64,
+        -10e10_f64..10e10_f64,
+        -10e10_f64..10e10_f64,
     )
 }
 
 /// Generate a `TupleVec` for [`proptest::strategy::Strategy`] from -10e30 to 10e30
-/// A small enough range to prevent `f32::MAX` ranges from breaking certain tests
+/// A small enough range to prevent `f64::MAX` ranges from breaking certain tests
 pub fn tuplevec_large_strategy() -> impl Strategy<Value = TupleVec> {
     (
-        -10e30_f32..10e30_f32,
-        -10e30_f32..10e30_f32,
-        -10e30_f32..10e30_f32,
+        -10e30_f64..10e30_f64,
+        -10e30_f64..10e30_f64,
+        -10e30_f64..10e30_f64,
     )
 }
 
@@ -94,7 +94,7 @@ pub fn generate_aligned_boxes() -> Vec<UnitBox> {
     // Create 21 boxes along the x-axis
     let mut shapes = Vec::new();
     for x in -10..11 {
-        shapes.push(UnitBox::new(x, Point3::new(x as f32, 0.0, 0.0)));
+        shapes.push(UnitBox::new(x, Point3::new(x as f64, 0.0, 0.0)));
     }
     shapes
 }
@@ -214,7 +214,7 @@ impl<I: FromPrimitive + Integer> FromRawVertex<I> for Triangle {
         // Convert the vertices to `Point3`s.
         let points = vertices
             .into_iter()
-            .map(|v| Point3::new(v.0, v.1, v.2))
+            .map(|v| Point3::new(v.0.into(), v.1.into(), v.2.into()))
             .collect::<Vec<_>>();
 
         // Estimate for the number of triangles, assuming that each polygon is a triangle.
@@ -341,9 +341,9 @@ pub fn next_point3(seed: &mut u64, aabb: &AABB) -> Point3 {
     let (a, b, c) = next_point3_raw(seed);
     use std::i32;
     let float_vector = Vector3::new(
-        (a as f32 / i32::MAX as f32) + 1.0,
-        (b as f32 / i32::MAX as f32) + 1.0,
-        (c as f32 / i32::MAX as f32) + 1.0,
+        (a as f64 / i32::MAX as f64) + 1.0,
+        (b as f64 / i32::MAX as f64) + 1.0,
+        (c as f64 / i32::MAX as f64) + 1.0,
     ) * 0.5;
 
     assert!(float_vector.x >= 0.0 && float_vector.x <= 1.0);
@@ -404,7 +404,7 @@ pub fn randomly_transform_scene(
     triangles: &mut Vec<Triangle>,
     amount: usize,
     bounds: &AABB,
-    max_offset_option: Option<f32>,
+    max_offset_option: Option<f64>,
     seed: &mut u64,
 ) -> HashSet<usize> {
     let mut indices: Vec<usize> = (0..triangles.len()).collect();
@@ -420,7 +420,7 @@ pub fn randomly_transform_scene(
     let max_offset = if let Some(value) = max_offset_option {
         value
     } else {
-        f32::INFINITY
+        f64::INFINITY
     };
 
     for index in &indices {

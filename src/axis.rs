@@ -63,19 +63,19 @@ impl Display for Axis {
 }
 
 /// Make slices indexable by `Axis`.
-impl Index<Axis> for [f32] {
-    type Output = f32;
+impl Index<Axis> for [f64] {
+    type Output = f64;
 
-    fn index(&self, axis: Axis) -> &f32 {
+    fn index(&self, axis: Axis) -> &f64 {
         &self[axis as usize]
     }
 }
 
 /// Make `Point3` indexable by `Axis`.
 impl Index<Axis> for Point3 {
-    type Output = f32;
+    type Output = f64;
 
-    fn index(&self, axis: Axis) -> &f32 {
+    fn index(&self, axis: Axis) -> &f64 {
         match axis {
             Axis::X => &self.x,
             Axis::Y => &self.y,
@@ -86,9 +86,9 @@ impl Index<Axis> for Point3 {
 
 /// Make `Vector3` indexable by `Axis`.
 impl Index<Axis> for MyType<Vector3> {
-    type Output = f32;
+    type Output = f64;
 
-    fn index(&self, axis: Axis) -> &f32 {
+    fn index(&self, axis: Axis) -> &f64 {
         match axis {
             Axis::X => &self.0.x,
             Axis::Y => &self.0.y,
@@ -98,15 +98,15 @@ impl Index<Axis> for MyType<Vector3> {
 }
 
 /// Make slices mutably accessible by `Axis`.
-impl IndexMut<Axis> for [f32] {
-    fn index_mut(&mut self, axis: Axis) -> &mut f32 {
+impl IndexMut<Axis> for [f64] {
+    fn index_mut(&mut self, axis: Axis) -> &mut f64 {
         &mut self[axis as usize]
     }
 }
 
 /// Make `Point3` mutably accessible by `Axis`.
 impl IndexMut<Axis> for Point3 {
-    fn index_mut(&mut self, axis: Axis) -> &mut f32 {
+    fn index_mut(&mut self, axis: Axis) -> &mut f64 {
         match axis {
             Axis::X => &mut self.x,
             Axis::Y => &mut self.y,
@@ -117,7 +117,7 @@ impl IndexMut<Axis> for Point3 {
 
 /// Make `Vector3` mutably accessible by `Axis`.
 impl IndexMut<Axis> for MyType<Vector3> {
-    fn index_mut(&mut self, axis: Axis) -> &mut f32 {
+    fn index_mut(&mut self, axis: Axis) -> &mut f64 {
         match axis {
             Axis::X => &mut self.0.x,
             Axis::Y => &mut self.0.y,
@@ -134,22 +134,22 @@ mod test {
     proptest! {
         // Test whether accessing arrays by index is the same as accessing them by `Axis`.
         #[test]
-        fn test_index_by_axis(tpl: (f32, f32, f32)) {
+        fn test_index_by_axis(tpl: (f64, f64, f64)) {
             let a = [tpl.0, tpl.1, tpl.2];
 
-            assert!((a[0] - a[Axis::X]).abs() < f32::EPSILON && (a[1] - a[Axis::Y]).abs() < f32::EPSILON && (a[2] - a[Axis::Z]).abs() < f32::EPSILON);
+            assert!((a[0] - a[Axis::X]).abs() < f64::EPSILON && (a[1] - a[Axis::Y]).abs() < f64::EPSILON && (a[2] - a[Axis::Z]).abs() < f64::EPSILON);
         }
 
         // Test whether arrays can be mutably set, by indexing via `Axis`.
         #[test]
-        fn test_set_by_axis(tpl: (f32, f32, f32)) {
+        fn test_set_by_axis(tpl: (f64, f64, f64)) {
             let mut a = [0.0, 0.0, 0.0];
 
             a[Axis::X] = tpl.0;
             a[Axis::Y] = tpl.1;
             a[Axis::Z] = tpl.2;
 
-            assert!((a[0] - tpl.0).abs() < f32::EPSILON && (a[1] - tpl.1).abs() < f32::EPSILON && (a[2] - tpl.2).abs() < f32::EPSILON);
+            assert!((a[0] - tpl.0).abs() < f64::EPSILON && (a[1] - tpl.1).abs() < f64::EPSILON && (a[2] - tpl.2).abs() < f64::EPSILON);
         }
     }
 }

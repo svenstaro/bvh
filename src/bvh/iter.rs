@@ -1,6 +1,6 @@
 use crate::aabb::Bounded;
 use crate::bvh::{BVHNode, BVH};
-use crate::ray::Ray;
+use crate::bounding_hierarchy::{IntersectionTest};
 
 /// Iterator to traverse a [`BVH`] without memory allocations
 #[allow(clippy::upper_case_acronyms)]
@@ -8,7 +8,7 @@ pub struct BVHTraverseIterator<'a, Shape: Bounded> {
     /// Reference to the BVH to traverse
     bvh: &'a BVH,
     /// Reference to the input ray
-    ray: &'a Ray,
+    test: &'a dyn IntersectionTest,
     /// Reference to the input shapes array
     shapes: &'a [Shape],
     /// Traversal stack. 4 billion items seems enough?
@@ -23,10 +23,10 @@ pub struct BVHTraverseIterator<'a, Shape: Bounded> {
 
 impl<'a, Shape: Bounded> BVHTraverseIterator<'a, Shape> {
     /// Creates a new `BVHTraverseIterator`
-    pub fn new(bvh: &'a BVH, ray: &'a Ray, shapes: &'a [Shape]) -> Self {
+    pub fn new(bvh: &'a BVH, test: &'a impl IntersectionTest, shapes: &'a [Shape]) -> Self {
         BVHTraverseIterator {
             bvh,
-            ray,
+            test,
             shapes,
             stack: [0; 32],
             node_index: 0,
@@ -69,7 +69,7 @@ impl<'a, Shape: Bounded> BVHTraverseIterator<'a, Shape> {
                 ref child_l_aabb,
                 ..
             } => {
-                if self.ray.intersects_aabb(child_l_aabb) {
+                if self.test.intersects_aabb(child_l_aabb) {
                     self.node_index = child_l_index;
                     self.has_node = true;
                 } else {
@@ -91,7 +91,7 @@ impl<'a, Shape: Bounded> BVHTraverseIterator<'a, Shape> {
                 ref child_r_aabb,
                 ..
             } => {
-                if self.ray.intersects_aabb(child_r_aabb) {
+                if self.test.intersects_aabb(child_r_aabb) {
                     self.node_index = child_r_index;
                     self.has_node = true;
                 } else {

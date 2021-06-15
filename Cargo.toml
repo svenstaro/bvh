@@ -13,6 +13,10 @@ documentation = "https://docs.rs/crate/bvh"
 keywords = ["bvh", "bounding", "volume", "sah", "aabb"]
 license = "MIT"
 
+[lib]
+name="bvh_f64"
+crate-type = ["rlib", "dylib"]
+
 [dependencies]
 approx = "0.4"
 rand = "0.8"

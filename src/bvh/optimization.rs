@@ -235,7 +235,7 @@ impl BVH {
         // thus being the favored rotation that will be executed after considering all rotations.
         let mut best_rotation: Option<(usize, usize)> = None;
         {
-            let mut consider_rotation = |new_rotation: (usize, usize), surface_area: f32| {
+            let mut consider_rotation = |new_rotation: (usize, usize), surface_area: f64| {
                 if surface_area < best_surface_area {
                     best_surface_area = surface_area;
                     best_rotation = Some(new_rotation);
@@ -958,11 +958,11 @@ mod bench {
 
     /// Benchmark optimizing a `BVH` with 120,000 `Triangle`s, where `percent`
     /// `Triangles` have been randomly moved.
-    fn optimize_bvh_120k(percent: f32, b: &mut ::test::Bencher) {
+    fn optimize_bvh_120k(percent: f64, b: &mut ::test::Bencher) {
         let bounds = default_bounds();
         let mut triangles = create_n_cubes(10_000, &bounds);
         let mut bvh = BVH::build(&mut triangles);
-        let num_move = (triangles.len() as f32 * percent) as usize;
+        let num_move = (triangles.len() as f64 * percent) as usize;
         let mut seed = 0;
 
         b.iter(|| {
@@ -998,13 +998,13 @@ mod bench {
     fn intersect_scene_after_optimize(
         mut triangles: &mut Vec<Triangle>,
         bounds: &AABB,
-        percent: f32,
+        percent: f64,
         max_offset: Option<f32>,
         iterations: usize,
         b: &mut ::test::Bencher,
     ) {
         let mut bvh = BVH::build(&mut triangles);
-        let num_move = (triangles.len() as f32 * percent) as usize;
+        let num_move = (triangles.len() as f64 * percent) as usize;
         let mut seed = 0;
 
         for _ in 0..iterations {
@@ -1051,12 +1051,12 @@ mod bench {
     fn intersect_scene_with_rebuild(
         mut triangles: &mut Vec<Triangle>,
         bounds: &AABB,
-        percent: f32,
+        percent: f64,
         max_offset: Option<f32>,
         iterations: usize,
         b: &mut ::test::Bencher,
     ) {
-        let num_move = (triangles.len() as f32 * percent) as usize;
+        let num_move = (triangles.len() as f64 * percent) as usize;
         let mut seed = 0;
         for _ in 0..iterations {
             randomly_transform_scene(&mut triangles, num_move, &bounds, max_offset, &mut seed);
@@ -1096,7 +1096,7 @@ mod bench {
 
     /// Benchmark intersecting a `BVH` for Sponza after randomly moving one `Triangle` and
     /// optimizing.
-    fn intersect_sponza_after_optimize(percent: f32, b: &mut ::test::Bencher) {
+    fn intersect_sponza_after_optimize(percent: f64, b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();
         intersect_scene_after_optimize(&mut triangles, &bounds, percent, Some(0.1), 10, b);
     }
@@ -1123,7 +1123,7 @@ mod bench {
 
     /// Benchmark intersecting a `BVH` for Sponza after rebuilding. Used to compare optimizing
     /// with rebuilding. For reference see `intersect_sponza_after_optimize`.
-    fn intersect_sponza_with_rebuild(percent: f32, b: &mut ::test::Bencher) {
+    fn intersect_sponza_with_rebuild(percent: f64, b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();
         intersect_scene_with_rebuild(&mut triangles, &bounds, percent, Some(0.1), 10, b);
     }

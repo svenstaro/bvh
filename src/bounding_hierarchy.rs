@@ -1,7 +1,7 @@
 //! This module defines the `BoundingHierarchy` trait.
 
 use crate::aabb::Bounded;
-use crate::ray::Ray;
+use crate::aabb::AABB;
 
 /// Describes a shape as referenced by a [`BoundingHierarchy`] leaf node.
 /// Knows the index of the node in the [`BoundingHierarchy`] it is in.
@@ -72,7 +72,7 @@ pub trait BoundingHierarchy {
     /// # fn create_bhshapes() -> Vec<UnitBox> {
     /// #     let mut shapes = Vec::new();
     /// #     for i in 0..1000 {
-    /// #         let position = Point3::new(i as f32, i as f32, i as f32);
+    /// #         let position = Point3::new(i as f64, i as f64, i as f64);
     /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
     /// #     shapes
@@ -145,7 +145,7 @@ pub trait BoundingHierarchy {
     /// # fn create_bvh() -> (BVH, Vec<UnitBox>) {
     /// #     let mut shapes = Vec::new();
     /// #     for i in 0..1000 {
-    /// #         let position = Point3::new(i as f32, i as f32, i as f32);
+    /// #         let position = Point3::new(i as f64, i as f64, i as f64);
     /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
     /// #     let bvh = BVH::build(&mut shapes);
@@ -163,11 +163,15 @@ pub trait BoundingHierarchy {
     /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
     /// [`AABB`]: ../aabb/struct.AABB.html
     ///
-    fn traverse<'a, Shape: BHShape>(&'a self, ray: &Ray, shapes: &'a [Shape]) -> Vec<&Shape>;
+    fn traverse<'a, Shape: BHShape>(&'a self, test: &impl IntersectionTest, shapes: &'a [Shape]) -> Vec<&Shape>;
 
     /// Prints the [`BoundingHierarchy`] in a tree-like visualization.
     ///
     /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
     ///
     fn pretty_print(&self) {}
+}
+
+pub trait IntersectionTest {
+    fn intersects_aabb(&self, aabb: &AABB) -> bool;
 }

@@ -4,7 +4,8 @@
 use crate::aabb::AABB;
 use crate::EPSILON;
 use crate::{Point3, Vector3};
-use std::f32::INFINITY;
+use std::f64::INFINITY;
+use crate::bounding_hierarchy::IntersectionTest;
 
 /// A struct which defines a ray and some of its cached values.
 #[derive(Debug)]
@@ -46,54 +47,24 @@ pub struct Ray {
 /// A struct which is returned by the `intersects_triangle` method.
 pub struct Intersection {
     /// Distance from the ray origin to the intersection point.
-    pub distance: f32,
+    pub distance: f64,
 
     /// U coordinate of the intersection.
-    pub u: f32,
+    pub u: f64,
 
     /// V coordinate of the intersection.
-    pub v: f32,
+    pub v: f64,
 }
 
 impl Intersection {
     /// Constructs an `Intersection`. `distance` should be set to positive infinity,
     /// if the intersection does not occur.
-    pub fn new(distance: f32, u: f32, v: f32) -> Intersection {
+    pub fn new(distance: f64, u: f64, v: f64) -> Intersection {
         Intersection { distance, u, v }
     }
 }
 
-impl Ray {
-    /// Creates a new [`Ray`] from an `origin` and a `direction`.
-    /// `direction` will be normalized.
-    ///
-    /// # Examples
-    /// ```
-    /// use bvh::ray::Ray;
-    /// use bvh::{Point3,Vector3};
-    ///
-    /// let origin = Point3::new(0.0,0.0,0.0);
-    /// let direction = Vector3::new(1.0,0.0,0.0);
-    /// let ray = Ray::new(origin, direction);
-    ///
-    /// assert_eq!(ray.origin, origin);
-    /// assert_eq!(ray.direction, direction);
-    /// ```
-    ///
-    /// [`Ray`]: struct.Ray.html
-    ///
-    pub fn new(origin: Point3, direction: Vector3) -> Ray {
-        let direction = direction.normalize();
-        Ray {
-            origin,
-            direction,
-            inv_direction: Vector3::new(1.0 / direction.x, 1.0 / direction.y, 1.0 / direction.z),
-            sign_x: (direction.x < 0.0) as usize,
-            sign_y: (direction.y < 0.0) as usize,
-            sign_z: (direction.z < 0.0) as usize,
-        }
-    }
-
+impl IntersectionTest for Ray {
     /// Tests the intersection of a [`Ray`] with an [`AABB`] using the optimized algorithm
     /// from [this paper](http://www.cs.utah.edu/~awilliam/box/box.pdf).
     ///
@@ -117,7 +88,7 @@ impl Ray {
     /// [`Ray`]: struct.Ray.html
     /// [`AABB`]: struct.AABB.html
     ///
-    pub fn intersects_aabb(&self, aabb: &AABB) -> bool {
+    fn intersects_aabb(&self, aabb: &AABB) -> bool {
         let mut ray_min = (aabb[self.sign_x].x - self.origin.x) * self.inv_direction.x;
         let mut ray_max = (aabb[1 - self.sign_x].x - self.origin.x) * self.inv_direction.x;
 
@@ -160,6 +131,40 @@ impl Ray {
 
         ray_max > 0.0
     }
+}
+
+
+impl Ray {
+    /// Creates a new [`Ray`] from an `origin` and a `direction`.
+    /// `direction` will be normalized.
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::ray::Ray;
+    /// use bvh::{Point3,Vector3};
+    ///
+    /// let origin = Point3::new(0.0,0.0,0.0);
+    /// let direction = Vector3::new(1.0,0.0,0.0);
+    /// let ray = Ray::new(origin, direction);
+    ///
+    /// assert_eq!(ray.origin, origin);
+    /// assert_eq!(ray.direction, direction);
+    /// ```
+    ///
+    /// [`Ray`]: struct.Ray.html
+    ///
+    pub fn new(origin: Point3, direction: Vector3) -> Ray {
+        let direction = direction.normalize();
+        Ray {
+            origin,
+            direction,
+            inv_direction: Vector3::new(1.0 / direction.x, 1.0 / direction.y, 1.0 / direction.z),
+            sign_x: (direction.x < 0.0) as usize,
+            sign_y: (direction.y < 0.0) as usize,
+            sign_z: (direction.z < 0.0) as usize,
+        }
+    }
+
 
     /// Naive implementation of a [`Ray`]/[`AABB`] intersection algorithm.
     ///
@@ -315,13 +320,13 @@ impl Ray {
 #[cfg(test)]
 mod tests {
     use std::cmp;
-    use std::f32::INFINITY;
+    use std::f64::INFINITY;
 
     use crate::aabb::AABB;
     use crate::ray::Ray;
     use crate::testbase::{tuple_to_point, tuplevec_small_strategy, TupleVec};
     use crate::EPSILON;
-
+    use crate::bounding_hierarchy::IntersectionTest;
     use proptest::prelude::*;
 
     /// Generates a random `Ray` which points at at a random `AABB`.
@@ -433,8 +438,8 @@ mod tests {
             // Get some u and v coordinates such that u+v <= 1
             let u = u % 101;
             let v = cmp::min(100 - u, v % 101);
-            let u = u as f32 / 100.0;
-            let v = v as f32 / 100.0;
+            let u = u as f64 / 100.0;
+            let v = v as f64 / 100.0;
 
             // Define some point on the triangle
             let point_on_triangle = triangle.0 + u * u_vec + v * v_vec;

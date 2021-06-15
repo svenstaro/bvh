@@ -1,9 +1,8 @@
 //! This module exports methods to flatten the `BVH` and traverse it iteratively.
 
 use crate::aabb::{Bounded, AABB};
-use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use crate::bounding_hierarchy::{BHShape, BoundingHierarchy, IntersectionTest};
 use crate::bvh::{BVHNode, BVH};
-use crate::ray::Ray;
 
 /// A structure of a node of a flat [`BVH`]. The structure of the nodes allows for an
 /// iterative traversal approach without the necessity to maintain a stack or queue.
@@ -200,7 +199,7 @@ impl BVH {
     /// # fn create_bhshapes() -> Vec<UnitBox> {
     /// #     let mut shapes = Vec::new();
     /// #     for i in 0..1000 {
-    /// #         let position = Point3::new(i as f32, i as f32, i as f32);
+    /// #         let position = Point3::new(i as f64, i as f64, i as f64);
     /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
     /// #     shapes
@@ -284,7 +283,7 @@ impl BVH {
     /// # fn create_bhshapes() -> Vec<UnitBox> {
     /// #     let mut shapes = Vec::new();
     /// #     for i in 0..1000 {
-    /// #         let position = Point3::new(i as f32, i as f32, i as f32);
+    /// #         let position = Point3::new(i as f64, i as f64, i as f64);
     /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
     /// #     shapes
@@ -365,7 +364,7 @@ impl BoundingHierarchy for FlatBVH {
     /// # fn create_bhshapes() -> Vec<UnitBox> {
     /// #     let mut shapes = Vec::new();
     /// #     for i in 0..1000 {
-    /// #         let position = Point3::new(i as f32, i as f32, i as f32);
+    /// #         let position = Point3::new(i as f64, i as f64, i as f64);
     /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
     /// #     shapes
@@ -378,7 +377,7 @@ impl BoundingHierarchy for FlatBVH {
     /// let flat_bvh = FlatBVH::build(&mut shapes);
     /// let hit_shapes = flat_bvh.traverse(&ray, &shapes);
     /// ```
-    fn traverse<'a, T: Bounded>(&'a self, ray: &Ray, shapes: &'a [T]) -> Vec<&T> {
+    fn traverse<'a, T: Bounded>(&'a self, ray: &impl IntersectionTest, shapes: &'a [T]) -> Vec<&T> {
         let mut hit_shapes = Vec::new();
         let mut index = 0;
 
