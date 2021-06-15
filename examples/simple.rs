@@ -1,13 +1,13 @@
-use bvh::aabb::{Bounded, AABB};
-use bvh::bounding_hierarchy::BHShape;
-use bvh::bvh::BVH;
-use bvh::ray::Ray;
-use bvh::{Point3, Vector3};
+use bvh_f64::aabb::{Bounded, AABB};
+use bvh_f64::bounding_hierarchy::BHShape;
+use bvh_f64::bvh::BVH;
+use bvh_f64::ray::Ray;
+use bvh_f64::{Point3, Vector3};
 
 #[derive(Debug)]
 struct Sphere {
     position: Point3,
-    radius: f32,
+    radius: f64,
     node_index: usize,
 }
 
@@ -33,8 +33,8 @@ impl BHShape for Sphere {
 pub fn main() {
     let mut spheres = Vec::new();
     for i in 0..1000000u32 {
-        let position = Point3::new(i as f32, i as f32, i as f32);
-        let radius = (i % 10) as f32 + 1.0;
+        let position = Point3::new(i as f64, i as f64, i as f64);
+        let radius = (i % 10) as f64 + 1.0;
         spheres.push(Sphere {
             position,
             radius,
