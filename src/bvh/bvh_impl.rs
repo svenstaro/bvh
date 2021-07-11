@@ -288,7 +288,7 @@ impl BVHNode {
 
         let mut parallel_recurse = false;
         if nodes.len() > 128 {
-            parallel_recurse = true;
+            //parallel_recurse = true;
             /*
             let avail_threads = BUILD_THREAD_COUNT.load(Ordering::Relaxed);
             if avail_threads > 0 {

@@ -24,10 +24,10 @@ log = "0.4"
 num = "0.4"
 glam = "0.15"
 rayon = "1.5.1"
+obj-rs = "0.6"
 
 [dev-dependencies]
 proptest = "1.0"
-obj-rs = "0.6"
 float_eq = "0.6"
 criterion = "0.3"
 
@@ -37,6 +37,7 @@ bench = []
 [profile.release]
 lto = true
 codegen-units = 1
+debug = true
 
 [profile.bench]
 lto = true
