@@ -16,7 +16,7 @@ use std::iter::repeat;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 
-pub static BUILD_THREAD_COUNT: AtomicUsize = AtomicUsize::new(0);
+pub static BUILD_THREAD_COUNT: AtomicUsize = AtomicUsize::new(20);
 
 /// The [`BVHNode`] enum that describes a node in a [`BVH`].
 /// It's either a leaf node and references a shape (by holding its index)
@@ -284,10 +284,12 @@ impl BVHNode {
         }
 
 
-        let use_parallel_hull = false;
+        let mut use_parallel_hull = false;
 
         let mut parallel_recurse = false;
-        if nodes.len() > 64 {
+        if nodes.len() > 128 {
+            parallel_recurse = true;
+            /*
             let avail_threads = BUILD_THREAD_COUNT.load(Ordering::Relaxed);
             if avail_threads > 0 {
                 let exchange = BUILD_THREAD_COUNT.compare_exchange(avail_threads, avail_threads - 1, Ordering::Relaxed, Ordering::Relaxed);
@@ -295,7 +297,12 @@ impl BVHNode {
                     Ok(_) => parallel_recurse = true,
                     Err(_) => ()
                 };
+
+                if nodes.len() > 4096 {
+                    //use_parallel_hull = true;
+                }
             }
+            */
         };
 
 
@@ -362,7 +369,7 @@ impl BVHNode {
                 };
                 rayon::join(|| BVHNode::build(shapes_a, &child_l_indices, l_nodes, node_index, depth + 1, child_l_index), 
                             || BVHNode::build(shapes_b, &child_r_indices, r_nodes, node_index, depth + 1, child_r_index));
-                BUILD_THREAD_COUNT.fetch_add(1, Ordering::Relaxed);
+                //BUILD_THREAD_COUNT.fetch_add(1, Ordering::Relaxed);
             } else {
                 BVHNode::build(shapes, &child_l_indices, l_nodes, node_index, depth + 1, child_l_index);
                 BVHNode::build(shapes, &child_r_indices, r_nodes, node_index, depth + 1, child_r_index);
@@ -438,7 +445,7 @@ impl BVHNode {
                 };
                 rayon::join(|| BVHNode::build(shapes_a, &child_l_indices, l_nodes, node_index, depth + 1, child_l_index), 
                             || BVHNode::build(shapes_b, &child_r_indices, r_nodes, node_index, depth + 1, child_r_index));
-                BUILD_THREAD_COUNT.fetch_add(1, Ordering::Relaxed);
+                //BUILD_THREAD_COUNT.fetch_add(1, Ordering::Relaxed);
             } else {
                 
                 BVHNode::build(shapes, &child_l_indices, l_nodes, node_index, depth + 1, child_l_index);
