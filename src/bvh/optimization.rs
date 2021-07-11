@@ -999,7 +999,7 @@ mod bench {
         mut triangles: &mut Vec<Triangle>,
         bounds: &AABB,
         percent: f64,
-        max_offset: Option<f32>,
+        max_offset: Option<f64>,
         iterations: usize,
         b: &mut ::test::Bencher,
     ) {
@@ -1052,7 +1052,7 @@ mod bench {
         mut triangles: &mut Vec<Triangle>,
         bounds: &AABB,
         percent: f64,
-        max_offset: Option<f32>,
+        max_offset: Option<f64>,
         iterations: usize,
         b: &mut ::test::Bencher,
     ) {

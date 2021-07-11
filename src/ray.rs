@@ -487,6 +487,7 @@ mod tests {
 mod bench {
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
+    use crate::bounding_hierarchy::IntersectionTest;
 
     use crate::aabb::AABB;
     use crate::ray::Ray;

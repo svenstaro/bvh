@@ -96,9 +96,12 @@ use bvh::BVHNode;
 use ray::Ray;
 use shapes::{Capsule, Sphere, OBB};
 use glam::DQuat;
+use bvh::BUILD_THREAD_COUNT;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(test)]
 mod testbase;
+
 
 #[no_mangle]
 pub extern fn add_numbers(number1: i32, number2: i32) -> i32 {
@@ -116,9 +119,17 @@ pub struct Vector3D {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
+pub struct Float3 {    
+    pub x: f32,
+    pub y: f32,
+    pub z: f32
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
 pub struct BoundsD {
-    pub center: Vector3D,
-    pub extents: Vector3D
+    pub min: Vector3D,
+    pub max: Vector3D
 }
 
 #[repr(C)]
@@ -145,12 +156,34 @@ pub struct QuaternionD {
     pub w: f64
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct Point32 {
+    pub x: f32,
+    pub y: f32,
+    pub z: f32
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct AABB32 {
+    pub min: Point32,
+    pub max: Point32
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct FlatNode32 {
+    pub aabb: AABB32,
+    pub entry_index: u32,
+    pub exit_index: u32,
+    pub shape_index: u32
+}
+
 impl Bounded for BVHBounds {
     fn aabb(&self) -> AABB {
-        let half_size = to_vec(&self.bounds.extents);
-        let pos = to_vec(&self.bounds.center);
-        let min = pos - half_size;
-        let max = pos + half_size;
+        let min = to_vec(&self.bounds.min);
+        let max = to_vec(&self.bounds.max);
         AABB::with_bounds(min, max)
     }
 }
@@ -182,11 +215,64 @@ pub fn to_quat(a: &QuaternionD) -> DQuat {
 }
 
 #[no_mangle]
+pub extern fn set_build_thread_count(count: i32)
+{
+    BUILD_THREAD_COUNT.store(count as usize, Ordering::Relaxed);
+}
+
+
+#[no_mangle]
+pub extern fn add_vecs(a_ptr: *mut Float3, b_ptr: *mut Float3, out_ptr: *mut Float3)
+{
+    let a = unsafe {*a_ptr};
+
+    let a = glam::Vec3::new(a.x, a.y, a.z);
+    let b = unsafe {*b_ptr};
+    let b = glam::Vec3::new(b.x, b.y, b.z);
+    let mut c = glam::Vec3::new(0.0, 0.0, 0.0);
+
+    for i in 0 .. 100000 {
+        c = a + b + c;
+    }
+
+    unsafe {
+        *out_ptr = Float3 {
+            x: c.x,
+            y: c.y,
+            z: c.z
+        };
+    }
+}
+
+#[no_mangle]
 pub extern fn build_bvh(a: *mut BVHBounds, count: i32) -> BVHRef 
 {
     let mut s = unsafe { std::slice::from_raw_parts_mut(a, count as usize) };
 
     let mut bvh = bvh::BVH::build(&mut s);
+    let len = bvh.nodes.len();
+    let cap = bvh.nodes.capacity();
+    let p = bvh.nodes.as_mut_ptr();
+    std::mem::forget(bvh.nodes);
+
+    BVHRef { ptr: p, len: len as i32, cap: cap as i32 }
+}
+
+
+
+#[no_mangle]
+pub extern fn rebuild_bvh(bvh_ref: *const BVHRef, a: *mut BVHBounds, count: i32) -> BVHRef
+{
+    let mut s = unsafe { std::slice::from_raw_parts_mut(a, count as usize) };
+
+    let v = unsafe { Vec::from_raw_parts((*bvh_ref).ptr, (*bvh_ref).len as usize, (*bvh_ref).cap as usize)};
+    
+    let mut bvh = bvh::BVH {
+        nodes: v
+    };
+
+    bvh.rebuild(s);
+
     let len = bvh.nodes.len();
     let cap = bvh.nodes.capacity();
     let p = bvh.nodes.as_mut_ptr();
@@ -317,10 +403,8 @@ pub extern fn query_aabb(bvh_ref: *const BVHRef, bounds: *const BoundsD, boxes: 
         nodes: v
     };
 
-    let half_size = to_vec(&unsafe { *bounds }.extents);
-    let pos = to_vec(&unsafe { *bounds }.center);
-    let min = pos - half_size;
-    let max = pos + half_size;
+    let min = to_vec(&unsafe { *bounds }.min);
+    let max = to_vec(&unsafe { *bounds }.max);
     let test_shape = AABB::with_bounds(min, max);
     let mut i = 0;
 
@@ -411,5 +495,54 @@ pub extern fn remove_node(bvh_ref: *const BVHRef, remove_shape: i32, boxes: *mut
     
     BVHRef { ptr: p, len: len as i32, cap: cap as i32 }
 }
+
+#[no_mangle]
+pub extern fn flatten_bvh(bvh_ref: *const BVHRef, boxes: *mut BVHBounds, count: i32, res: *mut FlatNode32, res_count: i32) -> i32
+{
+    let shapes = unsafe { std::slice::from_raw_parts_mut(boxes, count as usize) };
+    let results = unsafe { std::slice::from_raw_parts_mut(res, res_count as usize) };
+
+    let v = unsafe { Vec::from_raw_parts((*bvh_ref).ptr, (*bvh_ref).len as usize, (*bvh_ref).cap as usize)};
+    
+    let bvh = bvh::BVH {
+        nodes: v
+    };
+
+    let flattened = bvh.flatten_custom(shapes, &node_32_constructor);
+
+    for i in 0..flattened.len() {
+        results[i] = flattened[i];
+    }
+
+    std::mem::forget(bvh.nodes);
+
+    flattened.len() as i32
+}
+
+pub fn node_32_constructor(aabb: &AABB, entry_index: u32, exit_index: u32, shape_index: u32) -> FlatNode32
+{
+    let min = Point32 {
+        x: aabb.min.x as f32,
+        y: aabb.min.y as f32,
+        z: aabb.min.z as f32
+    };
+    let max = Point32 {
+        x: aabb.max.x as f32,
+        y: aabb.max.y as f32,
+        z: aabb.max.z as f32
+    };
+    let b = AABB32 {
+        min,
+        max
+    };
+    FlatNode32 {
+        aabb: b,
+        entry_index,
+        exit_index,
+        shape_index
+    }
+}
+
+
 
 

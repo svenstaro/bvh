@@ -44,11 +44,12 @@ impl BVHNode {
     /// Creates a flat node from a `BVH` inner node and its `AABB`. Returns the next free index.
     /// TODO: change the algorithm which pushes `FlatNode`s to a vector to not use indices this
     /// much. Implement an algorithm which writes directly to a writable slice.
-    fn create_flat_branch<F, FNodeType>(
+    fn create_flat_branch<F, FNodeType, T : BHShape>(
         &self,
         nodes: &[BVHNode],
         this_aabb: &AABB,
         vec: &mut Vec<FNodeType>,
+        shapes: &[T],
         next_free: usize,
         constructor: &F,
     ) -> usize
@@ -61,7 +62,7 @@ impl BVHNode {
         assert_eq!(vec.len() - 1, next_free);
 
         // Create subtree.
-        let index_after_subtree = self.flatten_custom(nodes, vec, next_free + 1, constructor);
+        let index_after_subtree = self.flatten_custom(nodes, vec, shapes, next_free + 1, constructor);
 
         // Replace dummy node by actual node with the entry index pointing to the subtree
         // and the exit index pointing to the next node after the subtree.
@@ -80,10 +81,11 @@ impl BVHNode {
     ///
     /// [`BVH`]: ../bvh/struct.BVH.html
     ///
-    pub fn flatten_custom<F, FNodeType>(
+    pub fn flatten_custom<F, FNodeType, T: BHShape>(
         &self,
         nodes: &[BVHNode],
         vec: &mut Vec<FNodeType>,
+        shapes: &[T],
         next_free: usize,
         constructor: &F,
     ) -> usize
@@ -102,6 +104,7 @@ impl BVHNode {
                     nodes,
                     child_l_aabb,
                     vec,
+                    shapes,
                     next_free,
                     constructor,
                 );
@@ -109,6 +112,7 @@ impl BVHNode {
                     nodes,
                     child_r_aabb,
                     vec,
+                    shapes,
                     index_after_child_l,
                     constructor,
                 )
@@ -117,7 +121,7 @@ impl BVHNode {
                 let mut next_shape = next_free;
                 next_shape += 1;
                 let leaf_node = constructor(
-                    &AABB::empty(),
+                    &shapes[shape_index].aabb(),
                     u32::max_value(),
                     next_shape as u32,
                     shape_index as u32,
@@ -225,12 +229,12 @@ impl BVH {
     /// let bvh = BVH::build(&mut shapes);
     /// let custom_flat_bvh = bvh.flatten_custom(&custom_constructor);
     /// ```
-    pub fn flatten_custom<F, FNodeType>(&self, constructor: &F) -> Vec<FNodeType>
+    pub fn flatten_custom<F, FNodeType, T: BHShape>(&self, shapes: &[T], constructor: &F) -> Vec<FNodeType>
     where
         F: Fn(&AABB, u32, u32, u32) -> FNodeType,
     {
         let mut vec = Vec::new();
-        self.nodes[0].flatten_custom(&self.nodes, &mut vec, 0, constructor);
+        self.nodes[0].flatten_custom(&self.nodes, &mut vec, shapes, 0, constructor);
         vec
     }
 
@@ -293,8 +297,8 @@ impl BVH {
     /// let bvh = BVH::build(&mut shapes);
     /// let flat_bvh = bvh.flatten();
     /// ```
-    pub fn flatten(&self) -> FlatBVH {
-        self.flatten_custom(&|aabb, entry, exit, shape| FlatNode {
+    pub fn flatten<T: BHShape>(&self, shapes: &[T]) -> FlatBVH {
+        self.flatten_custom(shapes, &|aabb, entry, exit, shape| FlatNode {
             aabb: *aabb,
             entry_index: entry,
             exit_index: exit,
@@ -311,7 +315,7 @@ impl BoundingHierarchy for FlatBVH {
     ///
     fn build<T: BHShape>(shapes: &mut [T]) -> FlatBVH {
         let bvh = BVH::build(shapes);
-        bvh.flatten()
+        bvh.flatten(shapes)
     }
 
     /// Traverses a [`FlatBVH`] structure iteratively.
@@ -390,8 +394,8 @@ impl BoundingHierarchy for FlatBVH {
 
             if node.entry_index == u32::max_value() {
                 // If the entry_index is MAX_UINT32, then it's a leaf node.
-                let shape = &shapes[node.shape_index as usize];
-                if ray.intersects_aabb(&shape.aabb()) {
+                if ray.intersects_aabb(&node.aabb) {
+                    let shape = &shapes[node.shape_index as usize];
                     hit_shapes.push(shape);
                 }
 
@@ -463,7 +467,7 @@ mod bench {
         let bvh = BVH::build(&mut triangles);
 
         b.iter(|| {
-            bvh.flatten();
+            bvh.flatten(&triangles);
         });
     }
     #[bench]

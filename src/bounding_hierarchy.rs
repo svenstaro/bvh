@@ -9,7 +9,7 @@ use crate::aabb::AABB;
 /// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
 ///
 #[allow(clippy::upper_case_acronyms)]
-pub trait BHShape: Bounded {
+pub trait BHShape: Bounded + Sync + Send {
     /// Sets the index of the referenced [`BoundingHierarchy`] node.
     ///
     /// [`BoundingHierarchy`]: struct.BoundingHierarchy.html

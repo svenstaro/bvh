@@ -15,7 +15,7 @@ use rand::seq::SliceRandom;
 use rand::SeedableRng;
 
 use crate::aabb::{Bounded, AABB};
-use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use crate::bounding_hierarchy::{BHShape, BoundingHierarchy, IntersectionTest};
 use crate::ray::Ray;
 
 /// A vector represented as a tuple
