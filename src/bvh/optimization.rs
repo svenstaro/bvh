@@ -74,8 +74,27 @@ impl BVH {
     pub fn optimize<Shape: BHShape>(
         &mut self,
         refit_shape_indices: &HashSet<usize>,
-        shapes: &[Shape],
+        shapes: &mut[Shape],
     ) {
+        
+        for i in refit_shape_indices {
+            self.remove_node(shapes, *i, false);
+            //self.assert_tight(shapes);
+        }
+        //println!("--------");
+        //self.pretty_print();
+        //println!("--------");
+        for i in refit_shape_indices {
+            self.add_node(shapes, *i);
+            //self.assert_tight(shapes);
+            //println!("--------");
+            //self.pretty_print();
+            //println!("--------");
+            //self.assert_consistent(shapes);
+        }
+
+        return;
+
         // `refit_node_indices` will contain the indices of the leaf nodes
         // that reference the given shapes, sorted by their depth
         // in increasing order.
@@ -86,9 +105,10 @@ impl BVH {
                 .collect::<Vec<_>>();
 
             // Sorts the Vector to have the greatest depth nodes last.
+            let depths = self.cache_depths();
             raw_indices.sort_by(|a, b| {
-                let depth_a = self.nodes[*a].depth();
-                let depth_b = self.nodes[*b].depth();
+                let depth_a = depths[*a];
+                let depth_b = depths[*b];
                 depth_a.cmp(&depth_b)
             });
 
@@ -104,12 +124,12 @@ impl BVH {
             let mut sweep_node_indices = Vec::new();
             let max_depth = {
                 let last_node_index = refit_node_indices.last().unwrap();
-                self.nodes[last_node_index.index()].depth()
+                self.nodes[last_node_index.index()].depth(self.nodes.as_slice())
             };
             while !refit_node_indices.is_empty() {
                 let last_node_depth = {
                     let last_node_index = refit_node_indices.last().unwrap();
-                    self.nodes[last_node_index.index()].depth()
+                    self.nodes[last_node_index.index()].depth(self.nodes.as_slice())
                 };
                 if last_node_depth == max_depth {
                     sweep_node_indices.push(refit_node_indices.pop().unwrap());
@@ -141,13 +161,41 @@ impl BVH {
                 // that we should check, so we add its index to the refit_node_indices.
                 if let Some(index) = new_refit_node_index {
                     assert!({
-                        let new_node_depth = self.nodes[index.index()].depth();
+                        let new_node_depth = self.nodes[index.index()].depth(self.nodes.as_slice());
                         new_node_depth == max_depth - 1
                     });
                     refit_node_indices.push(index);
                 }
             }
         }
+    }
+
+    fn cache_depths(&mut self) -> Vec<usize> {
+        let mut depths = Vec::with_capacity(self.nodes.len());
+        unsafe {
+            depths.set_len(self.nodes.len());
+        }
+
+        let mut stack = Vec::new();
+        stack.push((0 as usize, 0 as usize));
+        while stack.len() > 0 {
+            let (i, depth) = stack.pop().unwrap();
+            depths[i] = depth;
+            match self.nodes[i] {
+                BVHNode::Leaf { .. } => {
+                    
+                }
+                BVHNode::Node {
+                    child_l_index,
+                    child_r_index,
+                    ..
+                } => {
+                    stack.push((child_r_index, depth + 1));
+                    stack.push((child_l_index, depth + 1));
+                }
+            }
+        }
+        depths
     }
 
     /// This method is called for each node which has been modified and needs to be updated.
@@ -434,7 +482,7 @@ impl BVH {
             shapes,
         );
     }
-
+/*
     /// Updates the depth of a node, and sets the depth of its descendants accordingly.
     fn update_depth_recursively(&mut self, node_index: usize, new_depth: u32) {
         let children = {
@@ -460,6 +508,7 @@ impl BVH {
             self.update_depth_recursively(child_r_index, new_depth + 1);
         }
     }
+*/
 
     fn node_is_left_child(&self, node_index: usize) -> bool {
         // Get the index of the parent.
@@ -479,14 +528,13 @@ impl BVH {
         let child_aabb = self.nodes[child_index].get_node_aabb(shapes);
         info!("\tConnecting: {} < {}.", child_index, parent_index);
         // Set parent's child and child_aabb; and get its depth.
-        let parent_depth = {
+        let _ = {
             match self.nodes[parent_index] {
                 BVHNode::Node {
                     ref mut child_l_index,
                     ref mut child_r_index,
                     ref mut child_l_aabb,
                     ref mut child_r_aabb,
-                    depth,
                     ..
                 } => {
                     if left_child {
@@ -497,7 +545,6 @@ impl BVH {
                         *child_r_aabb = child_aabb;
                     }
                     info!("\t  {}'s new {}", parent_index, child_aabb);
-                    depth
                 }
                 // Assuming that our BVH is correct, the parent cannot be a leaf.
                 _ => unreachable!(),
@@ -506,9 +553,6 @@ impl BVH {
 
         // Set child's parent.
         *self.nodes[child_index].parent_mut() = parent_index;
-
-        // Update the node's and the node's descendants' depth values.
-        self.update_depth_recursively(child_index, parent_depth + 1);
     }
 }
 
@@ -527,12 +571,12 @@ mod tests {
     #[test]
     /// Tests if `optimize` does not modify a fresh `BVH`.
     fn test_optimizing_new_bvh() {
-        let (shapes, mut bvh) = build_some_bh::<BVH>();
+        let (mut shapes, mut bvh) = build_some_bh::<BVH>();
         let original_nodes = bvh.nodes.clone();
 
         // Query an update for all nodes.
         let refit_shape_indices: HashSet<usize> = (0..shapes.len()).collect();
-        bvh.optimize(&refit_shape_indices, &shapes);
+        bvh.optimize(&refit_shape_indices, &mut shapes);
 
         // Assert that all nodes are the same as before the update.
         for (optimized, original) in bvh.nodes.iter().zip(original_nodes.iter()) {
@@ -552,7 +596,7 @@ mod tests {
         shapes[5].pos = Point3::new(11.0, 2.0, 2.0);
 
         let refit_shape_indices = (0..6).collect();
-        bvh.optimize(&refit_shape_indices, &shapes);
+        bvh.optimize(&refit_shape_indices, &mut shapes);
         bvh.assert_consistent(&shapes);
     }
 
@@ -596,7 +640,7 @@ mod tests {
         // Move the first shape so that it is closer to shape #2.
         shapes[1].pos = Point3::new(40.0, 0.0, 0.0);
         let refit_shape_indices: HashSet<usize> = (1..2).collect();
-        bvh.optimize(&refit_shape_indices, &shapes);
+        bvh.optimize(&refit_shape_indices, &mut shapes);
         bvh.pretty_print();
         bvh.assert_consistent(&shapes);
 
@@ -639,7 +683,6 @@ mod tests {
             // Root node.
             BVHNode::Node {
                 parent_index: 0,
-                depth: 0,
                 child_l_aabb: shapes[0].aabb().join(&shapes[1].aabb()),
                 child_l_index: 1,
                 child_r_aabb: shapes[2].aabb().join(&shapes[3].aabb()),
@@ -648,7 +691,6 @@ mod tests {
             // Depth 1 nodes.
             BVHNode::Node {
                 parent_index: 0,
-                depth: 1,
                 child_l_aabb: shapes[0].aabb(),
                 child_l_index: 3,
                 child_r_aabb: shapes[1].aabb(),
@@ -656,7 +698,6 @@ mod tests {
             },
             BVHNode::Node {
                 parent_index: 0,
-                depth: 1,
                 child_l_aabb: shapes[2].aabb(),
                 child_l_index: 5,
                 child_r_aabb: shapes[3].aabb(),
@@ -665,22 +706,18 @@ mod tests {
             // Depth 2 nodes (leaves).
             BVHNode::Leaf {
                 parent_index: 1,
-                depth: 2,
                 shape_index: 0,
             },
             BVHNode::Leaf {
                 parent_index: 1,
-                depth: 2,
                 shape_index: 1,
             },
             BVHNode::Leaf {
                 parent_index: 2,
-                depth: 2,
                 shape_index: 2,
             },
             BVHNode::Leaf {
                 parent_index: 2,
-                depth: 2,
                 shape_index: 3,
             },
         ];
@@ -929,7 +966,35 @@ mod tests {
         assert!(!bvh.is_consistent(&triangles), "BVH is consistent.");
 
         // After fixing the `AABB` consistency should be restored.
-        bvh.optimize(&updated, &triangles);
+        bvh.optimize(&updated, &mut triangles);
+        bvh.assert_consistent(&triangles);
+        bvh.assert_tight(&triangles);
+    }
+
+    #[test]
+    fn test_optimize_bvh_10_75p() {
+        let bounds = default_bounds();
+        let mut triangles = create_n_cubes(50, &bounds);
+        println!("triangles={}", triangles.len());
+
+        let mut bvh = BVH::build(&mut triangles);
+
+        // The initial BVH should be consistent.
+        bvh.assert_consistent(&triangles);
+        bvh.assert_tight(&triangles);
+
+        // After moving triangles, the BVH should be inconsistent, because the shape `AABB`s do not
+        // match the tree entries.
+        let mut seed = 0;
+
+        let updated = randomly_transform_scene(&mut triangles, 599, &bounds, None, &mut seed);
+        assert!(!bvh.is_consistent(&triangles), "BVH is consistent.");
+        println!("triangles={}", triangles.len());
+        //bvh.pretty_print();
+
+        // After fixing the `AABB` consistency should be restored.
+        bvh.optimize(&updated, &mut triangles);
+        //bvh.pretty_print();
         bvh.assert_consistent(&triangles);
         bvh.assert_tight(&triangles);
     }
@@ -968,7 +1033,7 @@ mod bench {
         b.iter(|| {
             let updated =
                 randomly_transform_scene(&mut triangles, num_move, &bounds, Some(10.0), &mut seed);
-            bvh.optimize(&updated, &triangles);
+            bvh.optimize(&updated, &mut triangles);
         });
     }
 
@@ -1010,7 +1075,7 @@ mod bench {
         for _ in 0..iterations {
             let updated =
                 randomly_transform_scene(&mut triangles, num_move, &bounds, max_offset, &mut seed);
-            bvh.optimize(&updated, &triangles);
+            bvh.optimize(&updated, &mut triangles);
         }
 
         intersect_bh(&bvh, &triangles, &bounds, b);

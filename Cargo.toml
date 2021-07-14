@@ -30,6 +30,8 @@ obj-rs = "0.6"
 proptest = "1.0"
 float_eq = "0.6"
 criterion = "0.3"
+itertools = "0.10.1"
+parry3d-f64 = "0.6.0"
 
 [features]
 bench = []
@@ -42,3 +44,4 @@ debug = true
 [profile.bench]
 lto = true
 codegen-units = 1
+debug = true

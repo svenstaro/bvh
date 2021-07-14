@@ -487,7 +487,7 @@ pub extern fn remove_node(bvh_ref: *const BVHRef, remove_shape: i32, boxes: *mut
         nodes: v
     };
 
-    bvh.remove_node(shapes, remove_shape as usize);
+    bvh.remove_node(shapes, remove_shape as usize, true);
     let len = bvh.nodes.len();
     let cap = bvh.nodes.capacity();
     let p = bvh.nodes.as_mut_ptr();

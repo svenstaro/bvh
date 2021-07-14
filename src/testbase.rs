@@ -167,7 +167,7 @@ pub fn traverse_some_bh<BH: BoundingHierarchy>() {
 }
 
 /// A triangle struct. Instance of a more complex `Bounded` primitive.
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct Triangle {
     pub a: Point3,
     pub b: Point3,
@@ -413,7 +413,7 @@ pub fn randomly_transform_scene(
         let bytes: [u8; 8] = unsafe { transmute(seed.to_be()) };
         seed_array[i] = bytes[i % 8];
     }
-    let mut rng: StdRng = SeedableRng::from_seed(seed_array);
+    let mut rng: StdRng = SeedableRng::from_seed(Default::default());
     indices.shuffle(&mut rng);
     indices.truncate(amount);
 

@@ -139,7 +139,7 @@ pub fn main() {
    let (mut triangles, bounds) = load_sponza_scene();
    let mut bvh = BVH::build(triangles.as_mut_slice());
 
-   for i in 0..50 {
+   for i in 0..10 {
         bvh.rebuild(triangles.as_mut_slice());
    }
 }
