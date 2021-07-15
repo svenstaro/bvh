@@ -98,6 +98,17 @@ use shapes::{Capsule, Sphere, OBB};
 use glam::DQuat;
 use bvh::BUILD_THREAD_COUNT;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use bvh::qbvh::BoundableQ;
+use parry3d_f64::partitioning::{QBVH, QBVHDataGenerator, IndexedData};
+use parry3d_f64::bounding_volume::aabb::AABB as QAABB;
+use parry3d_f64::math::{Point, Vector};
+use parry3d_f64::query::Ray as RayQ;
+use std::boxed;
+use parry3d_f64::query::visitors::RayIntersectionsVisitor;
+
+#[macro_use]
+extern crate lazy_static;
+
 
 #[cfg(test)]
 mod testbase;
@@ -137,7 +148,7 @@ pub struct BoundsD {
 pub struct BVHBounds {
     pub bounds: BoundsD,
     pub index: i32,
-    pub ptr: i32
+    pub array_index: i32
 }
 
 #[repr(C)]
@@ -145,6 +156,23 @@ pub struct BVHRef {
     pub ptr: *mut BVHNode,
     pub len: i32,
     pub cap: i32
+}
+
+#[repr(C)]
+pub struct QBVHRef {
+    pub ptr: *mut QBVH<RefNode>
+}
+
+impl QBVHRef {
+    fn from_box(boxed: Box<QBVH<RefNode>>) -> Self {
+        let ptr = Box::into_raw(boxed);
+        QBVHRef {
+            ptr
+        }
+    }
+    fn to_box(&self) -> Box<QBVH<RefNode>> {
+        unsafe { Box::from_raw(self.ptr) }
+    }
 }
 
 #[repr(C)]
@@ -188,6 +216,30 @@ impl Bounded for BVHBounds {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub struct RefNode {
+    pub index: usize
+}
+
+impl IndexedData for RefNode {
+    fn index(&self) -> usize {
+        self.index
+    }
+    fn default() -> Self {
+        RefNode {
+            index: usize::MAX
+        }
+    }
+}
+
+impl BVHBounds {
+    fn qaabb(&self) -> QAABB {
+        let min = Point::new(self.bounds.min.x, self.bounds.min.y, self.bounds.min.z);
+        let max = Point::new(self.bounds.max.x, self.bounds.max.y, self.bounds.max.z);
+        QAABB::new(min, max)
+    }
+}
+
 impl BHShape for BVHBounds {
     fn set_bh_node_index(&mut self, index: usize) {
         self.index = index as i32;
@@ -212,6 +264,35 @@ pub fn to_vecd(a: &Vector3) -> Vector3D {
 
 pub fn to_quat(a: &QuaternionD) -> DQuat {
     DQuat::from_xyzw(a.x, a.y, a.z, a.w)
+}
+
+struct BoundsData<'a> {
+    data: &'a mut [BVHBounds]
+}
+
+impl <'a> BoundsData<'a> {
+    fn new(data: &'a mut [BVHBounds]) -> BoundsData {
+        BoundsData {
+            data
+        }
+    }
+}
+
+impl <'a> QBVHDataGenerator<RefNode> for BoundsData<'a> {
+    fn size_hint(&self) -> usize {
+        self.data.len()
+    }
+
+    fn for_each(&mut self, mut f: impl FnMut(RefNode, QAABB)) {
+        for i in 0..self.data.len()
+        {
+            let bounds = self.data[i];
+            f(RefNode {
+                index: i
+            }, bounds.qaabb());
+        }
+            
+    }
 }
 
 #[no_mangle]
@@ -256,6 +337,57 @@ pub extern fn build_bvh(a: *mut BVHBounds, count: i32) -> BVHRef
     std::mem::forget(bvh.nodes);
 
     BVHRef { ptr: p, len: len as i32, cap: cap as i32 }
+}
+
+
+#[no_mangle]
+pub extern fn build_qbvh(a: *mut BVHBounds, count: i32) -> QBVHRef 
+{
+    let mut s = unsafe { std::slice::from_raw_parts_mut(a, count as usize) };
+
+    let data = BoundsData::new(s);
+    let mut bvh = Box::new(QBVH::new());
+
+    bvh.clear_and_rebuild(data, 0.0);
+
+    QBVHRef::from_box(bvh)
+}
+
+#[no_mangle]
+pub extern fn query_ray_q(bvh_ref: *const QBVHRef, origin_vec: *const Vector3D, dir_vec: *const Vector3D, boxes: *mut BVHBounds, count: i32, res: *mut BVHBounds, max_res: i32) -> i32
+{
+    let shapes = unsafe { std::slice::from_raw_parts_mut(boxes, count as usize) };
+    let buffer = unsafe { std::slice::from_raw_parts_mut(res, max_res as usize) };
+
+
+    let bvh = unsafe {(*bvh_ref).to_box()};
+    let o_vec = unsafe {*origin_vec};
+    let d_vec = unsafe {*dir_vec};
+    let ray = RayQ::new(Point::new(o_vec.x, o_vec.y, o_vec.z), Vector::new(d_vec.x, d_vec.y, d_vec.z));
+    let mut i = 0;
+
+    let mut stack_arr: [u32; 32] = [0; 32];
+
+    let mut stack = unsafe { Vec::from_raw_parts(&mut stack_arr as *mut u32, 0, 32)};
+    
+    let mut visit = |node: &RefNode| {
+        if i < max_res {
+            buffer[i as usize] = shapes[node.index];
+            i += 1;
+            return false;
+        }
+        i += 1;
+        true
+    };
+
+    let mut visitor = RayIntersectionsVisitor::new(&ray, 1000000000000.0, &mut visit);
+
+    bvh.traverse_depth_first_with_stack(&mut visitor, &mut stack);
+
+    std::mem::forget(stack);
+    std::mem::forget(bvh);
+
+    i as i32
 }
 
 
@@ -541,6 +673,69 @@ pub fn node_32_constructor(aabb: &AABB, entry_index: u32, exit_index: u32, shape
         exit_index,
         shape_index
     }
+}
+
+
+#[test]
+fn test_building_and_querying() {
+    let min = Vector3D {
+        x: -1.0,
+        y: -1.0,
+        z: -1.0
+    };
+    let max = Vector3D {
+        x: 1.0,
+        y: 1.0,
+        z: 1.0
+    };
+    let bounds = BoundsD {
+        min,
+        max
+    };
+    let mut b = BVHBounds {
+        bounds,
+        array_index: 0,
+        index: 0
+    };
+    let ptr = unsafe {
+        &mut b as *mut BVHBounds
+    };
+
+
+    let mut out = BVHBounds {
+        bounds,
+        array_index: 0,
+        index: 0
+    };
+    let out_ptr = unsafe {
+        &mut out as *mut BVHBounds
+    };
+
+    let origin = Vector3D {
+        x: 0.0,
+        y: -5.0,
+        z: 0.0
+    };
+    let dir = Vector3D {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0
+    };
+    let o_ptr = unsafe {
+        &origin as * const Vector3D
+    };
+    let d_ptr = unsafe {
+        &dir as * const Vector3D
+    };
+
+    let mut bvhRef = build_qbvh(ptr, 1);
+
+    let bvh_ptr = unsafe {
+        &bvhRef as * const QBVHRef
+    };
+
+    let x = query_ray_q(bvh_ptr, o_ptr, d_ptr, ptr, 1, out_ptr, 1);
+    assert_eq!(x, 1);
 }
 
 
