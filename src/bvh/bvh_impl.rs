@@ -15,6 +15,7 @@ use rayon::prelude::*;
 use std::iter::repeat;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use smallvec::SmallVec;
+use crate::axis::Axis;
 
 
 pub static BUILD_THREAD_COUNT: AtomicUsize = AtomicUsize::new(20);
@@ -273,7 +274,7 @@ impl BVHNode {
 
         let mut parallel_recurse = false;
         if nodes.len() > 128 {
-            //parallel_recurse = true;
+            parallel_recurse = true;
             /*
             let avail_threads = BUILD_THREAD_COUNT.load(Ordering::Relaxed);
             if avail_threads > 0 {
@@ -361,79 +362,17 @@ impl BVHNode {
             //println!("{:?}", (parent_index, child_l_index, child_l_indices.len(), child_r_index, child_r_indices.len()));
             (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
         } else {
-            // Create six `Bucket`s, and six index assignment vector.
-            const NUM_BUCKETS: usize = 6;
-            let mut buckets = [Bucket::empty(); NUM_BUCKETS];
-            let mut bucket_assignments: [SmallVec<[usize; 128]>; NUM_BUCKETS] = Default::default();
-
-            // In this branch the `split_axis_size` is large enough to perform meaningful splits.
-            // We start by assigning the shapes to `Bucket`s.
-            for idx in indices.iter() {
-                let shape = &shapes[*idx];
-                let shape_aabb = shape.aabb();
-                let shape_center = shape_aabb.center();
-
-                // Get the relative position of the shape centroid `[0.0..1.0]`.
-                let bucket_num_relative =
-                    (shape_center[split_axis] - centroid_bounds.min[split_axis]) / split_axis_size;
-
-                // Convert that to the actual `Bucket` number.
-                let bucket_num = (bucket_num_relative * (NUM_BUCKETS as f64 - 0.01)) as usize;
-
-                // Extend the selected `Bucket` and add the index to the actual bucket.
-                buckets[bucket_num].add_aabb(&shape_aabb);
-                bucket_assignments[bucket_num].push(*idx);
-            }
-
-            // Compute the costs for each configuration and select the best configuration.
-            let mut min_bucket = 0;
-            let mut min_cost = f64::INFINITY;
-            let mut child_l_aabb = AABB::empty();
-            let mut child_r_aabb = AABB::empty();
-            for i in 0..(NUM_BUCKETS - 1) {
-                let (l_buckets, r_buckets) = buckets.split_at(i + 1);
-                let child_l = l_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
-                let child_r = r_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
-
-                let cost = (child_l.size as f64 * child_l.aabb.surface_area()
-                    + child_r.size as f64 * child_r.aabb.surface_area())
-                    / aabb_bounds.surface_area();
-                if cost < min_cost {
-                    min_bucket = i;
-                    min_cost = cost;
-                    child_l_aabb = child_l.aabb;
-                    child_r_aabb = child_r.aabb;
-                }
-            }
 
             // Join together all index buckets.
-            let (l_assignments, r_assignments) = bucket_assignments.split_at_mut(min_bucket + 1);
-            // split input indices, loop over assignments and assign
-            let mut l_count = 0;
-            for group in l_assignments.iter() {
-                l_count += group.len();
-            }
 
-            let (child_l_indices, child_r_indices) = indices.split_at_mut(l_count);
-            let mut i = 0;
-            for group in l_assignments.iter() {
-                for x in group {
-                    child_l_indices[i] = *x;
-                    i += 1;
-                }
-            }
-            i = 0;
-            for group in r_assignments.iter() {
-                for x in group {
-                    child_r_indices[i] = *x;
-                    i += 1;
-                }
-            }
+
+            // split input indices, loop over assignments and assign
 
 
             //let child_l_indices = concatenate_vectors(l_assignments);
             //let child_r_indices = concatenate_vectors(r_assignments);
 
+            let (child_l_aabb, child_r_aabb, child_l_indices, child_r_indices) = BVHNode::build_buckets(shapes, indices, split_axis, split_axis_size, &centroid_bounds, &aabb_bounds);
 
             let next_nodes = &mut nodes[1..];
             let (l_nodes, r_nodes) = next_nodes.split_at_mut(child_l_indices.len() * 2 - 1);
@@ -476,6 +415,85 @@ impl BVHNode {
         node_index
     }
 
+
+    fn build_buckets<'a, T: BHShape>(
+        shapes: &mut [T],
+        indices: &'a mut [usize],
+        split_axis: Axis,
+        split_axis_size: f64,
+        centroid_bounds: &AABB,
+        aabb_bounds: &AABB) -> (AABB, AABB, &'a mut [usize], &'a mut [usize])  {
+        // Create six `Bucket`s, and six index assignment vector.
+        const NUM_BUCKETS: usize = 6;
+        let mut buckets = [Bucket::empty(); NUM_BUCKETS];
+        let mut bucket_assignments: [SmallVec<[usize; 1024]>; NUM_BUCKETS] = Default::default();
+
+        // In this branch the `split_axis_size` is large enough to perform meaningful splits.
+        // We start by assigning the shapes to `Bucket`s.
+        for idx in indices.iter() {
+            let shape = &shapes[*idx];
+            let shape_aabb = shape.aabb();
+            let shape_center = shape_aabb.center();
+
+            // Get the relative position of the shape centroid `[0.0..1.0]`.
+            let bucket_num_relative =
+                (shape_center[split_axis] - centroid_bounds.min[split_axis]) / split_axis_size;
+
+            // Convert that to the actual `Bucket` number.
+            let bucket_num = (bucket_num_relative * (NUM_BUCKETS as f64 - 0.01)) as usize;
+
+            // Extend the selected `Bucket` and add the index to the actual bucket.
+            buckets[bucket_num].add_aabb(&shape_aabb);
+            bucket_assignments[bucket_num].push(*idx);
+        }
+
+        // Compute the costs for each configuration and select the best configuration.
+        let mut min_bucket = 0;
+        let mut min_cost = f64::INFINITY;
+        let mut child_l_aabb = AABB::empty();
+        let mut child_r_aabb = AABB::empty();
+        for i in 0..(NUM_BUCKETS - 1) {
+            let (l_buckets, r_buckets) = buckets.split_at(i + 1);
+            let child_l = l_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
+            let child_r = r_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
+
+            let cost = (child_l.size as f64 * child_l.aabb.surface_area()
+                + child_r.size as f64 * child_r.aabb.surface_area())
+                / aabb_bounds.surface_area();
+            if cost < min_cost {
+                min_bucket = i;
+                min_cost = cost;
+                child_l_aabb = child_l.aabb;
+                child_r_aabb = child_r.aabb;
+            }
+        }
+
+        let (l_assignments, r_assignments) = bucket_assignments.split_at_mut(min_bucket + 1);
+
+        
+        let mut l_count = 0;
+        for group in l_assignments.iter() {
+            l_count += group.len();
+        }
+
+        let (child_l_indices, child_r_indices) = indices.split_at_mut(l_count);
+        let mut i = 0;
+        for group in l_assignments.iter() {
+            for x in group {
+                child_l_indices[i] = *x;
+                i += 1;
+            }
+        }
+        i = 0;
+        for group in r_assignments.iter() {
+            for x in group {
+                child_r_indices[i] = *x;
+                i += 1;
+            }
+        }
+
+        (child_l_aabb, child_r_aabb, child_l_indices, child_r_indices)
+    }
 
     /// Traverses the [`BVH`] recursively and returns all shapes whose [`AABB`] is
     /// intersected by the given [`Ray`].
