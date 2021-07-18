@@ -28,6 +28,7 @@ obj-rs = "0.6"
 parry3d-f64 = "0.6.0"
 object-pool = "0.5.4"
 lazy_static = "1.4.0"
+smallvec = "1.6.1"
 
 [dev-dependencies]
 proptest = "1.0"

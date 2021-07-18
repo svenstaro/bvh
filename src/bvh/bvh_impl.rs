@@ -14,6 +14,7 @@ use std::slice;
 use rayon::prelude::*;
 use std::iter::repeat;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use smallvec::SmallVec;
 
 
 pub static BUILD_THREAD_COUNT: AtomicUsize = AtomicUsize::new(20);
@@ -247,7 +248,7 @@ impl BVHNode {
     ///
     pub fn build<T: BHShape>(
         shapes: &mut [T],
-        indices: &[usize],
+        indices: &mut [usize],
         nodes: &mut [BVHNode],
         parent_index: usize,
         depth: u32,
@@ -297,7 +298,7 @@ impl BVHNode {
         } else {
             let mut convex_hull = Default::default();
         
-            for index in indices {
+            for index in indices.iter() {
                 convex_hull = grow_convex_hull(convex_hull, &shapes[*index].aabb());
             };
             convex_hull
@@ -332,7 +333,7 @@ impl BVHNode {
         {
             // In this branch the shapes lie too close together so that splitting them in a
             // sensible way is not possible. Instead we just split the list of shapes in half.
-            let (child_l_indices, child_r_indices) = indices.split_at(indices.len() / 2);
+            let (child_l_indices, child_r_indices) = indices.split_at_mut(indices.len() / 2);
             let child_l_aabb = joint_aabb_of_shapes(child_l_indices, shapes);
             let child_r_aabb = joint_aabb_of_shapes(child_r_indices, shapes);
 
@@ -350,12 +351,12 @@ impl BVHNode {
                     let shapes_b = slice::from_raw_parts_mut(ptr, len);
                     (shapes_a, shapes_b)
                 };
-                rayon::join(|| BVHNode::build(shapes_a, &child_l_indices, l_nodes, node_index, depth + 1, child_l_index), 
-                            || BVHNode::build(shapes_b, &child_r_indices, r_nodes, node_index, depth + 1, child_r_index));
+                rayon::join(|| BVHNode::build(shapes_a, child_l_indices, l_nodes, node_index, depth + 1, child_l_index), 
+                            || BVHNode::build(shapes_b, child_r_indices, r_nodes, node_index, depth + 1, child_r_index));
                 //BUILD_THREAD_COUNT.fetch_add(1, Ordering::Relaxed);
             } else {
-                BVHNode::build(shapes, &child_l_indices, l_nodes, node_index, depth + 1, child_l_index);
-                BVHNode::build(shapes, &child_r_indices, r_nodes, node_index, depth + 1, child_r_index);
+                BVHNode::build(shapes, child_l_indices, l_nodes, node_index, depth + 1, child_l_index);
+                BVHNode::build(shapes, child_r_indices, r_nodes, node_index, depth + 1, child_r_index);
             }
             //println!("{:?}", (parent_index, child_l_index, child_l_indices.len(), child_r_index, child_r_indices.len()));
             (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
@@ -363,11 +364,11 @@ impl BVHNode {
             // Create six `Bucket`s, and six index assignment vector.
             const NUM_BUCKETS: usize = 6;
             let mut buckets = [Bucket::empty(); NUM_BUCKETS];
-            let mut bucket_assignments: [Vec<usize>; NUM_BUCKETS] = Default::default();
+            let mut bucket_assignments: [SmallVec<[usize; 128]>; NUM_BUCKETS] = Default::default();
 
             // In this branch the `split_axis_size` is large enough to perform meaningful splits.
             // We start by assigning the shapes to `Bucket`s.
-            for idx in indices {
+            for idx in indices.iter() {
                 let shape = &shapes[*idx];
                 let shape_aabb = shape.aabb();
                 let shape_center = shape_aabb.center();
@@ -407,8 +408,31 @@ impl BVHNode {
 
             // Join together all index buckets.
             let (l_assignments, r_assignments) = bucket_assignments.split_at_mut(min_bucket + 1);
-            let child_l_indices = concatenate_vectors(l_assignments);
-            let child_r_indices = concatenate_vectors(r_assignments);
+            // split input indices, loop over assignments and assign
+            let mut l_count = 0;
+            for group in l_assignments.iter() {
+                l_count += group.len();
+            }
+
+            let (child_l_indices, child_r_indices) = indices.split_at_mut(l_count);
+            let mut i = 0;
+            for group in l_assignments.iter() {
+                for x in group {
+                    child_l_indices[i] = *x;
+                    i += 1;
+                }
+            }
+            i = 0;
+            for group in r_assignments.iter() {
+                for x in group {
+                    child_r_indices[i] = *x;
+                    i += 1;
+                }
+            }
+
+
+            //let child_l_indices = concatenate_vectors(l_assignments);
+            //let child_r_indices = concatenate_vectors(r_assignments);
 
 
             let next_nodes = &mut nodes[1..];
@@ -426,13 +450,13 @@ impl BVHNode {
                     let shapes_b = slice::from_raw_parts_mut(ptr, len);
                     (shapes_a, shapes_b)
                 };
-                rayon::join(|| BVHNode::build(shapes_a, &child_l_indices, l_nodes, node_index, depth + 1, child_l_index), 
-                            || BVHNode::build(shapes_b, &child_r_indices, r_nodes, node_index, depth + 1, child_r_index));
+                rayon::join(|| BVHNode::build(shapes_a, child_l_indices, l_nodes, node_index, depth + 1, child_l_index), 
+                            || BVHNode::build(shapes_b, child_r_indices, r_nodes, node_index, depth + 1, child_r_index));
                 //BUILD_THREAD_COUNT.fetch_add(1, Ordering::Relaxed);
             } else {
                 
-                BVHNode::build(shapes, &child_l_indices, l_nodes, node_index, depth + 1, child_l_index);
-                BVHNode::build(shapes, &child_r_indices, r_nodes, node_index, depth + 1, child_r_index);
+                BVHNode::build(shapes, child_l_indices, l_nodes, node_index, depth + 1, child_l_index);
+                BVHNode::build(shapes, child_r_indices, r_nodes, node_index, depth + 1, child_r_index);
             }
             //println!("{:?}", (parent_index, child_l_index, child_l_indices.len(), child_r_index, child_r_indices.len()));
             (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
@@ -507,7 +531,7 @@ impl BVH {
     /// [`BVH`]: struct.BVH.html
     ///
     pub fn build<Shape: BHShape>(shapes: &mut [Shape]) -> BVH {
-        let indices = (0..shapes.len()).collect::<Vec<usize>>();
+        let mut indices = (0..shapes.len()).collect::<Vec<usize>>();
         let expected_node_count = shapes.len() * 2 - 1;
         let mut nodes = Vec::with_capacity(expected_node_count);
         unsafe {
@@ -515,12 +539,12 @@ impl BVH {
         }
         //println!("shapes={} nodes={}", shapes.len(), nodes.len());
         let n = nodes.as_mut_slice();
-        BVHNode::build(shapes, &indices, n, 0, 0, 0);
+        BVHNode::build(shapes, &mut indices, n, 0, 0, 0);
         BVH { nodes }
     }
 
     pub fn rebuild<Shape: BHShape>(&mut self, shapes: &mut [Shape]) {
-        let indices = (0..shapes.len()).collect::<Vec<usize>>();
+        let mut indices = (0..shapes.len()).collect::<Vec<usize>>();
         let expected_node_count = shapes.len() * 2 - 1;
         let additional_nodes = self.nodes.capacity() as i32 - expected_node_count as i32;
         if additional_nodes > 0 {
@@ -530,7 +554,7 @@ impl BVH {
             self.nodes.set_len(expected_node_count);
         }
         let n = self.nodes.as_mut_slice();
-        BVHNode::build(shapes, &indices, n, 0, 0, 0);
+        BVHNode::build(shapes, &mut indices, n, 0, 0, 0);
     }
 
     /// Traverses the [`BVH`].
