@@ -364,7 +364,7 @@ impl BVHNode {
             // Create six `Bucket`s, and six index assignment vector.
             const NUM_BUCKETS: usize = 6;
             let mut buckets = [Bucket::empty(); NUM_BUCKETS];
-            let mut bucket_assignments: [SmallVec<[usize; 128]>; NUM_BUCKETS] = Default::default();
+            //let mut bucket_assignments: [SmallVec<[usize; 128]>; NUM_BUCKETS] = Default::default();
 
             // In this branch the `split_axis_size` is large enough to perform meaningful splits.
             // We start by assigning the shapes to `Bucket`s.
@@ -382,7 +382,7 @@ impl BVHNode {
 
                 // Extend the selected `Bucket` and add the index to the actual bucket.
                 buckets[bucket_num].add_aabb(&shape_aabb);
-                bucket_assignments[bucket_num].push(*idx);
+                //bucket_assignments[bucket_num].push(*idx);
             }
 
             // Compute the costs for each configuration and select the best configuration.
@@ -390,6 +390,7 @@ impl BVHNode {
             let mut min_cost = f64::INFINITY;
             let mut child_l_aabb = AABB::empty();
             let mut child_r_aabb = AABB::empty();
+            let mut l_count = 0;
             for i in 0..(NUM_BUCKETS - 1) {
                 let (l_buckets, r_buckets) = buckets.split_at(i + 1);
                 let child_l = l_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
@@ -403,34 +404,50 @@ impl BVHNode {
                     min_cost = cost;
                     child_l_aabb = child_l.aabb;
                     child_r_aabb = child_r.aabb;
+                    l_count = child_l.size;
                 }
             }
-
-            // Join together all index buckets.
-            let (l_assignments, r_assignments) = bucket_assignments.split_at_mut(min_bucket + 1);
             // split input indices, loop over assignments and assign
-            let mut l_count = 0;
-            for group in l_assignments.iter() {
-                l_count += group.len();
-            }
 
             let (child_l_indices, child_r_indices) = indices.split_at_mut(l_count);
-            let mut i = 0;
-            for group in l_assignments.iter() {
-                for x in group {
-                    child_l_indices[i] = *x;
-                    i += 1;
-                }
-            }
-            i = 0;
-            for group in r_assignments.iter() {
-                for x in group {
-                    child_r_indices[i] = *x;
-                    i += 1;
-                }
-            }
 
 
+            let mut k = 0;
+            for j in 0..child_l_indices.len() {
+                let shape = &shapes[j];
+                let shape_aabb = shape.aabb();
+                let shape_center = shape_aabb.center();
+
+                // Get the relative position of the shape centroid `[0.0..1.0]`.
+                let bucket_num_relative =
+                    (shape_center[split_axis] - centroid_bounds.min[split_axis]) / split_axis_size;
+
+                // Convert that to the actual `Bucket` number.
+                let bucket_num = (bucket_num_relative * (NUM_BUCKETS as f64 - 0.01)) as usize;
+
+                if bucket_num > min_bucket {
+                    while k < child_r_indices.len() {
+                        let shape = &shapes[j];
+                        let shape_aabb = shape.aabb();
+                        let shape_center = shape_aabb.center();
+
+                        // Get the relative position of the shape centroid `[0.0..1.0]`.
+                        let bucket_num_relative =
+                            (shape_center[split_axis] - centroid_bounds.min[split_axis]) / split_axis_size;
+
+                        // Convert that to the actual `Bucket` number.
+                        let r_bucket_num = (bucket_num_relative * (NUM_BUCKETS as f64 - 0.01)) as usize;
+                        if r_bucket_num <= min_bucket {
+                            let temp = child_l_indices[j];
+                            child_l_indices[j] = child_r_indices[k];
+                            child_r_indices[k] = temp;
+                            k += 1;
+                            break;
+                        }
+                        k += 1;
+                    }
+                }
+            }
             //let child_l_indices = concatenate_vectors(l_assignments);
             //let child_r_indices = concatenate_vectors(r_assignments);
 

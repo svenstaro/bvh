@@ -263,6 +263,10 @@ impl AABB {
         )
     }
 
+    pub fn merge(a: AABB, b: &AABB) -> AABB {
+        a.join(b)
+    }
+
     /// mutable version of [`AABB::join`].
     ///
     /// # Examples
