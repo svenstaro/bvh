@@ -64,6 +64,10 @@
 //! let hit_sphere_aabbs = bvh.traverse(&ray, &spheres);
 //! ```
 //!
+//! ## Features
+//!
+//! - `serde_impls` (default **disabled**) - adds `Serialize` and `Deserialize` implementations for some types
+//!
 
 #![deny(missing_docs)]
 #![cfg_attr(feature = "bench", feature(test))]

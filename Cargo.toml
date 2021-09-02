@@ -19,6 +19,7 @@ rand = "0.8"
 log = "0.4"
 num = "0.4"
 glam = "0.18"
+serde = { optional = true, version = "1", features = ["derive"] }
 
 [dev-dependencies]
 proptest = "1.0"
@@ -28,6 +29,8 @@ criterion = "0.3"
 
 [features]
 bench = []
+# Unfortunately can't use "serde" as the feature name until https://github.com/rust-lang/cargo/issues/5565 lands
+serde_impls = ["serde", "glam/serde"]
 
 [profile.release]
 lto = true
