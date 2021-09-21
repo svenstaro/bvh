@@ -65,7 +65,7 @@ mod tests {
     /// Test if concatenating no `Vec`s yields an empty `Vec`.
     fn test_concatenate_empty() {
         let mut vectors: Vec<Vec<usize>> = vec![];
-        let expected = vec![];
+        let expected: Vec<usize> = vec![];
         assert_eq!(concatenate_vectors(vectors.as_mut_slice()), expected);
         let expected_remainder: Vec<Vec<usize>> = vec![];
         assert_eq!(vectors, expected_remainder);
@@ -78,6 +78,7 @@ mod tests {
         let result = concatenate_vectors(vectors.as_mut_slice());
         let expected = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
         assert_eq!(result, expected);
-        assert_eq!(vectors, vec![vec![], vec![], vec![], vec![], vec![]]);
+        let expected_vecs: Vec<Vec<i32>> = vec![vec![], vec![], vec![], vec![], vec![]];
+        assert_eq!(vectors, expected_vecs);
     }
 }

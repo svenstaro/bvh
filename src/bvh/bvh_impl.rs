@@ -7,13 +7,13 @@
 use crate::aabb::{Bounded, AABB};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy, IntersectionTest};
 use crate::bvh::iter::BVHTraverseIterator;
-use crate::utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
+use crate::utils::{joint_aabb_of_shapes, Bucket};
 use crate::Point3;
 use crate::EPSILON;
 use std::slice;
 use rayon::prelude::*;
 use std::iter::repeat;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize};
 use smallvec::SmallVec;
 use crate::axis::Axis;
 
@@ -270,11 +270,11 @@ impl BVHNode {
         }
 
 
-        let mut use_parallel_hull = false;
+        let use_parallel_hull = false;
 
-        let mut parallel_recurse = false;
+        let parallel_recurse = false;
         if nodes.len() > 128 {
-            parallel_recurse = true;
+            //parallel_recurse = true;
             /*
             let avail_threads = BUILD_THREAD_COUNT.load(Ordering::Relaxed);
             if avail_threads > 0 {
@@ -1180,7 +1180,7 @@ impl BVH {
 
         // Check if all nodes have been counted from the root node.
         // If this is false, it means we have a detached subtree.
-        if (node_count != self.nodes.len()) {
+        if node_count != self.nodes.len() {
             for x in node_count..self.nodes.len() {
                 let node = self.nodes[x];
                 match node {
@@ -1224,7 +1224,7 @@ impl BVH {
         {
             let joint_aabb = child_l_aabb.join(&child_r_aabb);
             if !joint_aabb.relative_eq(outer_aabb, EPSILON) {
-                for i in 0..shapes.len()
+                for _i in 0..shapes.len()
                 {
                     //println!("s#{} {}", i, shapes[i].aabb())
                 }
@@ -1276,8 +1276,6 @@ mod tests {
     use crate::testbase::{build_some_bh, traverse_some_bh, UnitBox};
     use crate::Ray;
     use crate::bounding_hierarchy::BHShape;
-    use rand::thread_rng;
-    use rand::prelude::SliceRandom;
     use itertools::Itertools;
 
     #[test]
@@ -1451,7 +1449,6 @@ mod tests {
         }
 
         let (left, right) =  shapes.split_at_mut(10);
-        let addable = 10..25;
 
         let mut bvh = BVH::build(left);
         bvh.pretty_print();

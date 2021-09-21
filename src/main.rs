@@ -1,7 +1,6 @@
 use bvh_f64::aabb::{Bounded, AABB};
 use bvh_f64::bounding_hierarchy::BHShape;
 use bvh_f64::bvh::BVH;
-use bvh_f64::ray::Ray;
 use bvh_f64::{Point3, Vector3};
 use obj::*;
 use obj::raw::object::Polygon;
@@ -139,7 +138,7 @@ pub fn main() {
    let (mut triangles, bounds) = load_sponza_scene();
    let mut bvh = BVH::build(triangles.as_mut_slice());
 
-   for i in 0..10 {
+   for _i in 0..10 {
         bvh.rebuild(triangles.as_mut_slice());
    }
 }

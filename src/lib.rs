@@ -92,19 +92,24 @@ mod utils;
 
 use aabb::{Bounded, AABB};
 use bounding_hierarchy::BHShape;
-use bvh::BVHNode;
+use bvh::{BVH, BVHNode};
 use ray::Ray;
 use shapes::{Capsule, Sphere, OBB};
 use glam::DQuat;
 use bvh::BUILD_THREAD_COUNT;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use bvh::qbvh::BoundableQ;
 use parry3d_f64::partitioning::{QBVH, QBVHDataGenerator, IndexedData};
 use parry3d_f64::bounding_volume::aabb::AABB as QAABB;
 use parry3d_f64::math::{Point, Vector};
 use parry3d_f64::query::Ray as RayQ;
-use std::boxed;
 use parry3d_f64::query::visitors::RayIntersectionsVisitor;
+use interoptopus::{ffi_function, ffi_type};
+use interoptopus::patterns::slice::{FFISliceMut};
+use interoptopus::patterns::string::AsciiPointer;
+use interoptopus::lang::rust::CTypeInfo;
+use interoptopus::lang::c::{CType, CompositeType, Documentation, Field, OpaqueType, PrimitiveType, Visibility, Meta};
+use flexi_logger::{FileSpec, Logger, detailed_format};
+use log::{info, warn, error};
 
 #[macro_use]
 extern crate lazy_static;
@@ -115,20 +120,22 @@ mod testbase;
 
 
 #[no_mangle]
-pub extern fn add_numbers(number1: i32, number2: i32) -> i32 {
+pub extern "C" fn add_numbers(number1: i32, number2: i32) -> i32 {
     println!("Hello from rust!");
     number1 + number2
 }
 
 #[repr(C)]
+#[ffi_type]
 #[derive(Copy, Clone, Debug)]
-pub struct Vector3D {    
+pub struct Double3 {    
     pub x: f64,
     pub y: f64,
     pub z: f64
 }
 
 #[repr(C)]
+#[ffi_type]
 #[derive(Copy, Clone, Debug)]
 pub struct Float3 {    
     pub x: f32,
@@ -137,53 +144,54 @@ pub struct Float3 {
 }
 
 #[repr(C)]
+#[ffi_type(name="BoundingBoxD")]
 #[derive(Copy, Clone, Debug)]
 pub struct BoundsD {
-    pub min: Vector3D,
-    pub max: Vector3D
+    pub min: Double3,
+    pub max: Double3
 }
 
 #[repr(C)]
+#[ffi_type(name="BvhNode")]
 #[derive(Copy, Clone, Debug)]
 pub struct BVHBounds {
     pub bounds: BoundsD,
-    pub index: i32,
-    pub array_index: i32
+    pub internal_bvh_index: i32,
+    pub index: i32
 }
 
 #[repr(C)]
-pub struct BVHRef {
-    pub ptr: *mut BVHNode,
-    pub len: i32,
-    pub cap: i32
+pub struct BvhRef {
+    bvh: Box<bvh::BVH>
 }
 
+unsafe impl CTypeInfo for BvhRef {
+    fn type_info() -> CType {
+        let fields: Vec<Field> = vec![
+            Field::with_documentation("bvh".to_string(), CType::ReadPointer(Box::new(CType::Opaque(OpaqueType::new("BvhPtr".to_string(), Meta::new())))), Visibility::Private, Documentation::new()),
+        ];
+        let composite = CompositeType::new("BvhRef".to_string(), fields);
+        CType::Composite(composite)
+    }
+}
+
+#[ffi_type(opaque)]
 #[repr(C)]
 pub struct QBVHRef {
-    pub ptr: *mut QBVH<RefNode>
+    bvh: Box<QBVH<RefNode>>
 }
 
-impl QBVHRef {
-    fn from_box(boxed: Box<QBVH<RefNode>>) -> Self {
-        let ptr = Box::into_raw(boxed);
-        QBVHRef {
-            ptr
-        }
-    }
-    fn to_box(&self) -> Box<QBVH<RefNode>> {
-        unsafe { Box::from_raw(self.ptr) }
-    }
-}
-
+#[ffi_type]
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
-pub struct QuaternionD {
+pub struct QuatD {
     pub x: f64,
     pub y: f64,
     pub z: f64,
     pub w: f64
 }
 
+#[ffi_type(name="Float3")]
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct Point32 {
@@ -192,6 +200,7 @@ pub struct Point32 {
     pub z: f32
 }
 
+#[ffi_type(name="BoundingBox")]
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct AABB32 {
@@ -199,6 +208,7 @@ pub struct AABB32 {
     pub max: Point32
 }
 
+#[ffi_type(name="FlatNode")]
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct FlatNode32 {
@@ -216,6 +226,7 @@ impl Bounded for BVHBounds {
     }
 }
 
+#[ffi_type(opaque)]
 #[derive(Copy, Clone, Debug)]
 pub struct RefNode {
     pub index: usize
@@ -242,27 +253,27 @@ impl BVHBounds {
 
 impl BHShape for BVHBounds {
     fn set_bh_node_index(&mut self, index: usize) {
-        self.index = index as i32;
+        self.internal_bvh_index = index as i32;
     }
 
     fn bh_node_index(&self) -> usize {
-        self.index as usize
+        self.internal_bvh_index as usize
     }
 }
 
-pub fn to_vec(a: &Vector3D) -> Vector3 {
+pub fn to_vec(a: &Double3) -> Vector3 {
     Vector3::new(a.x, a.y, a.z)
 }
 
-pub fn to_vecd(a: &Vector3) -> Vector3D {
-    Vector3D {
+pub fn to_vecd(a: &Vector3) -> Double3 {
+    Double3 {
         x: a.x,
         y: a.y,
         z: a.z
     }
 }
 
-pub fn to_quat(a: &QuaternionD) -> DQuat {
+pub fn to_quat(a: &QuatD) -> DQuat {
     DQuat::from_xyzw(a.x, a.y, a.z, a.w)
 }
 
@@ -296,14 +307,37 @@ impl <'a> QBVHDataGenerator<RefNode> for BoundsData<'a> {
 }
 
 #[no_mangle]
-pub extern fn set_build_thread_count(count: i32)
+pub extern "C" fn set_build_thread_count(count: i32)
 {
     BUILD_THREAD_COUNT.store(count as usize, Ordering::Relaxed);
 }
 
+static LOGGER_INITIALIZED: AtomicUsize = AtomicUsize::new(0);
+
+#[ffi_function]
+#[no_mangle]
+pub extern "C" fn init_logger(log_path: AsciiPointer)
+{
+    let init_count = LOGGER_INITIALIZED.fetch_add(1, Ordering::SeqCst);
+    if init_count == 0 {
+        let path = log_path.as_str().unwrap();
+        let file = FileSpec::default()
+        .directory(path)
+        .basename("bvh_f64")
+        .suffix("log");
+        Logger::try_with_str("info").unwrap()
+        .log_to_file(file)
+        .format_for_files(detailed_format)
+        .start().unwrap();
+        log_panics::init();
+
+        info!("Log initialized in folder {}", path);
+    }
+}
+
 
 #[no_mangle]
-pub extern fn add_vecs(a_ptr: *mut Float3, b_ptr: *mut Float3, out_ptr: *mut Float3)
+pub extern "C" fn add_vecs(a_ptr: *mut Float3, b_ptr: *mut Float3, out_ptr: *mut Float3)
 {
     let a = unsafe {*a_ptr};
 
@@ -312,7 +346,7 @@ pub extern fn add_vecs(a_ptr: *mut Float3, b_ptr: *mut Float3, out_ptr: *mut Flo
     let b = glam::Vec3::new(b.x, b.y, b.z);
     let mut c = glam::Vec3::new(0.0, 0.0, 0.0);
 
-    for i in 0 .. 100000 {
+    for _i in 0 .. 100000 {
         c = a + b + c;
     }
 
@@ -325,44 +359,35 @@ pub extern fn add_vecs(a_ptr: *mut Float3, b_ptr: *mut Float3, out_ptr: *mut Flo
     }
 }
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn build_bvh(a: *mut BVHBounds, count: i32) -> BVHRef 
+pub extern "C" fn build_bvh(shapes: &mut FFISliceMut<BVHBounds>) -> BvhRef 
 {
-    let mut s = unsafe { std::slice::from_raw_parts_mut(a, count as usize) };
+    let bvh = Box::new(bvh::BVH::build(shapes.as_slice_mut()));
+    info!("Building bvh");
 
-    let mut bvh = bvh::BVH::build(&mut s);
-    let len = bvh.nodes.len();
-    let cap = bvh.nodes.capacity();
-    let p = bvh.nodes.as_mut_ptr();
-    std::mem::forget(bvh.nodes);
-
-    BVHRef { ptr: p, len: len as i32, cap: cap as i32 }
+    BvhRef { bvh }
 }
 
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn build_qbvh(a: *mut BVHBounds, count: i32) -> QBVHRef 
+pub extern "C" fn build_qbvh(shapes: &mut FFISliceMut<BVHBounds>) -> QBVHRef 
 {
-    let mut s = unsafe { std::slice::from_raw_parts_mut(a, count as usize) };
 
-    let data = BoundsData::new(s);
+    let data = BoundsData::new(shapes.as_slice_mut());
     let mut bvh = Box::new(QBVH::new());
 
     bvh.clear_and_rebuild(data, 0.0);
 
-    QBVHRef::from_box(bvh)
+    QBVHRef { bvh }
 }
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn query_ray_q(bvh_ref: *const QBVHRef, origin_vec: *const Vector3D, dir_vec: *const Vector3D, boxes: *mut BVHBounds, count: i32, res: *mut BVHBounds, max_res: i32) -> i32
+pub extern "C" fn query_ray_q(bvh_ref: &QBVHRef, o_vec: &Double3, d_vec: &Double3, shapes: &mut FFISliceMut<BVHBounds>, buffer: &mut FFISliceMut<BVHBounds>) -> i32
 {
-    let shapes = unsafe { std::slice::from_raw_parts_mut(boxes, count as usize) };
-    let buffer = unsafe { std::slice::from_raw_parts_mut(res, max_res as usize) };
-
-
-    let bvh = unsafe {(*bvh_ref).to_box()};
-    let o_vec = unsafe {*origin_vec};
-    let d_vec = unsafe {*dir_vec};
+    let bvh = &bvh_ref.bvh;
     let ray = RayQ::new(Point::new(o_vec.x, o_vec.y, o_vec.z), Vector::new(d_vec.x, d_vec.y, d_vec.z));
     let mut i = 0;
 
@@ -371,7 +396,7 @@ pub extern fn query_ray_q(bvh_ref: *const QBVHRef, origin_vec: *const Vector3D, 
     let mut stack = unsafe { Vec::from_raw_parts(&mut stack_arr as *mut u32, 0, 32)};
     
     let mut visit = |node: &RefNode| {
-        if i < max_res {
+        if i < buffer.len() {
             buffer[i as usize] = shapes[node.index];
             i += 1;
             return false;
@@ -384,81 +409,52 @@ pub extern fn query_ray_q(bvh_ref: *const QBVHRef, origin_vec: *const Vector3D, 
 
     bvh.traverse_depth_first_with_stack(&mut visitor, &mut stack);
 
+    // stack is pretending to be a heap allocated vector
     std::mem::forget(stack);
-    std::mem::forget(bvh);
 
     i as i32
 }
 
 
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn rebuild_bvh(bvh_ref: *const BVHRef, a: *mut BVHBounds, count: i32) -> BVHRef
+pub extern "C" fn rebuild_bvh(bvh_ref: &mut BvhRef, shapes: &mut FFISliceMut<BVHBounds>)
 {
-    let mut s = unsafe { std::slice::from_raw_parts_mut(a, count as usize) };
-
-    let v = unsafe { Vec::from_raw_parts((*bvh_ref).ptr, (*bvh_ref).len as usize, (*bvh_ref).cap as usize)};
-    
-    let mut bvh = bvh::BVH {
-        nodes: v
-    };
-
-    bvh.rebuild(s);
-
-    let len = bvh.nodes.len();
-    let cap = bvh.nodes.capacity();
-    let p = bvh.nodes.as_mut_ptr();
-    std::mem::forget(bvh.nodes);
-
-    BVHRef { ptr: p, len: len as i32, cap: cap as i32 }
+    let bvh = &mut bvh_ref.bvh;
+    bvh.rebuild(shapes.as_slice_mut());
 }
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn query_ray(bvh_ref: *const BVHRef, origin_vec: *const Vector3D, dir_vec: *const Vector3D, boxes: *mut BVHBounds, count: i32, res: *mut BVHBounds, max_res: i32) -> i32
+pub extern "C" fn query_ray(bvh_ref: &BvhRef, origin_vec: &Double3, dir_vec: &Double3, shapes: &mut FFISliceMut<BVHBounds>, buffer: &mut FFISliceMut<BVHBounds>) -> i32
 {
-    let shapes = unsafe { std::slice::from_raw_parts_mut(boxes, count as usize) };
-    let buffer = unsafe { std::slice::from_raw_parts_mut(res, max_res as usize) };
+    let bvh = &bvh_ref.bvh;
 
-    let v = unsafe { Vec::from_raw_parts((*bvh_ref).ptr, (*bvh_ref).len as usize, (*bvh_ref).cap as usize)};
-    
-    let bvh = bvh::BVH {
-        nodes: v
-    };
-
-    let ray = Ray::new(to_vec(& unsafe{*origin_vec}), to_vec(& unsafe{*dir_vec}));
+    let ray = Ray::new(to_vec(origin_vec), to_vec(dir_vec));
     let mut i = 0;
 
     for x in bvh.traverse_iterator(&ray, &shapes) {
-        if i < max_res {
+        if i < buffer.len() {
             buffer[i as usize] = *x;
         }
         i += 1;
     }
-    std::mem::forget(bvh.nodes);
-
     i as i32
 }
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn batch_query_rays(bvh_ref: *const BVHRef, origin_vecs: *mut Vector3D, dir_vecs: *mut Vector3D, hits: *mut i32, ray_count: i32, boxes: *mut BVHBounds, count: i32, res: *mut BVHBounds, max_res: i32)
+pub extern "C" fn batch_query_rays(bvh_ref: &BvhRef, origins: &FFISliceMut<Double3>, dirs: &FFISliceMut<Double3>, hits: &mut FFISliceMut<i32>, shapes: &mut FFISliceMut<BVHBounds>, buffer: &mut FFISliceMut<BVHBounds>)
 {
-    let shapes = unsafe { std::slice::from_raw_parts_mut(boxes, count as usize) };
-    let buffer = unsafe { std::slice::from_raw_parts_mut(res, max_res as usize) };
-    let origins = unsafe { std::slice::from_raw_parts_mut(origin_vecs, ray_count as usize) };
-    let dirs = unsafe { std::slice::from_raw_parts_mut(dir_vecs, ray_count as usize) };
-    let hits = unsafe { std::slice::from_raw_parts_mut(hits, ray_count as usize) };
-
-    let v = unsafe { Vec::from_raw_parts((*bvh_ref).ptr, (*bvh_ref).len as usize, (*bvh_ref).cap as usize)};
-    
-    let bvh = bvh::BVH {
-        nodes: v
-    };
+    let bvh = &bvh_ref.bvh;
     let mut i = 0;
+    let ray_count = origins.len();
     for r in 0..ray_count as usize {
         let ray = Ray::new(to_vec(&origins[r]), to_vec(&dirs[r]));
         let mut res = 0;
         for x in bvh.traverse_iterator(&ray, &shapes) {
-            if i < max_res {
+            if i < buffer.len() {
                 buffer[i as usize] = *x;
             }
             i += 1;
@@ -466,187 +462,131 @@ pub extern fn batch_query_rays(bvh_ref: *const BVHRef, origin_vecs: *mut Vector3
         }
         hits[r] = res;
     }
-
-    std::mem::forget(bvh.nodes);
 }
 
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn query_sphere(bvh_ref: *const BVHRef, center: *const Vector3D, radius: f64, boxes: *mut BVHBounds, count: i32, res: *mut BVHBounds, max_res: i32) -> i32
+pub extern "C" fn query_sphere(bvh_ref: &BvhRef, center: &Double3, radius: f64, shapes: &mut FFISliceMut<BVHBounds>, buffer: &mut FFISliceMut<BVHBounds>) -> i32
 {
-    let shapes = unsafe { std::slice::from_raw_parts_mut(boxes, count as usize) };
-    let buffer = unsafe { std::slice::from_raw_parts_mut(res, max_res as usize) };
 
-    let v = unsafe { Vec::from_raw_parts((*bvh_ref).ptr, (*bvh_ref).len as usize, (*bvh_ref).cap as usize)};
-    
-    let bvh = bvh::BVH {
-        nodes: v
-    };
+    let bvh = &bvh_ref.bvh;
 
-    let test_shape = Sphere::new(to_vec(&unsafe { *center }), radius);
+    let test_shape = Sphere::new(to_vec(center), radius);
     let mut i = 0;
 
     for x in bvh.traverse_iterator(&test_shape, &shapes) {
-        if i < max_res {
+        if i < buffer.len() {
             buffer[i as usize] = *x;
         }
         i += 1;
     }
-    std::mem::forget(bvh.nodes);
-
     i as i32
 }
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn query_capsule(bvh_ref: *const BVHRef, start: *const Vector3D, end: *const Vector3D, radius: f64, boxes: *mut BVHBounds, count: i32, res: *mut BVHBounds, max_res: i32) -> i32
+pub extern "C" fn query_capsule(bvh_ref: &BvhRef, start: &Double3, end: &Double3, radius: f64, shapes: &mut FFISliceMut<BVHBounds>, buffer: &mut FFISliceMut<BVHBounds>) -> i32
 {
-    let shapes = unsafe { std::slice::from_raw_parts_mut(boxes, count as usize) };
-    let buffer = unsafe { std::slice::from_raw_parts_mut(res, max_res as usize) };
+    let bvh = &bvh_ref.bvh;
 
-    let v = unsafe { Vec::from_raw_parts((*bvh_ref).ptr, (*bvh_ref).len as usize, (*bvh_ref).cap as usize)};
-    
-    let bvh = bvh::BVH {
-        nodes: v
-    };
-
-    let test_shape = Capsule::new(to_vec(&unsafe { *start }), to_vec(&unsafe { *end }), radius);
+    let test_shape = Capsule::new(to_vec(start), to_vec(end), radius);
     let mut i = 0;
 
     for x in bvh.traverse_iterator(&test_shape, &shapes) {
-        if i < max_res {
+        if i < buffer.len() {
             buffer[i as usize] = *x;
         }
         i += 1;
     }
-    std::mem::forget(bvh.nodes);
-
     i as i32
 }
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn query_aabb(bvh_ref: *const BVHRef, bounds: *const BoundsD, boxes: *mut BVHBounds, count: i32, res: *mut BVHBounds, max_res: i32) -> i32
+pub extern "C" fn query_aabb(bvh_ref: &BvhRef, bounds: &BoundsD, shapes: &mut FFISliceMut<BVHBounds>, buffer: &mut FFISliceMut<BVHBounds>) -> i32
 {
-    let shapes = unsafe { std::slice::from_raw_parts_mut(boxes, count as usize) };
-    let buffer = unsafe { std::slice::from_raw_parts_mut(res, max_res as usize) };
+    let bvh = &bvh_ref.bvh;
 
-    let v = unsafe { Vec::from_raw_parts((*bvh_ref).ptr, (*bvh_ref).len as usize, (*bvh_ref).cap as usize)};
-    
-    let bvh = bvh::BVH {
-        nodes: v
-    };
-
-    let min = to_vec(&unsafe { *bounds }.min);
-    let max = to_vec(&unsafe { *bounds }.max);
+    let min = to_vec(&bounds.min);
+    let max = to_vec(&bounds.max);
     let test_shape = AABB::with_bounds(min, max);
     let mut i = 0;
 
     for x in bvh.traverse_iterator(&test_shape, &shapes) {
-        if i < max_res {
+        if i < buffer.len() {
             buffer[i as usize] = *x;
         }
         i += 1;
     }
-    std::mem::forget(bvh.nodes);
-
     i as i32
 }
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn query_obb(bvh_ref: *const BVHRef, ori: *const QuaternionD, extents: *const Vector3D, center: *const Vector3D, boxes: *mut BVHBounds, count: i32, res: *mut BVHBounds, max_res: i32) -> i32
+pub extern "C" fn query_obb(bvh_ref: &BvhRef, ori: &QuatD, extents: &Double3, center: &Double3, shapes: &mut FFISliceMut<BVHBounds>, buffer: &mut FFISliceMut<BVHBounds>) -> i32
 {
-    let shapes = unsafe { std::slice::from_raw_parts_mut(boxes, count as usize) };
-    let buffer = unsafe { std::slice::from_raw_parts_mut(res, max_res as usize) };
-
-    let v = unsafe { Vec::from_raw_parts((*bvh_ref).ptr, (*bvh_ref).len as usize, (*bvh_ref).cap as usize)};
-
-    let bvh = bvh::BVH {
-        nodes: v
-    };
+    let bvh = &bvh_ref.bvh;
     let obb = OBB {
-        orientation: to_quat(&unsafe { *ori }),
-        extents: to_vec(&unsafe { *extents }),
-        center: to_vec(&unsafe { *center })
+        orientation: to_quat(ori),
+        extents: to_vec(extents),
+        center: to_vec(center)
     };
 
     let mut i = 0;
 
     for x in bvh.traverse_iterator(&obb, &shapes) {
-        if i < max_res {
+        if i < buffer.len() {
             buffer[i as usize] = *x;
         }
         i += 1;
     }
-    std::mem::forget(bvh.nodes);
-
     i as i32
 }
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn free_bvh(bvh_ref: *const BVHRef)
+pub extern "C" fn free_bvh(_bvh_ref: BvhRef)
 {
-    let _v = unsafe { Vec::from_raw_parts((*bvh_ref).ptr, (*bvh_ref).len as usize, (*bvh_ref).cap as usize)};
 }
 
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn add_node(bvh_ref: *const BVHRef, new_shape: i32, boxes: *mut BVHBounds, count: i32) -> BVHRef
+pub extern "C" fn add_node(bvh_ref: &mut BvhRef, new_shape: i32, shapes: &mut FFISliceMut<BVHBounds>)
 {
-    let shapes = unsafe { std::slice::from_raw_parts_mut(boxes, count as usize) };
-
-    let v = unsafe { Vec::from_raw_parts((*bvh_ref).ptr, (*bvh_ref).len as usize, (*bvh_ref).cap as usize)};
-    
-    let mut bvh = bvh::BVH {
-        nodes: v
-    };
-
-    bvh.add_node(shapes, new_shape as usize);
-    let len = bvh.nodes.len();
-    let cap = bvh.nodes.capacity();
-    let p = bvh.nodes.as_mut_ptr();
-    std::mem::forget(bvh.nodes);
-    
-    BVHRef { ptr: p, len: len as i32, cap: cap as i32 }
+    let bvh = &mut bvh_ref.bvh;
+    bvh.add_node(shapes.as_slice_mut(), new_shape as usize);
 }
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn remove_node(bvh_ref: *const BVHRef, remove_shape: i32, boxes: *mut BVHBounds, count: i32) -> BVHRef
+pub extern "C" fn remove_node(bvh_ref: &mut BvhRef, remove_shape: i32, shapes: &mut FFISliceMut<BVHBounds>)
 {
-    let shapes = unsafe { std::slice::from_raw_parts_mut(boxes, count as usize) };
-
-    let v = unsafe { Vec::from_raw_parts((*bvh_ref).ptr, (*bvh_ref).len as usize, (*bvh_ref).cap as usize)};
-    
-    let mut bvh = bvh::BVH {
-        nodes: v
-    };
-
-    bvh.remove_node(shapes, remove_shape as usize, true);
-    let len = bvh.nodes.len();
-    let cap = bvh.nodes.capacity();
-    let p = bvh.nodes.as_mut_ptr();
-    std::mem::forget(bvh.nodes);
-    
-    BVHRef { ptr: p, len: len as i32, cap: cap as i32 }
+    let bvh = &mut bvh_ref.bvh;
+    bvh.remove_node(shapes.as_slice_mut(), remove_shape as usize, true);
 }
 
+#[ffi_function]
 #[no_mangle]
-pub extern fn flatten_bvh(bvh_ref: *const BVHRef, boxes: *mut BVHBounds, count: i32, res: *mut FlatNode32, res_count: i32) -> i32
+pub extern "C" fn update_node(bvh_ref: &mut BvhRef, update_shape: i32, shapes: &mut FFISliceMut<BVHBounds>)
 {
-    let shapes = unsafe { std::slice::from_raw_parts_mut(boxes, count as usize) };
-    let results = unsafe { std::slice::from_raw_parts_mut(res, res_count as usize) };
+    let bvh = &mut bvh_ref.bvh;
+    bvh.remove_node(shapes.as_slice_mut(), update_shape as usize, false);
+    bvh.add_node(shapes, update_shape as usize);
+}
 
-    let v = unsafe { Vec::from_raw_parts((*bvh_ref).ptr, (*bvh_ref).len as usize, (*bvh_ref).cap as usize)};
-    
-    let bvh = bvh::BVH {
-        nodes: v
-    };
+#[ffi_function]
+#[no_mangle]
+pub extern "C" fn flatten_bvh(bvh_ref: &mut BvhRef, shapes: &mut FFISliceMut<BVHBounds>, results: &mut FFISliceMut<FlatNode32>) -> i32
+{
+    let bvh = &bvh_ref.bvh;
 
-    let flattened = bvh.flatten_custom(shapes, &node_32_constructor);
+    let flattened = bvh.flatten_custom(shapes.as_slice_mut(), &node_32_constructor);
 
     for i in 0..flattened.len() {
         results[i] = flattened[i];
     }
-
-    std::mem::forget(bvh.nodes);
 
     flattened.len() as i32
 }
@@ -675,15 +615,58 @@ pub fn node_32_constructor(aabb: &AABB, entry_index: u32, exit_index: u32, shape
     }
 }
 
+interoptopus::inventory!(my_inventory, [], [
+    init_logger,
+    build_bvh,
+    build_qbvh,
+    query_ray_q,
+    rebuild_bvh,
+    query_ray,
+    batch_query_rays,
+    query_sphere,
+    query_capsule,
+    query_aabb,
+    query_obb,
+    free_bvh,
+    add_node,
+    remove_node,
+    update_node,
+    flatten_bvh,
+    ], [], []);
+
+use interoptopus::util::NamespaceMappings;
+use interoptopus::{Error, Interop};
+
+#[test]
+fn bindings_csharp() -> Result<(), Error> {
+    use interoptopus_backend_csharp::{Config, Generator, Unsafe, overloads::{DotNet, Unity}};
+
+    Generator::new(
+        Config {
+            class: "NativeBvhInterop".to_string(),
+            dll_name: "bvh_f64".to_string(),
+            namespace_mappings: NamespaceMappings::new("Assets.Scripts.Native"),
+            use_unsafe: Unsafe::UnsafePlatformMemCpy,
+            ..Config::default()
+        },
+        my_inventory(),
+    )
+    .add_overload_writer(Unity::new())
+    .add_overload_writer(DotNet::new())
+    .write_file("bindings/csharp/Interop.cs")?;
+
+    Ok(())
+}
+
 
 #[test]
 fn test_building_and_querying() {
-    let min = Vector3D {
+    let min = Double3 {
         x: -1.0,
         y: -1.0,
         z: -1.0
     };
-    let max = Vector3D {
+    let max = Double3 {
         x: 1.0,
         y: 1.0,
         z: 1.0
@@ -692,49 +675,36 @@ fn test_building_and_querying() {
         min,
         max
     };
-    let mut b = BVHBounds {
+    let b = BVHBounds {
         bounds,
-        array_index: 0,
-        index: 0
-    };
-    let ptr = unsafe {
-        &mut b as *mut BVHBounds
+        index: 0,
+        internal_bvh_index: 0
     };
 
-
-    let mut out = BVHBounds {
+    let out = BVHBounds {
         bounds,
-        array_index: 0,
-        index: 0
-    };
-    let out_ptr = unsafe {
-        &mut out as *mut BVHBounds
+        index: 0,
+        internal_bvh_index: 0
     };
 
-    let origin = Vector3D {
+    let origin = Double3 {
         x: 0.0,
         y: -5.0,
         z: 0.0
     };
-    let dir = Vector3D {
+    let dir = Double3 {
         x: 0.0,
         y: 1.0,
         z: 0.0
     };
-    let o_ptr = unsafe {
-        &origin as * const Vector3D
-    };
-    let d_ptr = unsafe {
-        &dir as * const Vector3D
-    };
+    let in_slice = &mut [b];
+    let mut input = FFISliceMut::<BVHBounds>::from_slice(in_slice);
+    let out_slice = &mut [b];
+    let mut out = FFISliceMut::<BVHBounds>::from_slice(out_slice);
 
-    let mut bvhRef = build_qbvh(ptr, 1);
+    let bvh_ref = build_qbvh(&mut input);
 
-    let bvh_ptr = unsafe {
-        &bvhRef as * const QBVHRef
-    };
-
-    let x = query_ray_q(bvh_ptr, o_ptr, d_ptr, ptr, 1, out_ptr, 1);
+    let x = query_ray_q(&bvh_ref, &origin, &dir, &mut input, &mut out);
     assert_eq!(x, 1);
 }
 

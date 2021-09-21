@@ -71,26 +71,28 @@ impl BVH {
     ///
     /// Needs all the scene's shapes, plus the indices of the shapes that were updated.
     ///
-    pub fn optimize<Shape: BHShape>(
+    pub fn optimize<Shape: BHShape> (
         &mut self,
-        refit_shape_indices: &HashSet<usize>,
+        refit_shape_indices: &[usize],
         shapes: &mut[Shape],
     ) {
         
+        
         for i in refit_shape_indices {
             self.remove_node(shapes, *i, false);
+
             //self.assert_tight(shapes);
         }
         //println!("--------");
         //self.pretty_print();
         //println!("--------");
         for i in refit_shape_indices {
-            self.add_node(shapes, *i);
             //self.assert_tight(shapes);
             //println!("--------");
             //self.pretty_print();
             //println!("--------");
             //self.assert_consistent(shapes);
+            self.add_node(shapes, *i);
         }
 
         return;
@@ -99,8 +101,7 @@ impl BVH {
         // that reference the given shapes, sorted by their depth
         // in increasing order.
         let mut refit_node_indices: Vec<_> = {
-            let mut raw_indices = refit_shape_indices
-                .iter()
+            let mut raw_indices = refit_shape_indices.into_iter()
                 .map(|x| shapes[*x].bh_node_index())
                 .collect::<Vec<_>>();
 
@@ -575,7 +576,7 @@ mod tests {
         let original_nodes = bvh.nodes.clone();
 
         // Query an update for all nodes.
-        let refit_shape_indices: HashSet<usize> = (0..shapes.len()).collect();
+        let refit_shape_indices: Vec<usize> = (0..shapes.len()).collect();
         bvh.optimize(&refit_shape_indices, &mut shapes);
 
         // Assert that all nodes are the same as before the update.
@@ -595,7 +596,7 @@ mod tests {
         shapes[4].pos = Point3::new(11.0, 1.0, 2.0);
         shapes[5].pos = Point3::new(11.0, 2.0, 2.0);
 
-        let refit_shape_indices = (0..6).collect();
+        let refit_shape_indices: Vec<usize> = (0..6).collect();
         bvh.optimize(&refit_shape_indices, &mut shapes);
         bvh.assert_consistent(&shapes);
     }
@@ -639,7 +640,7 @@ mod tests {
 
         // Move the first shape so that it is closer to shape #2.
         shapes[1].pos = Point3::new(40.0, 0.0, 0.0);
-        let refit_shape_indices: HashSet<usize> = (1..2).collect();
+        let refit_shape_indices: Vec<usize> = (1..2).collect();
         bvh.optimize(&refit_shape_indices, &mut shapes);
         bvh.pretty_print();
         bvh.assert_consistent(&shapes);
@@ -963,6 +964,7 @@ mod tests {
         let mut seed = 0;
 
         let updated = randomly_transform_scene(&mut triangles, 9_000, &bounds, None, &mut seed);
+        let updated: Vec<usize> = updated.into_iter().collect();
         assert!(!bvh.is_consistent(&triangles), "BVH is consistent.");
 
         // After fixing the `AABB` consistency should be restored.
@@ -988,6 +990,7 @@ mod tests {
         let mut seed = 0;
 
         let updated = randomly_transform_scene(&mut triangles, 599, &bounds, None, &mut seed);
+        let updated: Vec<usize> = updated.into_iter().collect();
         assert!(!bvh.is_consistent(&triangles), "BVH is consistent.");
         println!("triangles={}", triangles.len());
         //bvh.pretty_print();
@@ -1033,6 +1036,7 @@ mod bench {
         b.iter(|| {
             let updated =
                 randomly_transform_scene(&mut triangles, num_move, &bounds, Some(10.0), &mut seed);
+            let updated: Vec<usize> = updated.into_iter().collect();
             bvh.optimize(&updated, &mut triangles);
         });
     }
@@ -1075,6 +1079,7 @@ mod bench {
         for _ in 0..iterations {
             let updated =
                 randomly_transform_scene(&mut triangles, num_move, &bounds, max_offset, &mut seed);
+            let updated: Vec<usize> = updated.into_iter().collect();
             bvh.optimize(&updated, &mut triangles);
         }
 
