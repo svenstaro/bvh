@@ -996,20 +996,20 @@ mod bench {
     /// `BVH`. Iterate this procedure `iterations` times. Afterwards benchmark the performance
     /// of intersecting this scene/`BVH`.
     fn intersect_scene_after_optimize(
-        mut triangles: &mut Vec<Triangle>,
+        triangles: &mut Vec<Triangle>,
         bounds: &AABB,
         percent: f32,
         max_offset: Option<f32>,
         iterations: usize,
         b: &mut ::test::Bencher,
     ) {
-        let mut bvh = BVH::build(&mut triangles);
+        let mut bvh = BVH::build(triangles);
         let num_move = (triangles.len() as f32 * percent) as usize;
         let mut seed = 0;
 
         for _ in 0..iterations {
             let updated =
-                randomly_transform_scene(&mut triangles, num_move, bounds, max_offset, &mut seed);
+                randomly_transform_scene(triangles, num_move, bounds, max_offset, &mut seed);
             bvh.optimize(&updated, triangles);
         }
 
@@ -1049,7 +1049,7 @@ mod bench {
     /// scene/`BVH`. Used to compare optimizing with rebuilding. For reference see
     /// `intersect_scene_after_optimize`.
     fn intersect_scene_with_rebuild(
-        mut triangles: &mut Vec<Triangle>,
+        triangles: &mut Vec<Triangle>,
         bounds: &AABB,
         percent: f32,
         max_offset: Option<f32>,
@@ -1059,10 +1059,10 @@ mod bench {
         let num_move = (triangles.len() as f32 * percent) as usize;
         let mut seed = 0;
         for _ in 0..iterations {
-            randomly_transform_scene(&mut triangles, num_move, bounds, max_offset, &mut seed);
+            randomly_transform_scene(triangles, num_move, bounds, max_offset, &mut seed);
         }
 
-        let bvh = BVH::build(&mut triangles);
+        let bvh = BVH::build(triangles);
         intersect_bh(&bvh, triangles, bounds, b);
     }
 

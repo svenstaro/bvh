@@ -469,37 +469,37 @@ mod bench {
     }
     #[bench]
     /// Benchmark the construction of a `FlatBVH` with 1,200 triangles.
-    fn bench_build_1200_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
-        build_1200_triangles_bh::<FlatBVH>(&mut b);
+    fn bench_build_1200_triangles_flat_bvh(b: &mut ::test::Bencher) {
+        build_1200_triangles_bh::<FlatBVH>(b);
     }
 
     #[bench]
     /// Benchmark the construction of a `FlatBVH` with 12,000 triangles.
-    fn bench_build_12k_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
-        build_12k_triangles_bh::<FlatBVH>(&mut b);
+    fn bench_build_12k_triangles_flat_bvh(b: &mut ::test::Bencher) {
+        build_12k_triangles_bh::<FlatBVH>(b);
     }
 
     #[bench]
     /// Benchmark the construction of a `FlatBVH` with 120,000 triangles.
-    fn bench_build_120k_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
-        build_120k_triangles_bh::<FlatBVH>(&mut b);
+    fn bench_build_120k_triangles_flat_bvh(b: &mut ::test::Bencher) {
+        build_120k_triangles_bh::<FlatBVH>(b);
     }
 
     #[bench]
     /// Benchmark intersecting 1,200 triangles using the recursive `FlatBVH`.
-    fn bench_intersect_1200_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
-        intersect_1200_triangles_bh::<FlatBVH>(&mut b);
+    fn bench_intersect_1200_triangles_flat_bvh(b: &mut ::test::Bencher) {
+        intersect_1200_triangles_bh::<FlatBVH>(b);
     }
 
     #[bench]
     /// Benchmark intersecting 12,000 triangles using the recursive `FlatBVH`.
-    fn bench_intersect_12k_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
-        intersect_12k_triangles_bh::<FlatBVH>(&mut b);
+    fn bench_intersect_12k_triangles_flat_bvh(b: &mut ::test::Bencher) {
+        intersect_12k_triangles_bh::<FlatBVH>(b);
     }
 
     #[bench]
     /// Benchmark intersecting 120,000 triangles using the recursive `FlatBVH`.
-    fn bench_intersect_120k_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
-        intersect_120k_triangles_bh::<FlatBVH>(&mut b);
+    fn bench_intersect_120k_triangles_flat_bvh(b: &mut ::test::Bencher) {
+        intersect_120k_triangles_bh::<FlatBVH>(b);
     }
 }
