@@ -24,7 +24,7 @@ serde = { optional = true, version = "1", features = ["derive"] }
 [dev-dependencies]
 proptest = "1.0"
 obj-rs = "0.7"
-float_eq = "0.6"
+float_eq = "0.7"
 criterion = "0.3"
 
 [features]
