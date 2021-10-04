@@ -7,8 +7,8 @@ use crate::bounding_hierarchy::BHShape;
 /// Drains the elements from the source `vectors`.
 pub fn concatenate_vectors<T: Sized>(vectors: &mut [Vec<T>]) -> Vec<T> {
     let mut result = Vec::new();
-    for mut vector in vectors.iter_mut() {
-        result.append(&mut vector);
+    for vector in vectors.iter_mut() {
+        result.append(vector);
     }
     result
 }
