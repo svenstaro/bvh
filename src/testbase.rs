@@ -3,7 +3,6 @@
 
 use std::collections::HashSet;
 use std::f32;
-use std::mem::transmute;
 
 use crate::{Point3, Vector3};
 use num::{FromPrimitive, Integer};
@@ -410,7 +409,7 @@ pub fn randomly_transform_scene(
     let mut indices: Vec<usize> = (0..triangles.len()).collect();
     let mut seed_array = [0u8; 32];
     for i in 0..seed_array.len() {
-        let bytes: [u8; 8] = unsafe { transmute(seed.to_be()) };
+        let bytes: [u8; 8] = seed.to_be_bytes();
         seed_array[i] = bytes[i % 8];
     }
     let mut rng: StdRng = SeedableRng::from_seed(seed_array);
