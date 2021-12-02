@@ -613,6 +613,16 @@ impl BVH {
         let new_shape = &shapes[new_shape_index];
         let shape_aabb = new_shape.aabb();
         let shape_sa = shape_aabb.surface_area();
+
+        if self.nodes.len() == 0 {
+            self.nodes.push(BVHNode::Leaf {
+                parent_index: 0,
+                shape_index: new_shape_index
+            });
+            shapes[new_shape_index].set_bh_node_index(0);
+            return
+        }
+
         loop {
             match self.nodes[i] {
                 BVHNode::Node {
@@ -627,7 +637,7 @@ impl BVH {
                     let right_expand = child_r_aabb.join(&shape_aabb);
 
                     let send_left = child_r_aabb.surface_area() + left_expand.surface_area();
-                    let send_right = child_r_aabb.surface_area() + right_expand.surface_area();
+                    let send_right = child_l_aabb.surface_area() + right_expand.surface_area();
                     let merged_aabb = child_r_aabb.join(&child_l_aabb);
                     let merged = merged_aabb.surface_area() + shape_sa;
 
@@ -744,9 +754,10 @@ impl BVH {
         deleted_shape_index: usize,
         swap_shape: bool,
     ) {
-        if self.nodes.len() < 2
+        if self.nodes.len() == 0
         {
-            panic!("can't remove a node from a bvh with only one node");
+            return
+            //panic!("can't remove a node from a bvh with only one node");
         }
         let bad_shape = &shapes[deleted_shape_index];
 
@@ -756,79 +767,86 @@ impl BVH {
         // swap the shape to the end and update the node to still point at the right shape
         let dead_node_index = bad_shape.bh_node_index();
 
-        //println!("delete_i={}", dead_node_index);
-
-        let dead_node = self.nodes[dead_node_index];
-
-        let parent_index = dead_node.parent();
-        println!("parent_i={}", parent_index);
-        let gp_index = self.nodes[parent_index].parent();
-        println!("{}->{}->{}", gp_index, parent_index, dead_node_index);
-
-        let sibling_index = if self.nodes[parent_index].child_l() == dead_node_index { self.nodes[parent_index].child_r() } else { self.nodes[parent_index].child_l() };
-        let sibling_box = if self.nodes[parent_index].child_l() == dead_node_index { self.nodes[parent_index].child_r_aabb() } else { self.nodes[parent_index].child_l_aabb() };
-        // TODO: fix potential issue leaving empty spot in self.nodes
-        // the node swapped to sibling_index should probably be swapped to the end
-        // of the vector and the vector truncated
-        if parent_index == gp_index {
-            // We are removing one of the children of the root node
-            // The other child needs to become the root node
-            // The old root node and the dead child then have to be moved
-            
-            //println!("gp == parent {}", parent_index);
-            if parent_index != 0 {
-                panic!("Circular node that wasn't root parent={} node={}", parent_index, dead_node_index);
+        if self.nodes.len() == 1 {
+            if dead_node_index == 0 {
+                self.nodes.clear();
             }
-            self.nodes.swap(parent_index, sibling_index);
-
-            match self.nodes[parent_index].shape_index() {
-                Some(index) => {
-                    *self.nodes[parent_index].parent_mut() = parent_index;
-                    shapes[index].set_bh_node_index(parent_index);
-                    self.swap_and_remove_index(shapes, sibling_index.max(dead_node_index));
-                    self.swap_and_remove_index(shapes, sibling_index.min(dead_node_index));
-                },
-                _ => {
-                    *self.nodes[parent_index].parent_mut() = parent_index;
-                    let new_root = self.nodes[parent_index];
-                    *self.nodes[new_root.child_l()].parent_mut() = parent_index;
-                    *self.nodes[new_root.child_r()].parent_mut() = parent_index;
-                    //println!("set {}'s parent to {}", new_root.child_l(), parent_index);
-                    //println!("set {}'s parent to {}", new_root.child_r(), parent_index);
-                    self.swap_and_remove_index(shapes, sibling_index.max(dead_node_index));
-                    self.swap_and_remove_index(shapes, sibling_index.min(dead_node_index));
-                }
-            }
-            //println!("nodes_len {}, sib_index {}", self.nodes.len(), sibling_index);
-            //println!("nodes_len {}", self.nodes.len());
         } else {
-            let box_to_change = if self.nodes[gp_index].child_l() == parent_index { self.nodes[gp_index].child_l_aabb_mut() } else { self.nodes[gp_index].child_r_aabb_mut() };
-            //println!("on {} adjusting {} to {}", gp_index, box_to_change, sibling_box);
-            *box_to_change = sibling_box;
-            //println!("{} {} {}", gp_index, self.nodes[gp_index].child_l_aabb(), self.nodes[gp_index].child_r_aabb());
-            let ref_to_change = if self.nodes[gp_index].child_l() == parent_index { self.nodes[gp_index].child_l_mut() } else { self.nodes[gp_index].child_r_mut() };
-            //println!("on {} {}=>{}", gp_index, ref_to_change, sibling_index);
-            *ref_to_change = sibling_index;
-            *self.nodes[sibling_index].parent_mut() = gp_index;
 
-            self.fix_aabbs_ascending(shapes, gp_index);
-            //let new_depth = self.nodes[sibling_index].depth() - 1;
-            //*self.nodes[sibling_index].depth_mut() = new_depth;
-            // remove node and parent
-            
-            //println!("---");
-            //self.pretty_print();
-            //println!("---");
-            self.swap_and_remove_index(shapes, dead_node_index.max(parent_index));
-            
-            //println!("---");
-            //self.pretty_print();
-            //println!("---");
-            self.swap_and_remove_index(shapes, parent_index.min(dead_node_index));
-            
-            //println!("---");
-            //self.pretty_print();
-            //println!("---");
+            //println!("delete_i={}", dead_node_index);
+
+            let dead_node = self.nodes[dead_node_index];
+
+            let parent_index = dead_node.parent();
+            //println!("parent_i={}", parent_index);
+            let gp_index = self.nodes[parent_index].parent();
+            //println!("{}->{}->{}", gp_index, parent_index, dead_node_index);
+
+            let sibling_index = if self.nodes[parent_index].child_l() == dead_node_index { self.nodes[parent_index].child_r() } else { self.nodes[parent_index].child_l() };
+            let sibling_box = if self.nodes[parent_index].child_l() == dead_node_index { self.nodes[parent_index].child_r_aabb() } else { self.nodes[parent_index].child_l_aabb() };
+            // TODO: fix potential issue leaving empty spot in self.nodes
+            // the node swapped to sibling_index should probably be swapped to the end
+            // of the vector and the vector truncated
+            if parent_index == gp_index {
+                // We are removing one of the children of the root node
+                // The other child needs to become the root node
+                // The old root node and the dead child then have to be moved
+                
+                //println!("gp == parent {}", parent_index);
+                if parent_index != 0 {
+                    panic!("Circular node that wasn't root parent={} node={}", parent_index, dead_node_index);
+                }
+                self.nodes.swap(parent_index, sibling_index);
+
+                match self.nodes[parent_index].shape_index() {
+                    Some(index) => {
+                        *self.nodes[parent_index].parent_mut() = parent_index;
+                        shapes[index].set_bh_node_index(parent_index);
+                        self.swap_and_remove_index(shapes, sibling_index.max(dead_node_index));
+                        self.swap_and_remove_index(shapes, sibling_index.min(dead_node_index));
+                    },
+                    _ => {
+                        *self.nodes[parent_index].parent_mut() = parent_index;
+                        let new_root = self.nodes[parent_index];
+                        *self.nodes[new_root.child_l()].parent_mut() = parent_index;
+                        *self.nodes[new_root.child_r()].parent_mut() = parent_index;
+                        //println!("set {}'s parent to {}", new_root.child_l(), parent_index);
+                        //println!("set {}'s parent to {}", new_root.child_r(), parent_index);
+                        self.swap_and_remove_index(shapes, sibling_index.max(dead_node_index));
+                        self.swap_and_remove_index(shapes, sibling_index.min(dead_node_index));
+                    }
+                }
+                //println!("nodes_len {}, sib_index {}", self.nodes.len(), sibling_index);
+                //println!("nodes_len {}", self.nodes.len());
+            } else {
+                let box_to_change = if self.nodes[gp_index].child_l() == parent_index { self.nodes[gp_index].child_l_aabb_mut() } else { self.nodes[gp_index].child_r_aabb_mut() };
+                //println!("on {} adjusting {} to {}", gp_index, box_to_change, sibling_box);
+                *box_to_change = sibling_box;
+                //println!("{} {} {}", gp_index, self.nodes[gp_index].child_l_aabb(), self.nodes[gp_index].child_r_aabb());
+                let ref_to_change = if self.nodes[gp_index].child_l() == parent_index { self.nodes[gp_index].child_l_mut() } else { self.nodes[gp_index].child_r_mut() };
+                //println!("on {} {}=>{}", gp_index, ref_to_change, sibling_index);
+                *ref_to_change = sibling_index;
+                *self.nodes[sibling_index].parent_mut() = gp_index;
+
+                self.fix_aabbs_ascending(shapes, gp_index);
+                //let new_depth = self.nodes[sibling_index].depth() - 1;
+                //*self.nodes[sibling_index].depth_mut() = new_depth;
+                // remove node and parent
+                
+                //println!("---");
+                //self.pretty_print();
+                //println!("---");
+                self.swap_and_remove_index(shapes, dead_node_index.max(parent_index));
+                
+                //println!("---");
+                //self.pretty_print();
+                //println!("---");
+                self.swap_and_remove_index(shapes, parent_index.min(dead_node_index));
+                
+                //println!("---");
+                //self.pretty_print();
+                //println!("---");
+            }
         }
 
         if swap_shape {

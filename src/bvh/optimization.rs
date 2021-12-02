@@ -1061,6 +1061,11 @@ mod bench {
         optimize_bvh_120k(0.5, b);
     }
 
+    #[bench]
+    fn bench_optimize_bvh_120k_100p(b: &mut ::test::Bencher) {
+        optimize_bvh_120k(1.0, b);
+    }
+
     /// Move `percent` `Triangle`s in the scene given by `triangles` and optimize the
     /// `BVH`. Iterate this procedure `iterations` times. Afterwards benchmark the performance
     /// of intersecting this scene/`BVH`.
@@ -1114,6 +1119,13 @@ mod bench {
         intersect_scene_after_optimize(&mut triangles, &bounds, 0.5, None, 10, b);
     }
 
+    #[bench]
+    fn bench_intersect_120k_after_optimize_100p(b: &mut ::test::Bencher) {
+        let bounds = default_bounds();
+        let mut triangles = create_n_cubes(10_000, &bounds);
+        intersect_scene_after_optimize(&mut triangles, &bounds, 1.0, None, 10, b);
+    }
+
     /// Move `percent` `Triangle`s in the scene given by `triangles` `iterations` times.
     /// Afterwards optimize the `BVH` and benchmark the performance of intersecting this
     /// scene/`BVH`. Used to compare optimizing with rebuilding. For reference see
@@ -1164,6 +1176,13 @@ mod bench {
         intersect_scene_with_rebuild(&mut triangles, &bounds, 0.5, None, 10, b);
     }
 
+    #[bench]
+    fn bench_intersect_120k_with_rebuild_100p(b: &mut ::test::Bencher) {
+        let bounds = default_bounds();
+        let mut triangles = create_n_cubes(10_000, &bounds);
+        intersect_scene_with_rebuild(&mut triangles, &bounds, 1.0, None, 10, b);
+    }
+
     /// Benchmark intersecting a `BVH` for Sponza after randomly moving one `Triangle` and
     /// optimizing.
     fn intersect_sponza_after_optimize(percent: f64, b: &mut ::test::Bencher) {
@@ -1189,6 +1208,11 @@ mod bench {
     #[bench]
     fn bench_intersect_sponza_after_optimize_50p(b: &mut ::test::Bencher) {
         intersect_sponza_after_optimize(0.5, b);
+    }
+
+    #[bench]
+    fn bench_intersect_sponza_after_optimize_100p(b: &mut ::test::Bencher) {
+        intersect_sponza_after_optimize(1.0, b);
     }
 
     /// Benchmark intersecting a `BVH` for Sponza after rebuilding. Used to compare optimizing

@@ -1,3 +1,5 @@
+use smallvec::SmallVec;
+
 use crate::aabb::Bounded;
 use crate::bvh::{BVHNode, BVH};
 use crate::bounding_hierarchy::{IntersectionTest};
@@ -12,11 +14,9 @@ pub struct BVHTraverseIterator<'a, Shape: Bounded> {
     /// Reference to the input shapes array
     shapes: &'a [Shape],
     /// Traversal stack. 4 billion items seems enough?
-    stack: [usize; 32],
+    stack: SmallVec<[usize; 64]>,
     /// Position of the iterator in bvh.nodes
     node_index: usize,
-    /// Size of the traversal stack
-    stack_size: usize,
     /// Whether or not we have a valid node (or leaf)
     has_node: bool,
 }
@@ -28,16 +28,15 @@ impl<'a, Shape: Bounded> BVHTraverseIterator<'a, Shape> {
             bvh,
             test,
             shapes,
-            stack: [0; 32],
+            stack: SmallVec::new(),
             node_index: 0,
-            stack_size: 0,
             has_node: true,
         }
     }
 
     /// Test if stack is empty.
     fn is_stack_empty(&self) -> bool {
-        self.stack_size == 0
+        self.stack.len() == 0
     }
 
     /// Push node onto stack.
@@ -46,8 +45,7 @@ impl<'a, Shape: Bounded> BVHTraverseIterator<'a, Shape> {
     ///
     /// Panics if `stack[stack_size]` is out of bounds.
     fn stack_push(&mut self, node: usize) {
-        self.stack[self.stack_size] = node;
-        self.stack_size += 1;
+        self.stack.push(node);
     }
 
     /// Pop the stack and return the node.
@@ -56,8 +54,7 @@ impl<'a, Shape: Bounded> BVHTraverseIterator<'a, Shape> {
     ///
     /// Panics if `stack_size` underflows.
     fn stack_pop(&mut self) -> usize {
-        self.stack_size -= 1;
-        self.stack[self.stack_size]
+        self.stack.pop().unwrap()
     }
 
     /// Attempt to move to the left node child of the current node.
