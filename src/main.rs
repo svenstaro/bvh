@@ -13,6 +13,8 @@ struct Sphere {
     node_index: usize,
 }
 
+
+
 impl Bounded for Sphere {
     fn aabb(&self) -> AABB {
         let half_size = Vector3::new(self.radius, self.radius, self.radius);

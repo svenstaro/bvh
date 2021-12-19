@@ -33,6 +33,7 @@ interoptopus = "0.10.3"
 interoptopus_backend_csharp = "0.10.4"
 flexi_logger = "0.19.3"
 log-panics = "2.0.0"
+stl_io = "0.6.0"
 
 [dev-dependencies]
 proptest = "1.0"
