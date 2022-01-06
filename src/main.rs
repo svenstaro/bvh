@@ -137,7 +137,7 @@ pub fn load_sponza_scene() -> (Vec<Triangle>, AABB) {
 
 
 pub fn main() {
-   let (mut triangles, bounds) = load_sponza_scene();
+   let (mut triangles, _bounds) = load_sponza_scene();
    let mut bvh = BVH::build(triangles.as_mut_slice());
 
    for _i in 0..10 {

@@ -1,7 +1,7 @@
-use parry3d_f64::partitioning::{QBVH, QBVHDataGenerator, IndexedData};
+use parry3d_f64::partitioning::{IndexedData};
 use parry3d_f64::bounding_volume::aabb::{AABB};
 use parry3d_f64::math::{Real, SimdBool, SimdReal, SIMD_WIDTH};
-use parry3d_f64::query::{Ray, RayCast, RayIntersection, SimdRay};
+use parry3d_f64::query::{Ray, RayCast, SimdRay};
 use parry3d_f64::partitioning::{SimdBestFirstVisitStatus, SimdBestFirstVisitor};
 use parry3d_f64::bounding_volume::SimdAABB;
 use parry3d_f64::simba::simd::{SimdBool as _, SimdPartialOrd, SimdValue};

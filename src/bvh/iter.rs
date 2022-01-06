@@ -13,7 +13,7 @@ pub struct BVHTraverseIterator<'a, Shape: Bounded> {
     test: &'a dyn IntersectionTest,
     /// Reference to the input shapes array
     shapes: &'a [Shape],
-    /// Traversal stack. 4 billion items seems enough?
+    /// Traversal stack. Allocates if exceeds depth of 64
     stack: SmallVec<[usize; 64]>,
     /// Position of the iterator in bvh.nodes
     node_index: usize,

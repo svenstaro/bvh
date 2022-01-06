@@ -29,8 +29,8 @@ parry3d-f64 = { version = "0.6.0", features = [ ], path = "C:/Users/derek/OneDri
 object-pool = "0.5.4"
 lazy_static = "1.4.0"
 smallvec = "1.6.1"
-interoptopus = "0.10.3"
-interoptopus_backend_csharp = "0.10.4"
+interoptopus = "0.13.12"
+interoptopus_backend_csharp = "0.13.12"
 flexi_logger = "0.19.3"
 log-panics = "2.0.0"
 stl_io = "0.6.0"
@@ -42,7 +42,9 @@ criterion = "0.3"
 itertools = "0.10.1"
 
 [features]
+default = []
 bench = []
+f32 = []
 
 [profile.release]
 lto = true

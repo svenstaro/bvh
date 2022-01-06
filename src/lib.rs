@@ -71,15 +71,40 @@
 #[cfg(all(feature = "bench", test))]
 extern crate test;
 
-/// A minimal floating value used as a lower bound.
-/// TODO: replace by/add ULPS/relative float comparison methods.
-pub const EPSILON: f64 = 0.00001;
 
-/// Point math type used by this crate. Type alias for [`glam::Vec3`].
+/// Point math type used by this crate. Type alias for [`glam::DVec3`].
+#[cfg(not(feature = "f32"))]
 pub type Point3 = glam::DVec3;
 
-/// Vector math type used by this crate. Type alias for [`glam::Vec3`].
+/// Vector math type used by this crate. Type alias for [`glam::DVec3`].
+#[cfg(not(feature = "f32"))]
 pub type Vector3 = glam::DVec3;
+
+#[cfg(not(feature = "f32"))]
+/// Float type used by this crate
+pub type Real = f64;
+
+/// A minimal floating value used as a lower bound.
+/// TODO: replace by/add ULPS/relative float comparison methods.
+#[cfg(feature = "f32")]
+pub const EPSILON: f32 = 0.00001;
+
+/// Point math type used by this crate. Type alias for [`glam::Vec3`].
+#[cfg(feature = "f32")]
+pub type Point3 = glam::Vec3;
+
+/// Vector math type used by this crate. Type alias for [`glam::Vec3`].
+#[cfg(feature = "f32")]
+pub type Vector3 = glam::Vec3;
+
+
+#[cfg(feature = "f32")]
+/// Float type used by this crate
+pub type Real = f32;
+
+/// A minimal floating value used as a lower bound.
+/// TODO: replace by/add ULPS/relative float comparison methods.
+pub const EPSILON: Real = 0.00001;
 
 pub mod aabb;
 pub mod axis;
@@ -92,7 +117,9 @@ mod utils;
 
 use aabb::{Bounded, AABB};
 use bounding_hierarchy::BHShape;
-use bvh::{BVH, BVHNode};
+
+
+use interoptopus::util::NamespaceMappings;
 use ray::Ray;
 use shapes::{Capsule, Sphere, OBB};
 use glam::DQuat;
@@ -103,13 +130,13 @@ use parry3d_f64::bounding_volume::aabb::AABB as QAABB;
 use parry3d_f64::math::{Point, Vector};
 use parry3d_f64::query::Ray as RayQ;
 use parry3d_f64::query::visitors::RayIntersectionsVisitor;
-use interoptopus::{ffi_function, ffi_type};
+use interoptopus::{ffi_function, ffi_type, Interop, Error};
 use interoptopus::patterns::slice::{FFISliceMut};
 use interoptopus::patterns::string::AsciiPointer;
 use interoptopus::lang::rust::CTypeInfo;
-use interoptopus::lang::c::{CType, CompositeType, Documentation, Field, OpaqueType, PrimitiveType, Visibility, Meta};
+use interoptopus::lang::c::{CType, CompositeType, Documentation, Field, OpaqueType, Visibility, Meta};
 use flexi_logger::{FileSpec, Logger, detailed_format};
-use log::{info, warn, error};
+use log::{info};
 
 #[macro_use]
 extern crate lazy_static;
@@ -615,6 +642,8 @@ pub fn node_32_constructor(aabb: &AABB, entry_index: u32, exit_index: u32, shape
     }
 }
 
+
+
 interoptopus::inventory!(my_inventory, [], [
     init_logger,
     build_bvh,
@@ -634,10 +663,9 @@ interoptopus::inventory!(my_inventory, [], [
     flatten_bvh,
     ], [], []);
 
-use interoptopus::util::NamespaceMappings;
-use interoptopus::{Error, Interop};
 
-#[test]
+
+
 fn bindings_csharp() -> Result<(), Error> {
     use interoptopus_backend_csharp::{Config, Generator, Unsafe, overloads::{DotNet, Unity}};
 
@@ -658,6 +686,10 @@ fn bindings_csharp() -> Result<(), Error> {
     Ok(())
 }
 
+#[test]
+fn gen_bindings() {
+    bindings_csharp().unwrap();
+}
 
 #[test]
 fn test_building_and_querying() {
@@ -681,7 +713,7 @@ fn test_building_and_querying() {
         internal_bvh_index: 0
     };
 
-    let out = BVHBounds {
+    let _out = BVHBounds {
         bounds,
         index: 0,
         internal_bvh_index: 0

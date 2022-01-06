@@ -12,7 +12,7 @@ use crate::bvh::*;
 
 use log::info;
 use rand::{thread_rng, Rng};
-use std::collections::HashSet;
+
 
 // TODO Consider: Instead of getting the scene's shapes passed, let leaf nodes store an AABB
 // that is updated from the outside, perhaps by passing not only the indices of the changed
@@ -567,7 +567,7 @@ mod tests {
     };
     use crate::Point3;
     use crate::EPSILON;
-    use std::collections::HashSet;
+    
 
     #[test]
     /// Tests if `optimize` does not modify a fresh `BVH`.

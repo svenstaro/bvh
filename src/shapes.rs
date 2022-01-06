@@ -236,7 +236,7 @@ mod tests {
     use crate::aabb::AABB;
     use crate::{Point3, Vector3};
     use crate::bounding_hierarchy::IntersectionTest;
-    use glam::{DQuat, DMat4};
+    use glam::{DQuat};
     use crate::shapes::{Capsule, OBB};
 
     #[test]
