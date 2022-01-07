@@ -13,26 +13,18 @@ documentation = "https://docs.rs/crate/bvh"
 keywords = ["bvh", "bounding", "volume", "sah", "aabb"]
 license = "MIT"
 
-[lib]
-name="bvh_f64"
-crate-type = ["rlib", "dylib"]
+[workspace]
+members = ["bvh-lib"]
 
 [dependencies]
 approx = "0.4"
 rand = "0.8"
 log = "0.4.14"
 num = "0.4"
-glam = "0.15"
+glam = "0.20"
 rayon = "1.5.1"
-obj-rs = "0.6"
-parry3d-f64 = { version = "0.6.0", features = [ ], path = "C:/Users/derek/OneDrive/jagexcache/Documents/GitHub/parry/build/parry3d-f64" }
-object-pool = "0.5.4"
-lazy_static = "1.4.0"
 smallvec = "1.6.1"
-interoptopus = "0.13.12"
-interoptopus_backend_csharp = "0.13.12"
-flexi_logger = "0.19.3"
-log-panics = "2.0.0"
+obj-rs = "0.6"
 stl_io = "0.6.0"
 
 [dev-dependencies]
@@ -44,7 +36,7 @@ itertools = "0.10.1"
 [features]
 default = []
 bench = []
-f32 = []
+f64 = []
 
 [profile.release]
 lto = true

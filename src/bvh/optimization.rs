@@ -6,13 +6,13 @@
 //! [`BVH`]: struct.BVH.html
 //!
 
-use crate::aabb::AABB;
 use crate::bounding_hierarchy::BHShape;
 use crate::bvh::*;
+use crate::{aabb::AABB, Real};
+use std::fmt::Debug;
 
 use log::info;
 use rand::{thread_rng, Rng};
-
 
 // TODO Consider: Instead of getting the scene's shapes passed, let leaf nodes store an AABB
 // that is updated from the outside, perhaps by passing not only the indices of the changed
@@ -71,18 +71,17 @@ impl BVH {
     ///
     /// Needs all the scene's shapes, plus the indices of the shapes that were updated.
     ///
-    pub fn optimize<Shape: BHShape> (
+    pub fn optimize<'a, Shape: BHShape>(
         &mut self,
-        refit_shape_indices: &[usize],
-        shapes: &mut[Shape],
+        refit_shape_indices: impl IntoIterator<Item = &'a usize> + Copy,
+        shapes: &mut [Shape],
     ) {
-        
-        
         for i in refit_shape_indices {
             self.remove_node(shapes, *i, false);
-
             //self.assert_tight(shapes);
         }
+        println!("removed");
+        self.assert_consistent(shapes);
         //println!("--------");
         //self.pretty_print();
         //println!("--------");
@@ -93,6 +92,12 @@ impl BVH {
             //println!("--------");
             //self.assert_consistent(shapes);
             self.add_node(shapes, *i);
+            if !self.is_consistent(shapes) {
+                dbg!(i);
+                dbg!(&shapes[*i].aabb());
+                dbg!(&shapes[*i].bh_node_index());
+                self.assert_consistent(shapes);
+            }
         }
 
         return;
@@ -101,7 +106,8 @@ impl BVH {
         // that reference the given shapes, sorted by their depth
         // in increasing order.
         let mut refit_node_indices: Vec<_> = {
-            let mut raw_indices = refit_shape_indices.into_iter()
+            let mut raw_indices = refit_shape_indices
+                .into_iter()
                 .map(|x| shapes[*x].bh_node_index())
                 .collect::<Vec<_>>();
 
@@ -183,9 +189,7 @@ impl BVH {
             let (i, depth) = stack.pop().unwrap();
             depths[i] = depth;
             match self.nodes[i] {
-                BVHNode::Leaf { .. } => {
-                    
-                }
+                BVHNode::Leaf { .. } => {}
                 BVHNode::Node {
                     child_l_index,
                     child_r_index,
@@ -284,7 +288,7 @@ impl BVH {
         // thus being the favored rotation that will be executed after considering all rotations.
         let mut best_rotation: Option<(usize, usize)> = None;
         {
-            let mut consider_rotation = |new_rotation: (usize, usize), surface_area: f64| {
+            let mut consider_rotation = |new_rotation: (usize, usize), surface_area: Real| {
                 if surface_area < best_surface_area {
                     best_surface_area = surface_area;
                     best_rotation = Some(new_rotation);
@@ -483,33 +487,33 @@ impl BVH {
             shapes,
         );
     }
-/*
-    /// Updates the depth of a node, and sets the depth of its descendants accordingly.
-    fn update_depth_recursively(&mut self, node_index: usize, new_depth: u32) {
-        let children = {
-            let node = &mut self.nodes[node_index];
-            match *node {
-                BVHNode::Node {
-                    ref mut depth,
-                    child_l_index,
-                    child_r_index,
-                    ..
-                } => {
-                    *depth = new_depth;
-                    Some((child_l_index, child_r_index))
+    /*
+        /// Updates the depth of a node, and sets the depth of its descendants accordingly.
+        fn update_depth_recursively(&mut self, node_index: usize, new_depth: u32) {
+            let children = {
+                let node = &mut self.nodes[node_index];
+                match *node {
+                    BVHNode::Node {
+                        ref mut depth,
+                        child_l_index,
+                        child_r_index,
+                        ..
+                    } => {
+                        *depth = new_depth;
+                        Some((child_l_index, child_r_index))
+                    }
+                    BVHNode::Leaf { ref mut depth, .. } => {
+                        *depth = new_depth;
+                        None
+                    }
                 }
-                BVHNode::Leaf { ref mut depth, .. } => {
-                    *depth = new_depth;
-                    None
-                }
+            };
+            if let Some((child_l_index, child_r_index)) = children {
+                self.update_depth_recursively(child_l_index, new_depth + 1);
+                self.update_depth_recursively(child_r_index, new_depth + 1);
             }
-        };
-        if let Some((child_l_index, child_r_index)) = children {
-            self.update_depth_recursively(child_l_index, new_depth + 1);
-            self.update_depth_recursively(child_r_index, new_depth + 1);
         }
-    }
-*/
+    */
 
     fn node_is_left_child(&self, node_index: usize) -> bool {
         // Get the index of the parent.
@@ -567,23 +571,6 @@ mod tests {
     };
     use crate::Point3;
     use crate::EPSILON;
-    
-
-    #[test]
-    /// Tests if `optimize` does not modify a fresh `BVH`.
-    fn test_optimizing_new_bvh() {
-        let (mut shapes, mut bvh) = build_some_bh::<BVH>();
-        let original_nodes = bvh.nodes.clone();
-
-        // Query an update for all nodes.
-        let refit_shape_indices: Vec<usize> = (0..shapes.len()).collect();
-        bvh.optimize(&refit_shape_indices, &mut shapes);
-
-        // Assert that all nodes are the same as before the update.
-        for (optimized, original) in bvh.nodes.iter().zip(original_nodes.iter()) {
-            assert_eq!(optimized, original);
-        }
-    }
 
     #[test]
     /// Tests whether a BVH is still consistent after a few optimization calls.
@@ -968,15 +955,16 @@ mod tests {
         assert!(!bvh.is_consistent(&triangles), "BVH is consistent.");
 
         // After fixing the `AABB` consistency should be restored.
+        println!("optimize");
         bvh.optimize(&updated, &mut triangles);
         bvh.assert_consistent(&triangles);
         bvh.assert_tight(&triangles);
     }
 
     #[test]
-    fn test_optimize_bvh_10_75p() {
+    fn test_optimize_bvh_12_75p() {
         let bounds = default_bounds();
-        let mut triangles = create_n_cubes(50, &bounds);
+        let mut triangles = create_n_cubes(1, &bounds);
         println!("triangles={}", triangles.len());
 
         let mut bvh = BVH::build(&mut triangles);
@@ -989,8 +977,7 @@ mod tests {
         // match the tree entries.
         let mut seed = 0;
 
-        let updated = randomly_transform_scene(&mut triangles, 599, &bounds, None, &mut seed);
-        let updated: Vec<usize> = updated.into_iter().collect();
+        let updated = randomly_transform_scene(&mut triangles, 9, &bounds, None, &mut seed);
         assert!(!bvh.is_consistent(&triangles), "BVH is consistent.");
         println!("triangles={}", triangles.len());
         //bvh.pretty_print();
@@ -1000,6 +987,37 @@ mod tests {
         //bvh.pretty_print();
         bvh.assert_consistent(&triangles);
         bvh.assert_tight(&triangles);
+    }
+
+    
+    #[test]
+    fn test_optimizing_nodes() {
+        let bounds = default_bounds();
+        let mut triangles = create_n_cubes(1, &bounds);
+        println!("triangles={}", triangles.len());
+
+        let mut bvh = BVH::build(&mut triangles);
+
+        // The initial BVH should be consistent.
+        bvh.assert_consistent(&triangles);
+        bvh.assert_tight(&triangles);
+
+        // After moving triangles, the BVH should be inconsistent, because the shape `AABB`s do not
+        // match the tree entries.
+        let mut seed = 0;
+
+
+        for _ in 0..1000 {
+            let updated = randomly_transform_scene(&mut triangles, 1, &bounds, None, &mut seed);
+            assert!(!bvh.is_consistent(&triangles), "BVH is consistent.");
+            //bvh.pretty_print();
+    
+            // After fixing the `AABB` consistency should be restored.
+            bvh.optimize(&updated, &mut triangles);
+            //bvh.pretty_print();
+            bvh.assert_consistent(&triangles);
+            bvh.assert_tight(&triangles);
+        }
     }
 }
 
@@ -1011,6 +1029,7 @@ mod bench {
         create_n_cubes, default_bounds, intersect_bh, load_sponza_scene, randomly_transform_scene,
         Triangle,
     };
+    use crate::Real;
 
     #[bench]
     /// Benchmark randomizing 50% of the shapes in a `BVH`.
@@ -1026,11 +1045,11 @@ mod bench {
 
     /// Benchmark optimizing a `BVH` with 120,000 `Triangle`s, where `percent`
     /// `Triangles` have been randomly moved.
-    fn optimize_bvh_120k(percent: f64, b: &mut ::test::Bencher) {
+    fn optimize_bvh_120k(percent: Real, b: &mut ::test::Bencher) {
         let bounds = default_bounds();
         let mut triangles = create_n_cubes(10_000, &bounds);
         let mut bvh = BVH::build(&mut triangles);
-        let num_move = (triangles.len() as f64 * percent) as usize;
+        let num_move = (triangles.len() as Real * percent) as usize;
         let mut seed = 0;
 
         b.iter(|| {
@@ -1072,13 +1091,13 @@ mod bench {
     fn intersect_scene_after_optimize(
         mut triangles: &mut Vec<Triangle>,
         bounds: &AABB,
-        percent: f64,
-        max_offset: Option<f64>,
+        percent: Real,
+        max_offset: Option<Real>,
         iterations: usize,
         b: &mut ::test::Bencher,
     ) {
         let mut bvh = BVH::build(&mut triangles);
-        let num_move = (triangles.len() as f64 * percent) as usize;
+        let num_move = (triangles.len() as Real * percent) as usize;
         let mut seed = 0;
 
         for _ in 0..iterations {
@@ -1133,12 +1152,12 @@ mod bench {
     fn intersect_scene_with_rebuild(
         mut triangles: &mut Vec<Triangle>,
         bounds: &AABB,
-        percent: f64,
-        max_offset: Option<f64>,
+        percent: Real,
+        max_offset: Option<Real>,
         iterations: usize,
         b: &mut ::test::Bencher,
     ) {
-        let num_move = (triangles.len() as f64 * percent) as usize;
+        let num_move = (triangles.len() as Real * percent) as usize;
         let mut seed = 0;
         for _ in 0..iterations {
             randomly_transform_scene(&mut triangles, num_move, &bounds, max_offset, &mut seed);
@@ -1185,7 +1204,7 @@ mod bench {
 
     /// Benchmark intersecting a `BVH` for Sponza after randomly moving one `Triangle` and
     /// optimizing.
-    fn intersect_sponza_after_optimize(percent: f64, b: &mut ::test::Bencher) {
+    fn intersect_sponza_after_optimize(percent: Real, b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();
         intersect_scene_after_optimize(&mut triangles, &bounds, percent, Some(0.1), 10, b);
     }
@@ -1217,7 +1236,7 @@ mod bench {
 
     /// Benchmark intersecting a `BVH` for Sponza after rebuilding. Used to compare optimizing
     /// with rebuilding. For reference see `intersect_sponza_after_optimize`.
-    fn intersect_sponza_with_rebuild(percent: f64, b: &mut ::test::Bencher) {
+    fn intersect_sponza_with_rebuild(percent: Real, b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();
         intersect_scene_with_rebuild(&mut triangles, &bounds, percent, Some(0.1), 10, b);
     }

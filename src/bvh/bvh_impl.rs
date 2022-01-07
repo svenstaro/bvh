@@ -5,20 +5,16 @@
 //!
 
 use crate::aabb::{Bounded, AABB};
+use crate::axis::Axis;
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy, IntersectionTest};
 use crate::bvh::iter::BVHTraverseIterator;
 use crate::utils::{joint_aabb_of_shapes, Bucket};
-use crate::Point3;
 use crate::EPSILON;
-use std::slice;
+use crate::{Point3, Real};
 use rayon::prelude::*;
-use std::iter::repeat;
-use std::sync::atomic::{AtomicUsize};
 use smallvec::SmallVec;
-use crate::axis::Axis;
-
-
-pub static BUILD_THREAD_COUNT: AtomicUsize = AtomicUsize::new(20);
+use std::iter::repeat;
+use std::slice;
 
 /// The [`BVHNode`] enum that describes a node in a [`BVH`].
 /// It's either a leaf node and references a shape (by holding its index)
@@ -90,10 +86,7 @@ impl PartialEq for BVHNode {
                     parent_index: other_parent_index,
                     shape_index: other_shape_index,
                 },
-            ) => {
-                self_parent_index == other_parent_index
-                    && self_shape_index == other_shape_index
-            }
+            ) => self_parent_index == other_parent_index && self_shape_index == other_shape_index,
             _ => false,
         }
     }
@@ -131,7 +124,10 @@ impl BVHNode {
     /// Returns the index of the left child node.
     pub fn child_l_mut(&mut self) -> &mut usize {
         match *self {
-            BVHNode::Node { ref mut child_l_index, .. } => child_l_index,
+            BVHNode::Node {
+                ref mut child_l_index,
+                ..
+            } => child_l_index,
             _ => panic!("Tried to get the left child of a leaf node."),
         }
     }
@@ -166,7 +162,10 @@ impl BVHNode {
     /// Returns the index of the right child node.
     pub fn child_r_mut(&mut self) -> &mut usize {
         match *self {
-            BVHNode::Node { ref mut child_r_index, .. } => child_r_index,
+            BVHNode::Node {
+                ref mut child_r_index,
+                ..
+            } => child_r_index,
             _ => panic!("Tried to get the right child of a leaf node."),
         }
     }
@@ -228,7 +227,10 @@ impl BVHNode {
     /// or `None` if it is an interior node.
     pub fn shape_index_mut(&mut self) -> Option<&mut usize> {
         match *self {
-            BVHNode::Leaf { ref mut shape_index, .. } => Some(shape_index),
+            BVHNode::Leaf {
+                ref mut shape_index,
+                ..
+            } => Some(shape_index),
             _ => None,
         }
     }
@@ -253,9 +255,8 @@ impl BVHNode {
         nodes: &mut [BVHNode],
         parent_index: usize,
         depth: u32,
-        node_index: usize
+        node_index: usize,
     ) -> usize {
-
         //println!("Building node={}", node_index);
 
         // Helper function to accumulate the AABB joint and the centroids AABB
@@ -269,39 +270,30 @@ impl BVHNode {
             )
         }
 
-
         let use_parallel_hull = false;
 
-        let parallel_recurse = false;
-        if nodes.len() > 128 {
-            //parallel_recurse = true;
-            /*
-            let avail_threads = BUILD_THREAD_COUNT.load(Ordering::Relaxed);
-            if avail_threads > 0 {
-                let exchange = BUILD_THREAD_COUNT.compare_exchange(avail_threads, avail_threads - 1, Ordering::Relaxed, Ordering::Relaxed);
-                match exchange {
-                    Ok(_) => parallel_recurse = true,
-                    Err(_) => ()
-                };
-
-                if nodes.len() > 4096 {
-                    //use_parallel_hull = true;
-                }
-            }
-            */
+        let mut parallel_recurse = false;
+        if nodes.len() > 64 {
+            parallel_recurse = true;
         };
 
-
-
         let convex_hull = if use_parallel_hull {
-            indices.par_iter().fold(|| (AABB::default(), AABB::default()),
-            |convex_hull, i|  grow_convex_hull(convex_hull, &shapes[*i].aabb())).reduce(|| (AABB::default(), AABB::default()), |a , b| (a.0.join(&b.0), a.1.join(&b.1)))
+            indices
+                .par_iter()
+                .fold(
+                    || (AABB::default(), AABB::default()),
+                    |convex_hull, i| grow_convex_hull(convex_hull, &shapes[*i].aabb()),
+                )
+                .reduce(
+                    || (AABB::default(), AABB::default()),
+                    |a, b| (a.0.join(&b.0), a.1.join(&b.1)),
+                )
         } else {
             let mut convex_hull = Default::default();
-        
+
             for index in indices.iter() {
                 convex_hull = grow_convex_hull(convex_hull, &shapes[*index].aabb());
-            };
+            }
             convex_hull
         };
 
@@ -316,7 +308,6 @@ impl BVHNode {
             };
             // Let the shape know the index of the node that represents it.
             shapes[shape_index].set_bh_node_index(node_index);
-            //println!("slice_i={} parent={}", node_index, parent_index);
             return node_index;
         }
 
@@ -329,77 +320,137 @@ impl BVHNode {
         let split_axis_size = centroid_bounds.max[split_axis] - centroid_bounds.min[split_axis];
 
         // The following `if` partitions `indices` for recursively calling `BVH::build`.
-        let (child_l_index, child_l_aabb, child_r_index, child_r_aabb) = if split_axis_size
-            < EPSILON
-        {
-            // In this branch the shapes lie too close together so that splitting them in a
-            // sensible way is not possible. Instead we just split the list of shapes in half.
-            let (child_l_indices, child_r_indices) = indices.split_at_mut(indices.len() / 2);
-            let child_l_aabb = joint_aabb_of_shapes(child_l_indices, shapes);
-            let child_r_aabb = joint_aabb_of_shapes(child_r_indices, shapes);
+        let (child_l_index, child_l_aabb, child_r_index, child_r_aabb) =
+            if split_axis_size < EPSILON {
+                // In this branch the shapes lie too close together so that splitting them in a
+                // sensible way is not possible. Instead we just split the list of shapes in half.
+                let (child_l_indices, child_r_indices) = indices.split_at_mut(indices.len() / 2);
+                let child_l_aabb = joint_aabb_of_shapes(child_l_indices, shapes);
+                let child_r_aabb = joint_aabb_of_shapes(child_r_indices, shapes);
 
-            let next_nodes = &mut nodes[1..];
-            let (l_nodes, r_nodes) = next_nodes.split_at_mut(child_l_indices.len() * 2 - 1);
-            let child_l_index = node_index + 1;
-            let child_r_index = node_index + 1 + l_nodes.len();
-            // Proceed recursively.
-            if parallel_recurse {
-                // This is safe because the indices represent unique shapes and we'll never write to the same one
-                let (shapes_a, shapes_b) = unsafe {
-                    let ptr = shapes.as_mut_ptr();
-                    let len = shapes.len();
-                    let shapes_a = slice::from_raw_parts_mut(ptr, len);
-                    let shapes_b = slice::from_raw_parts_mut(ptr, len);
-                    (shapes_a, shapes_b)
-                };
-                rayon::join(|| BVHNode::build(shapes_a, child_l_indices, l_nodes, node_index, depth + 1, child_l_index), 
-                            || BVHNode::build(shapes_b, child_r_indices, r_nodes, node_index, depth + 1, child_r_index));
-                //BUILD_THREAD_COUNT.fetch_add(1, Ordering::Relaxed);
+                let next_nodes = &mut nodes[1..];
+                let (l_nodes, r_nodes) = next_nodes.split_at_mut(child_l_indices.len() * 2 - 1);
+                let child_l_index = node_index + 1;
+                let child_r_index = node_index + 1 + l_nodes.len();
+                // Proceed recursively.
+                if parallel_recurse {
+                    // This is safe because shapes is only accessed using the indices and each index is unique
+                    let (shapes_a, shapes_b) = unsafe {
+                        let ptr = shapes.as_mut_ptr();
+                        let len = shapes.len();
+                        let shapes_a = slice::from_raw_parts_mut(ptr, len);
+                        let shapes_b = slice::from_raw_parts_mut(ptr, len);
+                        (shapes_a, shapes_b)
+                    };
+                    rayon::join(
+                        || {
+                            BVHNode::build(
+                                shapes_a,
+                                child_l_indices,
+                                l_nodes,
+                                node_index,
+                                depth + 1,
+                                child_l_index,
+                            )
+                        },
+                        || {
+                            BVHNode::build(
+                                shapes_b,
+                                child_r_indices,
+                                r_nodes,
+                                node_index,
+                                depth + 1,
+                                child_r_index,
+                            )
+                        },
+                    );
+                } else {
+                    BVHNode::build(
+                        shapes,
+                        child_l_indices,
+                        l_nodes,
+                        node_index,
+                        depth + 1,
+                        child_l_index,
+                    );
+                    BVHNode::build(
+                        shapes,
+                        child_r_indices,
+                        r_nodes,
+                        node_index,
+                        depth + 1,
+                        child_r_index,
+                    );
+                }
+                (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
             } else {
-                BVHNode::build(shapes, child_l_indices, l_nodes, node_index, depth + 1, child_l_index);
-                BVHNode::build(shapes, child_r_indices, r_nodes, node_index, depth + 1, child_r_index);
-            }
-            //println!("{:?}", (parent_index, child_l_index, child_l_indices.len(), child_r_index, child_r_indices.len()));
-            (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
-        } else {
+                let (child_l_aabb, child_r_aabb, child_l_indices, child_r_indices) =
+                    BVHNode::build_buckets(
+                        shapes,
+                        indices,
+                        split_axis,
+                        split_axis_size,
+                        &centroid_bounds,
+                        &aabb_bounds,
+                    );
 
-            // Join together all index buckets.
+                let next_nodes = &mut nodes[1..];
+                let (l_nodes, r_nodes) = next_nodes.split_at_mut(child_l_indices.len() * 2 - 1);
 
+                let child_l_index = node_index + 1;
+                let child_r_index = node_index + 1 + l_nodes.len();
+                // Proceed recursively.
 
-            // split input indices, loop over assignments and assign
-
-
-            //let child_l_indices = concatenate_vectors(l_assignments);
-            //let child_r_indices = concatenate_vectors(r_assignments);
-
-            let (child_l_aabb, child_r_aabb, child_l_indices, child_r_indices) = BVHNode::build_buckets(shapes, indices, split_axis, split_axis_size, &centroid_bounds, &aabb_bounds);
-
-            let next_nodes = &mut nodes[1..];
-            let (l_nodes, r_nodes) = next_nodes.split_at_mut(child_l_indices.len() * 2 - 1);
-
-            let child_l_index = node_index + 1;
-            let child_r_index = node_index + 1 + l_nodes.len();
-            // Proceed recursively.
-
-            if parallel_recurse {
-                let (shapes_a, shapes_b) = unsafe {
-                    let ptr = shapes.as_mut_ptr();
-                    let len = shapes.len();
-                    let shapes_a = slice::from_raw_parts_mut(ptr, len);
-                    let shapes_b = slice::from_raw_parts_mut(ptr, len);
-                    (shapes_a, shapes_b)
-                };
-                rayon::join(|| BVHNode::build(shapes_a, child_l_indices, l_nodes, node_index, depth + 1, child_l_index), 
-                            || BVHNode::build(shapes_b, child_r_indices, r_nodes, node_index, depth + 1, child_r_index));
-                //BUILD_THREAD_COUNT.fetch_add(1, Ordering::Relaxed);
-            } else {
-                
-                BVHNode::build(shapes, child_l_indices, l_nodes, node_index, depth + 1, child_l_index);
-                BVHNode::build(shapes, child_r_indices, r_nodes, node_index, depth + 1, child_r_index);
-            }
-            //println!("{:?}", (parent_index, child_l_index, child_l_indices.len(), child_r_index, child_r_indices.len()));
-            (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
-        };
+                if parallel_recurse {
+                    let (shapes_a, shapes_b) = unsafe {
+                        let ptr = shapes.as_mut_ptr();
+                        let len = shapes.len();
+                        let shapes_a = slice::from_raw_parts_mut(ptr, len);
+                        let shapes_b = slice::from_raw_parts_mut(ptr, len);
+                        (shapes_a, shapes_b)
+                    };
+                    rayon::join(
+                        || {
+                            BVHNode::build(
+                                shapes_a,
+                                child_l_indices,
+                                l_nodes,
+                                node_index,
+                                depth + 1,
+                                child_l_index,
+                            )
+                        },
+                        || {
+                            BVHNode::build(
+                                shapes_b,
+                                child_r_indices,
+                                r_nodes,
+                                node_index,
+                                depth + 1,
+                                child_r_index,
+                            )
+                        },
+                    );
+                } else {
+                    BVHNode::build(
+                        shapes,
+                        child_l_indices,
+                        l_nodes,
+                        node_index,
+                        depth + 1,
+                        child_l_index,
+                    );
+                    BVHNode::build(
+                        shapes,
+                        child_r_indices,
+                        r_nodes,
+                        node_index,
+                        depth + 1,
+                        child_r_index,
+                    );
+                }
+                (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
+            };
 
         // Construct the actual data structure and replace the dummy node.
         assert!(!child_l_aabb.is_empty());
@@ -415,14 +466,14 @@ impl BVHNode {
         node_index
     }
 
-
     fn build_buckets<'a, T: BHShape>(
         shapes: &mut [T],
         indices: &'a mut [usize],
         split_axis: Axis,
-        split_axis_size: f64,
+        split_axis_size: Real,
         centroid_bounds: &AABB,
-        aabb_bounds: &AABB) -> (AABB, AABB, &'a mut [usize], &'a mut [usize])  {
+        aabb_bounds: &AABB,
+    ) -> (AABB, AABB, &'a mut [usize], &'a mut [usize]) {
         // Create six `Bucket`s, and six index assignment vector.
         const NUM_BUCKETS: usize = 6;
         let mut buckets = [Bucket::empty(); NUM_BUCKETS];
@@ -440,7 +491,7 @@ impl BVHNode {
                 (shape_center[split_axis] - centroid_bounds.min[split_axis]) / split_axis_size;
 
             // Convert that to the actual `Bucket` number.
-            let bucket_num = (bucket_num_relative * (NUM_BUCKETS as f64 - 0.01)) as usize;
+            let bucket_num = (bucket_num_relative * (NUM_BUCKETS as Real - 0.01)) as usize;
 
             // Extend the selected `Bucket` and add the index to the actual bucket.
             buckets[bucket_num].add_aabb(&shape_aabb);
@@ -449,7 +500,7 @@ impl BVHNode {
 
         // Compute the costs for each configuration and select the best configuration.
         let mut min_bucket = 0;
-        let mut min_cost = f64::INFINITY;
+        let mut min_cost = Real::INFINITY;
         let mut child_l_aabb = AABB::empty();
         let mut child_r_aabb = AABB::empty();
         for i in 0..(NUM_BUCKETS - 1) {
@@ -457,8 +508,8 @@ impl BVHNode {
             let child_l = l_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
             let child_r = r_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
 
-            let cost = (child_l.size as f64 * child_l.aabb.surface_area()
-                + child_r.size as f64 * child_r.aabb.surface_area())
+            let cost = (child_l.size as Real * child_l.aabb.surface_area()
+                + child_r.size as Real * child_r.aabb.surface_area())
                 / aabb_bounds.surface_area();
             if cost < min_cost {
                 min_bucket = i;
@@ -467,10 +518,10 @@ impl BVHNode {
                 child_r_aabb = child_r.aabb;
             }
         }
-
+        // Join together all index buckets.
+        // split input indices, loop over assignments and assign
         let (l_assignments, r_assignments) = bucket_assignments.split_at_mut(min_bucket + 1);
 
-        
         let mut l_count = 0;
         for group in l_assignments.iter() {
             l_count += group.len();
@@ -581,7 +632,11 @@ impl BVH {
     /// [`BVH`]: struct.BVH.html
     /// [`AABB`]: ../aabb/struct.AABB.html
     ///
-    pub fn traverse<'a, Shape: Bounded>(&'a self, ray: &impl IntersectionTest, shapes: &'a [Shape]) -> Vec<&Shape> {
+    pub fn traverse<'a, Shape: Bounded>(
+        &'a self,
+        ray: &impl IntersectionTest,
+        shapes: &'a [Shape],
+    ) -> Vec<&Shape> {
         let mut indices = Vec::new();
         BVHNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
         indices
@@ -604,11 +659,7 @@ impl BVH {
         BVHTraverseIterator::new(self, test, shapes)
     }
 
-    pub fn add_node<T: BHShape>(
-        &mut self,
-        shapes: &mut [T],
-        new_shape_index: usize
-    ) {
+    pub fn add_node<T: BHShape>(&mut self, shapes: &mut [T], new_shape_index: usize) {
         let mut i = 0;
         let new_shape = &shapes[new_shape_index];
         let shape_aabb = new_shape.aabb();
@@ -617,11 +668,12 @@ impl BVH {
         if self.nodes.len() == 0 {
             self.nodes.push(BVHNode::Leaf {
                 parent_index: 0,
-                shape_index: new_shape_index
+                shape_index: new_shape_index,
             });
             shapes[new_shape_index].set_bh_node_index(0);
-            return
+            return;
         }
+        let mut depth = 0;
 
         loop {
             match self.nodes[i] {
@@ -630,7 +682,7 @@ impl BVH {
                     child_l_index,
                     child_r_aabb,
                     child_r_index,
-                    parent_index
+                    parent_index,
                 } => {
                     let left_expand = child_l_aabb.join(&shape_aabb);
 
@@ -643,16 +695,16 @@ impl BVH {
 
                     // merge is more expensive only do when it's significantly better
                     let merge_discount = 0.3;
+                    //dbg!(depth);
 
                     // compared SA of the options
-                    if merged < send_left.min(send_right) * merge_discount
-                    {
+                    if merged < send_left.min(send_right) * merge_discount {
                         //println!("Merging left and right trees");
                         // Merge left and right trees
                         let l_index = self.nodes.len();
                         let new_left = BVHNode::Leaf {
                             parent_index: i,
-                            shape_index: new_shape_index
+                            shape_index: new_shape_index,
                         };
                         shapes[new_shape_index].set_bh_node_index(l_index);
                         self.nodes.push(new_left);
@@ -663,7 +715,7 @@ impl BVH {
                             child_l_index,
                             child_r_aabb: child_r_aabb.clone(),
                             child_r_index,
-                            parent_index: i
+                            parent_index: i,
                         };
                         self.nodes.push(new_right);
                         *self.nodes[child_r_index].parent_mut() = r_index;
@@ -674,7 +726,7 @@ impl BVH {
                             child_l_index: l_index,
                             child_r_aabb: merged_aabb,
                             child_r_index: r_index,
-                            parent_index
+                            parent_index,
                         };
                         //self.fix_depth(l_index, depth + 1);
                         //self.fix_depth(r_index, depth + 1);
@@ -682,8 +734,7 @@ impl BVH {
                     } else if send_left < send_right {
                         // send new box down left side
                         //println!("Sending left");
-                        if i == child_l_index
-                        {
+                        if i == child_l_index {
                             panic!("broken loop");
                         }
                         let child_l_aabb = left_expand;
@@ -692,14 +743,13 @@ impl BVH {
                             child_l_index,
                             child_r_aabb,
                             child_r_index,
-                            parent_index
+                            parent_index,
                         };
                         i = child_l_index;
                     } else {
                         // send new box down right
                         //println!("Sending right");
-                        if i == child_r_index
-                        {
+                        if i == child_r_index {
                             panic!("broken loop");
                         }
                         let child_r_aabb = right_expand;
@@ -708,18 +758,21 @@ impl BVH {
                             child_l_index,
                             child_r_aabb,
                             child_r_index,
-                            parent_index
+                            parent_index,
                         };
                         i = child_r_index;
                     }
                 }
-                BVHNode::Leaf { shape_index, parent_index} => {
+                BVHNode::Leaf {
+                    shape_index,
+                    parent_index,
+                } => {
                     //println!("Splitting leaf");
                     // Split leaf into 2 nodes and insert the new box
                     let l_index = self.nodes.len();
                     let new_left = BVHNode::Leaf {
                         parent_index: i,
-                        shape_index: new_shape_index
+                        shape_index: new_shape_index,
                     };
                     shapes[new_shape_index].set_bh_node_index(l_index);
                     self.nodes.push(new_left);
@@ -728,7 +781,7 @@ impl BVH {
                     let child_r_index = self.nodes.len();
                     let new_right = BVHNode::Leaf {
                         parent_index: i,
-                        shape_index: shape_index
+                        shape_index: shape_index,
                     };
                     shapes[shape_index].set_bh_node_index(child_r_index);
                     self.nodes.push(new_right);
@@ -738,13 +791,14 @@ impl BVH {
                         child_l_index: l_index,
                         child_r_aabb,
                         child_r_index,
-                        parent_index
+                        parent_index,
                     };
                     self.nodes[i] = new_node;
                     self.fix_aabbs_ascending(shapes, parent_index);
                     return;
                 }
             }
+            depth += 1;
         }
     }
 
@@ -754,9 +808,8 @@ impl BVH {
         deleted_shape_index: usize,
         swap_shape: bool,
     ) {
-        if self.nodes.len() == 0
-        {
-            return
+        if self.nodes.len() == 0 {
+            return;
             //panic!("can't remove a node from a bvh with only one node");
         }
         let bad_shape = &shapes[deleted_shape_index];
@@ -772,7 +825,6 @@ impl BVH {
                 self.nodes.clear();
             }
         } else {
-
             //println!("delete_i={}", dead_node_index);
 
             let dead_node = self.nodes[dead_node_index];
@@ -782,8 +834,16 @@ impl BVH {
             let gp_index = self.nodes[parent_index].parent();
             //println!("{}->{}->{}", gp_index, parent_index, dead_node_index);
 
-            let sibling_index = if self.nodes[parent_index].child_l() == dead_node_index { self.nodes[parent_index].child_r() } else { self.nodes[parent_index].child_l() };
-            let sibling_box = if self.nodes[parent_index].child_l() == dead_node_index { self.nodes[parent_index].child_r_aabb() } else { self.nodes[parent_index].child_l_aabb() };
+            let sibling_index = if self.nodes[parent_index].child_l() == dead_node_index {
+                self.nodes[parent_index].child_r()
+            } else {
+                self.nodes[parent_index].child_l()
+            };
+            let sibling_box = if self.nodes[parent_index].child_l() == dead_node_index {
+                self.nodes[parent_index].child_r_aabb()
+            } else {
+                self.nodes[parent_index].child_l_aabb()
+            };
             // TODO: fix potential issue leaving empty spot in self.nodes
             // the node swapped to sibling_index should probably be swapped to the end
             // of the vector and the vector truncated
@@ -791,10 +851,13 @@ impl BVH {
                 // We are removing one of the children of the root node
                 // The other child needs to become the root node
                 // The old root node and the dead child then have to be moved
-                
-                //println!("gp == parent {}", parent_index);
+
+               // println!("gp == parent {}", parent_index);
                 if parent_index != 0 {
-                    panic!("Circular node that wasn't root parent={} node={}", parent_index, dead_node_index);
+                    panic!(
+                        "Circular node that wasn't root parent={} node={}",
+                        parent_index, dead_node_index
+                    );
                 }
                 self.nodes.swap(parent_index, sibling_index);
 
@@ -804,7 +867,7 @@ impl BVH {
                         shapes[index].set_bh_node_index(parent_index);
                         self.swap_and_remove_index(shapes, sibling_index.max(dead_node_index));
                         self.swap_and_remove_index(shapes, sibling_index.min(dead_node_index));
-                    },
+                    }
                     _ => {
                         *self.nodes[parent_index].parent_mut() = parent_index;
                         let new_root = self.nodes[parent_index];
@@ -819,11 +882,19 @@ impl BVH {
                 //println!("nodes_len {}, sib_index {}", self.nodes.len(), sibling_index);
                 //println!("nodes_len {}", self.nodes.len());
             } else {
-                let box_to_change = if self.nodes[gp_index].child_l() == parent_index { self.nodes[gp_index].child_l_aabb_mut() } else { self.nodes[gp_index].child_r_aabb_mut() };
+                let box_to_change = if self.nodes[gp_index].child_l() == parent_index {
+                    self.nodes[gp_index].child_l_aabb_mut()
+                } else {
+                    self.nodes[gp_index].child_r_aabb_mut()
+                };
                 //println!("on {} adjusting {} to {}", gp_index, box_to_change, sibling_box);
                 *box_to_change = sibling_box;
                 //println!("{} {} {}", gp_index, self.nodes[gp_index].child_l_aabb(), self.nodes[gp_index].child_r_aabb());
-                let ref_to_change = if self.nodes[gp_index].child_l() == parent_index { self.nodes[gp_index].child_l_mut() } else { self.nodes[gp_index].child_r_mut() };
+                let ref_to_change = if self.nodes[gp_index].child_l() == parent_index {
+                    self.nodes[gp_index].child_l_mut()
+                } else {
+                    self.nodes[gp_index].child_r_mut()
+                };
                 //println!("on {} {}=>{}", gp_index, ref_to_change, sibling_index);
                 *ref_to_change = sibling_index;
                 *self.nodes[sibling_index].parent_mut() = gp_index;
@@ -832,17 +903,17 @@ impl BVH {
                 //let new_depth = self.nodes[sibling_index].depth() - 1;
                 //*self.nodes[sibling_index].depth_mut() = new_depth;
                 // remove node and parent
-                
+
                 //println!("---");
                 //self.pretty_print();
                 //println!("---");
                 self.swap_and_remove_index(shapes, dead_node_index.max(parent_index));
-                
+
                 //println!("---");
                 //self.pretty_print();
                 //println!("---");
                 self.swap_and_remove_index(shapes, parent_index.min(dead_node_index));
-                
+
                 //println!("---");
                 //self.pretty_print();
                 //println!("---");
@@ -855,20 +926,14 @@ impl BVH {
                 shapes.swap(deleted_shape_index, end_shape);
                 let node_index = shapes[deleted_shape_index].bh_node_index();
                 match self.nodes[node_index].shape_index_mut() {
-                    Some(index) => {
-                        *index = deleted_shape_index
-                    },
+                    Some(index) => *index = deleted_shape_index,
                     _ => {}
                 }
             }
         }
     }
 
-    fn fix_aabbs_ascending<T: BHShape>(
-        &mut self,
-        shapes: &mut [T],
-        node_index: usize
-    ) {
+    fn fix_aabbs_ascending<T: BHShape>(&mut self, shapes: &mut [T], node_index: usize) {
         let mut index_to_fix = node_index;
         while index_to_fix != 0 {
             let parent = self.nodes[index_to_fix].parent();
@@ -878,7 +943,7 @@ impl BVH {
                     child_l_index,
                     child_r_index,
                     child_l_aabb,
-                    child_r_aabb 
+                    child_r_aabb,
                 } => {
                     //println!("checking {} l={} r={}", parent, child_l_index, child_r_index);
                     let l_aabb = self.nodes[child_l_index].get_node_aabb(shapes);
@@ -898,41 +963,48 @@ impl BVH {
                     }
                     if !stop {
                         index_to_fix = parent_index;
+                        //dbg!(index_to_fix);
                     } else {
                         index_to_fix = 0;
                     }
                 }
-                _ => {index_to_fix = 0}
+                _ => index_to_fix = 0,
             }
         }
     }
 
-    fn swap_and_remove_index<T: BHShape>(
-        &mut self,
-        shapes: &mut [T],
-        node_index: usize
-    ) {
+    fn swap_and_remove_index<T: BHShape>(&mut self, shapes: &mut [T], node_index: usize) {
         let end = self.nodes.len() - 1;
         //println!("removing node {}", node_index);
         if node_index != end {
             self.nodes[node_index] = self.nodes[end];
             let node_parent = self.nodes[node_index].parent();
             match self.nodes[node_parent] {
-                BVHNode::Leaf {parent_index, shape_index} => {
-                    println!("truncating early node_parent={} parent_index={} shape_index={}", node_parent, parent_index, shape_index);
+                BVHNode::Leaf {
+                    parent_index,
+                    shape_index,
+                } => {
+                    println!(
+                        "truncating early node_parent={} parent_index={} shape_index={}",
+                        node_parent, parent_index, shape_index
+                    );
                     self.nodes.truncate(end);
                     return;
                 }
-                _ => { }
+                _ => {}
             }
             let parent = self.nodes[node_parent];
             let moved_left = parent.child_l() == end;
-            let ref_to_change = if moved_left { self.nodes[node_parent].child_l_mut() } else { self.nodes[node_parent].child_r_mut() };
+            let ref_to_change = if moved_left {
+                self.nodes[node_parent].child_l_mut()
+            } else {
+                self.nodes[node_parent].child_r_mut()
+            };
             //println!("on {} changing {}=>{}", node_parent, ref_to_change, node_index);
             *ref_to_change = node_index;
 
             match self.nodes[node_index] {
-                BVHNode::Leaf { shape_index, ..} => {
+                BVHNode::Leaf { shape_index, .. } => {
                     shapes[shape_index].set_bh_node_index(node_index);
                 }
                 BVHNode::Node {
@@ -942,9 +1014,9 @@ impl BVH {
                 } => {
                     *self.nodes[child_l_index].parent_mut() = node_index;
                     *self.nodes[child_r_index].parent_mut() = node_index;
-                    
+
                     //println!("{} {} {}", node_index, self.nodes[node_index].child_l_aabb(), self.nodes[node_index].child_r_aabb());
-                    //let correct_depth 
+                    //let correct_depth
                     //self.fix_depth(child_l_index, )
                 }
             }
@@ -952,32 +1024,32 @@ impl BVH {
         self.nodes.truncate(end);
     }
 
-/*
-    pub fn fix_depth(
-        &mut self,
-        curr_node: usize,
-        correct_depth: u32
-    ) {
-        match self.nodes[curr_node] {
-            BVHNode::Node {
-                ref mut depth,
-                child_l_index,
-                child_r_index,
-                ..
-            } => {
-                *depth = correct_depth;
-                self.fix_depth(child_l_index, correct_depth + 1);
-                self.fix_depth(child_r_index, correct_depth + 1);
-            }
-            BVHNode::Leaf {
-                ref mut depth,
-                ..
-            } => {
-                *depth = correct_depth;
+    /*
+        pub fn fix_depth(
+            &mut self,
+            curr_node: usize,
+            correct_depth: u32
+        ) {
+            match self.nodes[curr_node] {
+                BVHNode::Node {
+                    ref mut depth,
+                    child_l_index,
+                    child_r_index,
+                    ..
+                } => {
+                    *depth = correct_depth;
+                    self.fix_depth(child_l_index, correct_depth + 1);
+                    self.fix_depth(child_r_index, correct_depth + 1);
+                }
+                BVHNode::Leaf {
+                    ref mut depth,
+                    ..
+                } => {
+                    *depth = correct_depth;
+                }
             }
         }
-    }
-*/
+    */
 
     /// Prints the [`BVH`] in a tree-like visualization.
     ///
@@ -987,7 +1059,6 @@ impl BVH {
         self.print_node(0);
     }
 
-    
     pub fn print_node(&self, node_index: usize) {
         let nodes = &self.nodes;
         match nodes[node_index] {
@@ -1000,18 +1071,26 @@ impl BVH {
             } => {
                 let depth = nodes[node_index].depth(nodes);
                 let padding: String = repeat(" ").take(depth as usize).collect();
-                println!("{} node={} parent={}", padding, node_index, nodes[node_index].parent());
+                println!(
+                    "{}node={} parent={}",
+                    padding,
+                    node_index,
+                    nodes[node_index].parent()
+                );
                 println!("{}{} child_l {}", padding, child_l_index, child_l_aabb);
                 self.print_node(child_l_index);
                 println!("{}{} child_r {}", padding, child_r_index, child_r_aabb);
                 self.print_node(child_r_index);
             }
-            BVHNode::Leaf {
-                shape_index, ..
-            } => {
+            BVHNode::Leaf { shape_index, .. } => {
                 let depth = nodes[node_index].depth(nodes);
                 let padding: String = repeat(" ").take(depth as usize).collect();
-                println!("{} node={} parent={}", padding, node_index, nodes[node_index].parent());
+                println!(
+                    "{}node={} parent={}",
+                    padding,
+                    node_index,
+                    nodes[node_index].parent()
+                );
                 println!("{}shape\t{:?}", padding, shape_index);
             }
         }
@@ -1090,8 +1169,8 @@ impl BVH {
     pub fn is_consistent<Shape: BHShape>(&self, shapes: &[Shape]) -> bool {
         // The root node of the bvh is not bounded by anything.
         let space = AABB {
-            min: Point3::new(f64::NEG_INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY),
-            max: Point3::new(f64::INFINITY, f64::INFINITY, f64::INFINITY),
+            min: Point3::new(Real::NEG_INFINITY, Real::NEG_INFINITY, Real::NEG_INFINITY),
+            max: Point3::new(Real::INFINITY, Real::INFINITY, Real::INFINITY),
         };
 
         // The counter for all nodes.
@@ -1124,7 +1203,7 @@ impl BVH {
             "Wrong parent index. Expected: {}; Actual: {}",
             expected_parent_index, parent
         );
-        let depth = node.depth(self.nodes.as_slice());
+        let depth = node.depth(&self.nodes);
         assert_eq!(
             expected_depth, depth,
             "Wrong depth. Expected: {}; Actual: {}",
@@ -1142,16 +1221,20 @@ impl BVH {
                 assert!(
                     expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, EPSILON),
                     "Left child lies outside the expected bounds.
+                         \tDepth: {}
                          \tBounds: {}
                          \tLeft child: {}",
+                    depth,
                     expected_outer_aabb,
                     child_l_aabb
                 );
                 assert!(
                     expected_outer_aabb.approx_contains_aabb_eps(&child_r_aabb, EPSILON),
                     "Right child lies outside the expected bounds.
+                         \tDepth: {}
                          \tBounds: {}
                          \tRight child: {}",
+                    depth,
                     expected_outer_aabb,
                     child_r_aabb
                 );
@@ -1172,13 +1255,18 @@ impl BVH {
                     shapes,
                 );
             }
-            BVHNode::Leaf { shape_index, .. } => {
+            BVHNode::Leaf { shape_index, parent_index, ..} => {
                 let shape_aabb = shapes[shape_index].aabb();
                 assert!(
-                    if parent != 0 { expected_outer_aabb.relative_eq(&shape_aabb, EPSILON) } else { true },
-                    "Shape's AABB lies outside the expected bounds.\n\tBounds: {}\n\tShape: {}",
+                    if parent != 0 {
+                        expected_outer_aabb.relative_eq(&shape_aabb, EPSILON)
+                    } else {
+                        true
+                    },
+                    "Shape's AABB lies outside the expected bounds.\n\tBounds: {}\n\tShape: {}\n\tParent: {}",
                     expected_outer_aabb,
-                    shape_aabb
+                    shape_aabb,
+                    parent_index
                 );
             }
         }
@@ -1188,8 +1276,8 @@ impl BVH {
     pub fn assert_consistent<Shape: BHShape>(&self, shapes: &[Shape]) {
         // The root node of the bvh is not bounded by anything.
         let space = AABB {
-            min: Point3::new(f64::NEG_INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY),
-            max: Point3::new(f64::INFINITY, f64::INFINITY, f64::INFINITY),
+            min: Point3::new(Real::NEG_INFINITY, Real::NEG_INFINITY, Real::NEG_INFINITY),
+            max: Point3::new(Real::INFINITY, Real::INFINITY, Real::INFINITY),
         };
 
         // The counter for all nodes.
@@ -1209,7 +1297,15 @@ impl BVH {
                         child_r_index,
                         child_r_aabb,
                     } => {
-                        println!("{}: parent_index={} child_l {} {} child_r {} {}", x, parent_index, child_l_index, child_l_aabb, child_r_index, child_r_aabb);
+                        println!(
+                            "{}: parent_index={} child_l {} {} child_r {} {}",
+                            x,
+                            parent_index,
+                            child_l_index,
+                            child_l_aabb,
+                            child_r_index,
+                            child_r_aabb
+                        );
                     }
                     BVHNode::Leaf {
                         parent_index,
@@ -1242,12 +1338,14 @@ impl BVH {
         {
             let joint_aabb = child_l_aabb.join(&child_r_aabb);
             if !joint_aabb.relative_eq(outer_aabb, EPSILON) {
-                for _i in 0..shapes.len()
-                {
+                for _i in 0..shapes.len() {
                     //println!("s#{} {}", i, shapes[i].aabb())
                 }
                 //self.pretty_print();
-                println!("{} real_aabb={} stored_aabb={}", node_index, joint_aabb, outer_aabb);
+                println!(
+                    "{} real_aabb={} stored_aabb={}",
+                    node_index, joint_aabb, outer_aabb
+                );
             }
             assert!(joint_aabb.relative_eq(outer_aabb, EPSILON));
             self.assert_tight_subtree(child_l_index, &child_l_aabb, shapes);
@@ -1277,7 +1375,11 @@ impl BoundingHierarchy for BVH {
         BVH::build(shapes)
     }
 
-    fn traverse<'a, Shape: Bounded>(&'a self, ray: &impl IntersectionTest, shapes: &'a [Shape]) -> Vec<&Shape> {
+    fn traverse<'a, Shape: Bounded>(
+        &'a self,
+        ray: &impl IntersectionTest,
+        shapes: &'a [Shape],
+    ) -> Vec<&Shape> {
         self.traverse(ray, shapes)
     }
 
@@ -1288,12 +1390,12 @@ impl BoundingHierarchy for BVH {
 
 #[cfg(test)]
 mod tests {
-    use crate::bvh::{BVHNode, BVH};
     use crate::aabb::AABB;
-    use crate::{Point3, Vector3};
-    use crate::testbase::{build_some_bh, traverse_some_bh, UnitBox};
-    use crate::Ray;
     use crate::bounding_hierarchy::BHShape;
+    use crate::bvh::{BVHNode, BVH};
+    use crate::ray::Ray;
+    use crate::testbase::{build_some_bh, traverse_some_bh, UnitBox};
+    use crate::{Point3, Real, Vector3};
     use itertools::Itertools;
 
     #[test]
@@ -1313,53 +1415,53 @@ mod tests {
     #[test]
     fn test_add_bvh() {
         let mut shapes = Vec::new();
-        
 
         for x in -1..2 {
-            shapes.push(UnitBox::new(x, Point3::new(x as f64, 0.0, 0.0)));
+            shapes.push(UnitBox::new(x, Point3::new(x as Real, 0.0, 0.0)));
         }
-
 
         let mut bvh = BVH::build(&mut shapes);
         bvh.pretty_print();
 
-        let test = AABB::empty().grow(&Point3::new(1.6, 0.0, 0.0)).grow(&Point3::new(2.4, 1.0, 1.0));
+        let test = AABB::empty()
+            .grow(&Point3::new(1.6, 0.0, 0.0))
+            .grow(&Point3::new(2.4, 1.0, 1.0));
 
         let res = bvh.traverse(&test, &shapes);
         assert_eq!(res.len(), 0);
 
         let x = 2;
-        shapes.push(UnitBox::new(x, Point3::new(x as f64, 0.0, 0.0)));
+        shapes.push(UnitBox::new(x, Point3::new(x as Real, 0.0, 0.0)));
         let len = shapes.len() - 1;
         bvh.add_node(&mut shapes, len);
-        
+
         bvh.pretty_print();
         bvh.rebuild(&mut shapes);
         let res = bvh.traverse(&test, &shapes);
         assert_eq!(res.len(), 1);
 
-        
         let x = 50;
-        shapes.push(UnitBox::new(x, Point3::new(x as f64, 0.0, 0.0)));
+        shapes.push(UnitBox::new(x, Point3::new(x as Real, 0.0, 0.0)));
         let len = shapes.len() - 1;
         bvh.add_node(&mut shapes, len);
         bvh.pretty_print();
         let res = bvh.traverse(&test, &shapes);
         assert_eq!(res.len(), 1);
-        
-        let test = AABB::empty().grow(&Point3::new(49.6, 0.0, 0.0)).grow(&Point3::new(52.4, 1.0, 1.0));
+
+        let test = AABB::empty()
+            .grow(&Point3::new(49.6, 0.0, 0.0))
+            .grow(&Point3::new(52.4, 1.0, 1.0));
         let res = bvh.traverse(&test, &shapes);
         assert_eq!(res.len(), 1);
     }
-
 
     #[test]
     fn test_remove_bvh() {
         let mut shapes = Vec::new();
         for x in -1..1 {
-            shapes.push(UnitBox::new(x, Point3::new(x as f64, 0.0, 0.0)));
+            shapes.push(UnitBox::new(x, Point3::new(x as Real, 0.0, 0.0)));
         }
-        
+
         let mut bvh = BVH::build(&mut shapes);
 
         bvh.pretty_print();
@@ -1376,22 +1478,19 @@ mod tests {
     fn test_accuracy_after_bvh_remove() {
         let mut shapes = Vec::new();
         for x in -25..25 {
-            shapes.push(UnitBox::new(x, Point3::new(x as f64, 0.0, 0.0)));
+            shapes.push(UnitBox::new(x, Point3::new(x as Real, 0.0, 0.0)));
         }
-
-        
 
         let mut bvh = BVH::build(&mut shapes);
         bvh.pretty_print();
         bvh.assert_consistent(shapes.as_slice());
 
-        fn test_x(bvh: &BVH, x: f64, count: usize, shapes: &[UnitBox]) {
+        fn test_x(bvh: &BVH, x: Real, count: usize, shapes: &[UnitBox]) {
             let dir = Vector3::new(0.0, -1.0, 0.0);
 
             let ray = Ray::new(Vector3::new(x, 2.0, 0.0), dir);
             let res = bvh.traverse(&ray, shapes);
-            if count == 0 && res.len() > 0
-            {
+            if count == 0 && res.len() > 0 {
                 println!("hit={} node={}", res[0].pos, res[0].bh_node_index());
             }
             assert_eq!(res.len(), count);
@@ -1399,8 +1498,8 @@ mod tests {
 
         test_x(&bvh, 2.0, 1, &shapes);
 
-        for x in -23 .. 23 {
-            let point = Point3::new(x as f64, 0.0, 0.0);
+        for x in -23..23 {
+            let point = Point3::new(x as Real, 0.0, 0.0);
             let mut delete_i = 0;
             for i in 0..shapes.len() {
                 if shapes[i].pos.distance_squared(point) < 0.01 {
@@ -1411,14 +1510,13 @@ mod tests {
             println!("Testing {}", x);
             bvh.pretty_print();
             println!("Ensuring x={} shape[{}] is present", x, delete_i);
-            test_x(&bvh, x as f64, 1, &shapes);
+            test_x(&bvh, x as Real, 1, &shapes);
             println!("Deleting x={} shape[{}]", x, delete_i);
             bvh.remove_node(&mut shapes, delete_i, true);
             shapes.truncate(shapes.len() - 1);
             bvh.pretty_print();
             println!("Ensuring {} [{}] is gone", x, delete_i);
-            test_x(&bvh, x as f64, 0, &shapes);
-
+            test_x(&bvh, x as Real, 0, &shapes);
         }
     }
 
@@ -1426,19 +1524,18 @@ mod tests {
     fn test_random_deletions() {
         let xs = -3..3;
         let x_values = xs.clone().collect::<Vec<i32>>();
-        for x_values in xs.clone().permutations(x_values.len() - 1)
-        {
+        for x_values in xs.clone().permutations(x_values.len() - 1) {
             let mut shapes = Vec::new();
             for x in xs.clone() {
-                shapes.push(UnitBox::new(x, Point3::new(x as f64, 0.0, 0.0)));
+                shapes.push(UnitBox::new(x, Point3::new(x as Real, 0.0, 0.0)));
             }
             let mut bvh = BVH::build(&mut shapes);
-            
+
             //bvh.pretty_print();
             for x_i in 0..x_values.len() {
                 let x = x_values[x_i];
-    
-                let point = Point3::new(x as f64, 0.0, 0.0);
+
+                let point = Point3::new(x as Real, 0.0, 0.0);
                 let mut delete_i = 0;
                 for i in 0..shapes.len() {
                     if shapes[i].pos.distance_squared(point) < 0.01 {
@@ -1453,20 +1550,18 @@ mod tests {
                 //bvh.pretty_print();
                 bvh.assert_consistent(shapes.as_slice());
                 bvh.assert_tight(shapes.as_slice());
-    
             }
         }
     }
 
-    
     #[test]
     fn test_add_consistency() {
         let mut shapes = Vec::new();
         for x in -25..25 {
-            shapes.push(UnitBox::new(x, Point3::new(x as f64, 0.0, 0.0)));
+            shapes.push(UnitBox::new(x, Point3::new(x as Real, 0.0, 0.0)));
         }
 
-        let (left, right) =  shapes.split_at_mut(10);
+        let (left, right) = shapes.split_at_mut(10);
 
         let mut bvh = BVH::build(left);
         bvh.pretty_print();
@@ -1479,10 +1574,6 @@ mod tests {
             bvh.assert_consistent(shapes.as_slice());
         }
     }
-
-
-
-
 
     #[test]
     /// Verify contents of the bounding hierarchy for a fixed scene structure
@@ -1515,13 +1606,13 @@ mod tests {
 
 #[cfg(all(feature = "bench", test))]
 mod bench {
+    use crate::bounding_hierarchy::BHShape;
     use crate::bvh::BVH;
     use crate::testbase::{
-        build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh,
-        intersect_1200_triangles_bh, intersect_120k_triangles_bh, intersect_12k_triangles_bh,
-        intersect_bh, load_sponza_scene,create_n_cubes, default_bounds
+        build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh, create_n_cubes,
+        default_bounds, intersect_1200_triangles_bh, intersect_120k_triangles_bh,
+        intersect_12k_triangles_bh, intersect_bh, load_sponza_scene,
     };
-    use crate::bounding_hierarchy::BHShape;
 
     #[bench]
     /// Benchmark the construction of a `BVH` with 1,200 triangles.
@@ -1549,7 +1640,7 @@ mod bench {
             BVH::build(&mut triangles);
         });
     }
-    
+
     #[cfg(feature = "bench")]
     fn add_triangles_bvh(n: usize, b: &mut ::test::Bencher) {
         let bounds = default_bounds();
@@ -1560,13 +1651,12 @@ mod bench {
     }
 
     #[cfg(feature = "bench")]
-    fn build_by_add<T: BHShape>(shapes: &mut [T] ) -> BVH
-    {
+    fn build_by_add<T: BHShape>(shapes: &mut [T]) -> BVH {
         let (first, rest) = shapes.split_at_mut(1);
         let mut bvh = BVH::build(first);
         for i in 1..shapes.len() {
             bvh.add_node(shapes, i)
-        };
+        }
         bvh
     }
 
@@ -1578,20 +1668,17 @@ mod bench {
         intersect_bh(&bh, &triangles, &bounds, b)
     }
 
-    
     #[bench]
     /// Benchmark the construction of a `BVH` for the Sponza scene.
     fn build_1200_triangles_add(b: &mut ::test::Bencher) {
         add_triangles_bvh(1200, b)
     }
 
-
     #[bench]
     /// Benchmark the construction of a `BVH` for the Sponza scene.
     fn build_12k_triangles_add(b: &mut ::test::Bencher) {
         add_triangles_bvh(12000, b)
     }
-
 
     /*
     #[bench]

@@ -1,10 +1,10 @@
 //! Axis Aligned Bounding Boxes.
 
+use crate::bounding_hierarchy::IntersectionTest;
 use std::fmt;
 use std::ops::Index;
-use crate::bounding_hierarchy::{IntersectionTest};
 
-use crate::{Point3, Vector3};
+use crate::{Point3, Real, Vector3};
 
 use crate::axis::Axis;
 
@@ -106,8 +106,8 @@ impl AABB {
     ///
     pub fn empty() -> AABB {
         AABB {
-            min: Point3::new(f64::INFINITY, f64::INFINITY, f64::INFINITY),
-            max: Point3::new(f64::NEG_INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY),
+            min: Point3::new(Real::INFINITY, Real::INFINITY, Real::INFINITY),
+            max: Point3::new(Real::NEG_INFINITY, Real::NEG_INFINITY, Real::NEG_INFINITY),
         }
     }
 
@@ -130,12 +130,12 @@ impl AABB {
     /// [`Point3`]: glam::Vec3
     ///
     pub fn contains(&self, p: &Point3) -> bool {
-        p.x >= self.min.x
-            && p.x <= self.max.x
-            && p.y >= self.min.y
-            && p.y <= self.max.y
-            && p.z >= self.min.z
-            && p.z <= self.max.z
+        !(p.x < self.min.x
+            || p.x > self.max.x
+            || p.y < self.min.y
+            || p.y > self.max.y
+            || p.z < self.min.z
+            || p.z > self.max.z)
     }
 
     /// Returns true if the [`Point3`] is approximately inside the [`AABB`]
@@ -158,7 +158,7 @@ impl AABB {
     /// [`AABB`]: struct.AABB.html
     /// [`Point3`]: glam::Vec3
     ///
-    pub fn approx_contains_eps(&self, p: &Point3, epsilon: f64) -> bool {
+    pub fn approx_contains_eps(&self, p: &Point3, epsilon: Real) -> bool {
         (p.x - self.min.x) > -epsilon
             && (p.x - self.max.x) < epsilon
             && (p.y - self.min.y) > -epsilon
@@ -185,7 +185,7 @@ impl AABB {
     /// ```
     ///
     /// [`AABB`]: struct.AABB.html
-    pub fn approx_contains_aabb_eps(&self, other: &AABB, epsilon: f64) -> bool {
+    pub fn approx_contains_aabb_eps(&self, other: &AABB, epsilon: Real) -> bool {
         self.approx_contains_eps(&other.min, epsilon)
             && self.approx_contains_eps(&other.max, epsilon)
     }
@@ -208,13 +208,13 @@ impl AABB {
     /// ```
     ///
     /// [`AABB`]: struct.AABB.html
-    pub fn relative_eq(&self, other: &AABB, epsilon: f64) -> bool {
-        f64::abs(self.min.x - other.min.x) < epsilon
-            && f64::abs(self.min.y - other.min.y) < epsilon
-            && f64::abs(self.min.z - other.min.z) < epsilon
-            && f64::abs(self.max.x - other.max.x) < epsilon
-            && f64::abs(self.max.y - other.max.y) < epsilon
-            && f64::abs(self.max.z - other.max.z) < epsilon
+    pub fn relative_eq(&self, other: &AABB, epsilon: Real) -> bool {
+        Real::abs(self.min.x - other.min.x) < epsilon
+            && Real::abs(self.min.y - other.min.y) < epsilon
+            && Real::abs(self.min.z - other.min.z) < epsilon
+            && Real::abs(self.max.x - other.max.x) < epsilon
+            && Real::abs(self.max.y - other.max.y) < epsilon
+            && Real::abs(self.max.z - other.max.z) < epsilon
     }
 
     /// Returns a new minimal [`AABB`] which contains both this [`AABB`] and `other`.
@@ -505,7 +505,7 @@ impl AABB {
     ///
     /// [`AABB`]: struct.AABB.html
     ///
-    pub fn surface_area(&self) -> f64 {
+    pub fn surface_area(&self) -> Real {
         let size = self.size();
         2.0 * (size.x * size.y + size.x * size.z + size.y * size.z)
     }
@@ -527,7 +527,7 @@ impl AABB {
     ///
     /// [`AABB`]: struct.AABB.html
     ///
-    pub fn volume(&self) -> f64 {
+    pub fn volume(&self) -> Real {
         let size = self.size();
         size.x * size.y * size.z
     }
@@ -568,7 +568,10 @@ impl AABB {
 
 impl IntersectionTest for AABB {
     fn intersects_aabb(&self, aabb: &AABB) -> bool {
-        !(self.max.x < aabb.min.x) && !(self.min.x > aabb.max.x) && (!(self.max.y < aabb.min.y) && !(self.min.y > aabb.max.y)) && (!(self.max.z < aabb.min.z) && !(self.min.z > aabb.max.z))
+        !(self.max.x < aabb.min.x)
+            && !(self.min.x > aabb.max.x)
+            && (!(self.max.y < aabb.min.y) && !(self.min.y > aabb.max.y))
+            && (!(self.max.z < aabb.min.z) && !(self.min.z > aabb.max.z))
     }
 }
 
@@ -664,10 +667,10 @@ impl Bounded for Point3 {
 #[cfg(test)]
 mod tests {
     use crate::aabb::{Bounded, AABB};
+    use crate::bounding_hierarchy::IntersectionTest;
     use crate::testbase::{tuple_to_point, tuple_to_vector, tuplevec_large_strategy, TupleVec};
     use crate::EPSILON;
     use crate::{Point3, Vector3};
-    use crate::bounding_hierarchy::IntersectionTest;
 
     use float_eq::assert_float_eq;
     use proptest::prelude::*;
@@ -710,6 +713,9 @@ mod tests {
             let aabb = AABB::empty().grow(&p1).join_bounded(&p2);
 
             // Its center should be inside the `AABB`
+            if !aabb.contains(&aabb.center()) {
+                dbg!(aabb.center());
+            }
             assert!(aabb.contains(&aabb.center()));
         }
 
@@ -722,29 +728,30 @@ mod tests {
 
             // Span the `AABB`
             let aabb = AABB::empty().grow(&p1).join_bounded(&p2);
+            if aabb.size().abs().min_element() > EPSILON {
+                // Get its size and center
+                let size = aabb.size();
+                let size_half = size / 2.0;
+                let center = aabb.center();
 
-            // Get its size and center
-            let size = aabb.size();
-            let size_half = size / 2.0;
-            let center = aabb.center();
+                // Compute the min and the max corners of the AABB by hand
+                let inside_ppp = center + size_half * 0.9;
+                let inside_mmm = center - size_half * 0.9;
 
-            // Compute the min and the max corners of the AABB by hand
-            let inside_ppp = center + size_half * 0.9;
-            let inside_mmm = center - size_half * 0.9;
+                // Generate two points which are outside the AABB
+                let outside_ppp = inside_ppp + (size_half * 1.1);
+                let outside_mmm = inside_mmm - size_half * 1.1;
+                let disjoint_mmm = outside_ppp + size_half * 0.1;
+                let disjoint_ppp = outside_ppp + size_half;
+                let small_aabb = AABB::empty().grow(&inside_ppp).grow(&inside_mmm);
+                let big_aabb = AABB::empty().grow(&outside_ppp).grow(&outside_mmm);
+                let dis_aabb = AABB::empty().grow(&disjoint_ppp).grow(&disjoint_mmm);
 
-            // Generate two points which are outside the AABB
-            let outside_ppp = inside_ppp + size_half * 1.1;
-            let outside_mmm = inside_mmm - size_half * 1.1;
-            let disjoint_mmm = outside_ppp + size_half * 0.1;
-            let disjoint_ppp = outside_ppp + size_half;
-            let small_aabb = AABB::empty().grow(&inside_ppp).grow(&inside_mmm);
-            let big_aabb = AABB::empty().grow(&outside_ppp).grow(&outside_mmm);
-            let dis_aabb = AABB::empty().grow(&disjoint_ppp).grow(&disjoint_mmm);
-
-            assert!(aabb.intersects_aabb(&small_aabb) 
-            && aabb.intersects_aabb(&big_aabb) 
-            && big_aabb.intersects_aabb(&small_aabb)
-            && !dis_aabb.intersects_aabb(&big_aabb));
+                assert!(aabb.intersects_aabb(&small_aabb));
+                assert!(aabb.intersects_aabb(&big_aabb));
+                assert!(big_aabb.intersects_aabb(&small_aabb));
+                assert!(!dis_aabb.intersects_aabb(&big_aabb));
+            }
         }
 
         // Test whether the joint of two point-sets contains all the points.
@@ -821,8 +828,8 @@ mod tests {
 
         // Compute and compare the surface area of an AABB by hand.
         #[test]
-        fn test_surface_area_cube(pos: TupleVec, size in EPSILON..10e30_f64) {
-            
+        fn test_surface_area_cube(pos: TupleVec, size in EPSILON..10e30) {
+
             // Generate some non-empty AABB
             let pos = tuple_to_point(&pos);
             let size_vec = Vector3::new(size, size, size);

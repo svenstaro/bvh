@@ -44,7 +44,7 @@ impl BVHNode {
     /// Creates a flat node from a `BVH` inner node and its `AABB`. Returns the next free index.
     /// TODO: change the algorithm which pushes `FlatNode`s to a vector to not use indices this
     /// much. Implement an algorithm which writes directly to a writable slice.
-    fn create_flat_branch<F, FNodeType, T : BHShape>(
+    fn create_flat_branch<F, FNodeType, T: BHShape>(
         &self,
         nodes: &[BVHNode],
         this_aabb: &AABB,
@@ -62,7 +62,8 @@ impl BVHNode {
         assert_eq!(vec.len() - 1, next_free);
 
         // Create subtree.
-        let index_after_subtree = self.flatten_custom(nodes, vec, shapes, next_free + 1, constructor);
+        let index_after_subtree =
+            self.flatten_custom(nodes, vec, shapes, next_free + 1, constructor);
 
         // Replace dummy node by actual node with the entry index pointing to the subtree
         // and the exit index pointing to the next node after the subtree.
@@ -229,7 +230,11 @@ impl BVH {
     /// let bvh = BVH::build(&mut shapes);
     /// let custom_flat_bvh = bvh.flatten_custom(&custom_constructor);
     /// ```
-    pub fn flatten_custom<F, FNodeType, T: BHShape>(&self, shapes: &[T], constructor: &F) -> Vec<FNodeType>
+    pub fn flatten_custom<F, FNodeType, T: BHShape>(
+        &self,
+        shapes: &[T],
+        constructor: &F,
+    ) -> Vec<FNodeType>
     where
         F: Fn(&AABB, u32, u32, u32) -> FNodeType,
     {

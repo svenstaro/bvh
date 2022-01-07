@@ -163,7 +163,11 @@ pub trait BoundingHierarchy {
     /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
     /// [`AABB`]: ../aabb/struct.AABB.html
     ///
-    fn traverse<'a, Shape: BHShape>(&'a self, test: &impl IntersectionTest, shapes: &'a [Shape]) -> Vec<&Shape>;
+    fn traverse<'a, Shape: BHShape>(
+        &'a self,
+        test: &impl IntersectionTest,
+        shapes: &'a [Shape],
+    ) -> Vec<&Shape>;
 
     /// Prints the [`BoundingHierarchy`] in a tree-like visualization.
     ///

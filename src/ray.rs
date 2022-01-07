@@ -2,10 +2,9 @@
 //! for axis aligned bounding boxes and triangles.
 
 use crate::aabb::AABB;
-use crate::EPSILON;
-use crate::{Point3, Vector3};
-use std::f64::INFINITY;
 use crate::bounding_hierarchy::IntersectionTest;
+use crate::{Point3, Vector3};
+use crate::{Real, EPSILON};
 
 /// A struct which defines a ray and some of its cached values.
 #[derive(Debug)]
@@ -47,19 +46,19 @@ pub struct Ray {
 /// A struct which is returned by the `intersects_triangle` method.
 pub struct Intersection {
     /// Distance from the ray origin to the intersection point.
-    pub distance: f64,
+    pub distance: Real,
 
     /// U coordinate of the intersection.
-    pub u: f64,
+    pub u: Real,
 
     /// V coordinate of the intersection.
-    pub v: f64,
+    pub v: Real,
 }
 
 impl Intersection {
     /// Constructs an `Intersection`. `distance` should be set to positive infinity,
     /// if the intersection does not occur.
-    pub fn new(distance: f64, u: f64, v: f64) -> Intersection {
+    pub fn new(distance: Real, u: Real, v: Real) -> Intersection {
         Intersection { distance, u, v }
     }
 }
@@ -133,7 +132,6 @@ impl IntersectionTest for Ray {
     }
 }
 
-
 impl Ray {
     /// Creates a new [`Ray`] from an `origin` and a `direction`.
     /// `direction` will be normalized.
@@ -164,7 +162,6 @@ impl Ray {
             sign_z: (direction.z < 0.0) as usize,
         }
     }
-
 
     /// Naive implementation of a [`Ray`]/[`AABB`] intersection algorithm.
     ///
@@ -281,7 +278,7 @@ impl Ray {
         // If backface culling is not desired write:
         // det < EPSILON && det > -EPSILON
         if det < EPSILON {
-            return Intersection::new(INFINITY, 0.0, 0.0);
+            return Intersection::new(Real::INFINITY, 0.0, 0.0);
         }
 
         let inv_det = 1.0 / det;
@@ -294,7 +291,7 @@ impl Ray {
 
         // Test bounds: u < 0 || u > 1 => outside of triangle
         if !(0.0..=1.0).contains(&u) {
-            return Intersection::new(INFINITY, u, 0.0);
+            return Intersection::new(Real::INFINITY, u, 0.0);
         }
 
         // Prepare to test v parameter
@@ -304,7 +301,7 @@ impl Ray {
         let v = self.direction.dot(v_vec) * inv_det;
         // The intersection lies outside of the triangle
         if v < 0.0 || u + v > 1.0 {
-            return Intersection::new(INFINITY, u, v);
+            return Intersection::new(Real::INFINITY, u, v);
         }
 
         let dist = a_to_c.dot(v_vec) * inv_det;
@@ -312,21 +309,21 @@ impl Ray {
         if dist > EPSILON {
             Intersection::new(dist, u, v)
         } else {
-            Intersection::new(INFINITY, u, v)
+            Intersection::new(Real::INFINITY, u, v)
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::Real;
     use std::cmp;
-    use std::f64::INFINITY;
 
     use crate::aabb::AABB;
+    use crate::bounding_hierarchy::IntersectionTest;
     use crate::ray::Ray;
     use crate::testbase::{tuple_to_point, tuplevec_small_strategy, TupleVec};
     use crate::EPSILON;
-    use crate::bounding_hierarchy::IntersectionTest;
     use proptest::prelude::*;
 
     /// Generates a random `Ray` which points at at a random `AABB`.
@@ -438,8 +435,8 @@ mod tests {
             // Get some u and v coordinates such that u+v <= 1
             let u = u % 101;
             let v = cmp::min(100 - u, v % 101);
-            let u = u as f64 / 100.0;
-            let v = v as f64 / 100.0;
+            let u = u as Real / 100.0;
+            let v = v as Real / 100.0;
 
             // Define some point on the triangle
             let point_on_triangle = triangle.0 + u * u_vec + v * v_vec;
@@ -456,12 +453,12 @@ mod tests {
             // Either the intersection is in the back side (including the triangle-plane)
             if on_back_side {
                 // Intersection must be INFINITY, u and v are undefined
-                assert!(intersects.distance == INFINITY);
+                assert!(intersects.distance == Real::INFINITY);
             } else {
                 // Or it is on the front side
                 // Either the intersection is inside the triangle, which it should be
                 // for all u, v such that u+v <= 1.0
-                let intersection_inside = (0.0..=1.0).contains(&uv_sum) && intersects.distance < INFINITY;
+                let intersection_inside = (0.0..=1.0).contains(&uv_sum) && intersects.distance < Real::INFINITY;
 
                 // Or the input data was close to the border
                 let close_to_border =
@@ -485,9 +482,9 @@ mod tests {
 
 #[cfg(all(feature = "bench", test))]
 mod bench {
+    use crate::bounding_hierarchy::IntersectionTest;
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
-    use crate::bounding_hierarchy::IntersectionTest;
 
     use crate::aabb::AABB;
     use crate::ray::Ray;

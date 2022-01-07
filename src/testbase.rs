@@ -2,10 +2,9 @@
 #![cfg(test)]
 
 use std::collections::HashSet;
-use std::f64;
 use std::mem::transmute;
 
-use crate::{Point3, Vector3};
+use crate::{Point3, Real, Vector3};
 use num::{FromPrimitive, Integer};
 use obj::raw::object::Polygon;
 use obj::*;
@@ -19,27 +18,23 @@ use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
 use crate::ray::Ray;
 
 /// A vector represented as a tuple
-pub type TupleVec = (f64, f64, f64);
+pub type TupleVec = (Real, Real, Real);
 
 /// Generate a `TupleVec` for [`proptest::strategy::Strategy`] from -10e10 to 10e10
 /// A small enough range to prevent most fp32 errors from breaking certain tests
 /// Tests which rely on this strategy should probably be rewritten
 pub fn tuplevec_small_strategy() -> impl Strategy<Value = TupleVec> {
-    (
-        -10e10_f64..10e10_f64,
-        -10e10_f64..10e10_f64,
-        -10e10_f64..10e10_f64,
-    )
+    let min: Real = -10e10;
+    let max: Real = 10e10;
+    (min..max, min..max, min..max)
 }
 
 /// Generate a `TupleVec` for [`proptest::strategy::Strategy`] from -10e30 to 10e30
-/// A small enough range to prevent `f64::MAX` ranges from breaking certain tests
+/// A small enough range to prevent `Real::MAX` ranges from breaking certain tests
 pub fn tuplevec_large_strategy() -> impl Strategy<Value = TupleVec> {
-    (
-        -10e30_f64..10e30_f64,
-        -10e30_f64..10e30_f64,
-        -10e30_f64..10e30_f64,
-    )
+    let min: Real = -10e30;
+    let max: Real = 10e30;
+    (min..max, min..max, min..max)
 }
 
 /// Convert a `TupleVec` to a [`Point3`].
@@ -53,6 +48,7 @@ pub fn tuple_to_vector(tpl: &TupleVec) -> Vector3 {
 }
 
 /// Define some `Bounded` structure.
+#[derive(Debug, Clone, Copy)]
 pub struct UnitBox {
     pub id: i32,
     pub pos: Point3,
@@ -94,7 +90,7 @@ pub fn generate_aligned_boxes() -> Vec<UnitBox> {
     // Create 21 boxes along the x-axis
     let mut shapes = Vec::new();
     for x in -10..11 {
-        shapes.push(UnitBox::new(x, Point3::new(x as f64, 0.0, 0.0)));
+        shapes.push(UnitBox::new(x, Point3::new(x as Real, 0.0, 0.0)));
     }
     shapes
 }
@@ -341,9 +337,9 @@ pub fn next_point3(seed: &mut u64, aabb: &AABB) -> Point3 {
     let (a, b, c) = next_point3_raw(seed);
     use std::i32;
     let float_vector = Vector3::new(
-        (a as f64 / i32::MAX as f64) + 1.0,
-        (b as f64 / i32::MAX as f64) + 1.0,
-        (c as f64 / i32::MAX as f64) + 1.0,
+        (a as Real / i32::MAX as Real) + 1.0,
+        (b as Real / i32::MAX as Real) + 1.0,
+        (c as Real / i32::MAX as Real) + 1.0,
     ) * 0.5;
 
     assert!(float_vector.x >= 0.0 && float_vector.x <= 1.0);
@@ -404,7 +400,7 @@ pub fn randomly_transform_scene(
     triangles: &mut Vec<Triangle>,
     amount: usize,
     bounds: &AABB,
-    max_offset_option: Option<f64>,
+    max_offset_option: Option<Real>,
     seed: &mut u64,
 ) -> HashSet<usize> {
     let mut indices: Vec<usize> = (0..triangles.len()).collect();
@@ -420,7 +416,7 @@ pub fn randomly_transform_scene(
     let max_offset = if let Some(value) = max_offset_option {
         value
     } else {
-        f64::INFINITY
+        Real::INFINITY
     };
 
     for index in &indices {
@@ -520,6 +516,8 @@ fn bench_intersect_sponza_list(b: &mut ::test::Bencher) {
 /// structures.
 #[cfg(feature = "bench")]
 pub fn intersect_list_aabb(triangles: &[Triangle], bounds: &AABB, b: &mut ::test::Bencher) {
+    use crate::bounding_hierarchy::IntersectionTest;
+
     let mut seed = 0;
     b.iter(|| {
         let ray = create_ray(&mut seed, &bounds);

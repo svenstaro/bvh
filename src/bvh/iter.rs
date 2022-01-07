@@ -1,8 +1,8 @@
 use smallvec::SmallVec;
 
 use crate::aabb::Bounded;
+use crate::bounding_hierarchy::IntersectionTest;
 use crate::bvh::{BVHNode, BVH};
-use crate::bounding_hierarchy::{IntersectionTest};
 
 /// Iterator to traverse a [`BVH`] without memory allocations
 #[allow(clippy::upper_case_acronyms)]
