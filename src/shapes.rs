@@ -100,7 +100,7 @@ impl IntersectionTest for OBB {
         let half_b = (aabb.max - aabb.min) * 0.5;
         let value = (aabb.max + aabb.min) * 0.5;
         let translation = self.orientation * (value - self.center);
-        let mat = Mat4::from_rotation_translation(self.orientation, translation);
+        let mat = Mat4::from_rotation_translation(self.orientation, translation.into());
 
         let vec_1 = Vector3::new(
             translation.x.abs(),
@@ -237,19 +237,19 @@ impl IntersectionTest for OBB {
 }
 
 fn right(matrix: Mat4) -> Vector3 {
-    matrix.row(0).truncate()
+    matrix.row(0).truncate().into()
 }
 
 fn up(matrix: Mat4) -> Vector3 {
-    matrix.row(1).truncate()
+    matrix.row(1).truncate().into()
 }
 
 fn back(matrix: Mat4) -> Vector3 {
-    matrix.row(2).truncate()
+    matrix.row(2).truncate().into()
 }
 
 fn translation(matrix: Mat4) -> Vector3 {
-    matrix.row(3).truncate()
+    matrix.row(3).truncate().into()
 }
 
 pub fn nearest_point_on_line(p1: &Point3, dir: &Vector3, len: Real, pnt: &Point3) -> Point3 {
@@ -303,7 +303,7 @@ mod tests {
         let max = Point3::new(1.0, 1.0, 1.0);
         let aabb = AABB::empty().grow(&min).grow(&max);
 
-        let ori = Quat::from_axis_angle(Vector3::new(1.0, 0.0, 0.0), 0.785398);
+        let ori = Quat::from_axis_angle(Vector3::new(1.0, 0.0, 0.0).into(), 0.785398);
         let extents = Vector3::new(0.5, 0.5, 0.5);
         let pos = Vector3::new(0.5, 2.2, 0.5);
 
