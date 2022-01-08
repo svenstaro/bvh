@@ -166,6 +166,7 @@ impl BVH {
     /// use bvh::bvh::BVH;
     /// use bvh::{Point3, Vector3};
     /// use bvh::ray::Ray;
+    /// use bvh::Real;
     /// # use bvh::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
@@ -204,7 +205,7 @@ impl BVH {
     /// # fn create_bhshapes() -> Vec<UnitBox> {
     /// #     let mut shapes = Vec::new();
     /// #     for i in 0..1000 {
-    /// #         let position = Point3::new(i as f64, i as f64, i as f64);
+    /// #         let position = Point3::new(i as Real, i as Real, i as Real);
     /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
     /// #     shapes
@@ -228,7 +229,7 @@ impl BVH {
     ///
     /// let mut shapes = create_bhshapes();
     /// let bvh = BVH::build(&mut shapes);
-    /// let custom_flat_bvh = bvh.flatten_custom(&custom_constructor);
+    /// let custom_flat_bvh = bvh.flatten_custom(&shapes, &custom_constructor);
     /// ```
     pub fn flatten_custom<F, FNodeType, T: BHShape>(
         &self,
@@ -254,6 +255,7 @@ impl BVH {
     /// use bvh::bvh::BVH;
     /// use bvh::{Point3, Vector3};
     /// use bvh::ray::Ray;
+    /// use bvh::Real;
     /// # use bvh::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
@@ -292,7 +294,7 @@ impl BVH {
     /// # fn create_bhshapes() -> Vec<UnitBox> {
     /// #     let mut shapes = Vec::new();
     /// #     for i in 0..1000 {
-    /// #         let position = Point3::new(i as f64, i as f64, i as f64);
+    /// #         let position = Point3::new(i as Real, i as Real, i as Real);
     /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
     /// #     shapes
@@ -300,7 +302,7 @@ impl BVH {
     ///
     /// let mut shapes = create_bhshapes();
     /// let bvh = BVH::build(&mut shapes);
-    /// let flat_bvh = bvh.flatten();
+    /// let flat_bvh = bvh.flatten(&shapes);
     /// ```
     pub fn flatten<T: BHShape>(&self, shapes: &[T]) -> FlatBVH {
         self.flatten_custom(shapes, &|aabb, entry, exit, shape| FlatNode {
@@ -335,6 +337,7 @@ impl BoundingHierarchy for FlatBVH {
     /// use bvh::flat_bvh::FlatBVH;
     /// use bvh::{Point3, Vector3};
     /// use bvh::ray::Ray;
+    /// use bvh::Real;
     /// # use bvh::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
@@ -373,7 +376,7 @@ impl BoundingHierarchy for FlatBVH {
     /// # fn create_bhshapes() -> Vec<UnitBox> {
     /// #     let mut shapes = Vec::new();
     /// #     for i in 0..1000 {
-    /// #         let position = Point3::new(i as f64, i as f64, i as f64);
+    /// #         let position = Point3::new(i as Real, i as Real, i as Real);
     /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
     /// #     shapes
@@ -477,37 +480,37 @@ mod bench {
     }
     #[bench]
     /// Benchmark the construction of a `FlatBVH` with 1,200 triangles.
-    fn bench_build_1200_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
-        build_1200_triangles_bh::<FlatBVH>(&mut b);
+    fn bench_build_1200_triangles_flat_bvh(b: &mut ::test::Bencher) {
+        build_1200_triangles_bh::<FlatBVH>(b);
     }
 
     #[bench]
     /// Benchmark the construction of a `FlatBVH` with 12,000 triangles.
-    fn bench_build_12k_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
-        build_12k_triangles_bh::<FlatBVH>(&mut b);
+    fn bench_build_12k_triangles_flat_bvh(b: &mut ::test::Bencher) {
+        build_12k_triangles_bh::<FlatBVH>(b);
     }
 
     #[bench]
     /// Benchmark the construction of a `FlatBVH` with 120,000 triangles.
-    fn bench_build_120k_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
-        build_120k_triangles_bh::<FlatBVH>(&mut b);
+    fn bench_build_120k_triangles_flat_bvh(b: &mut ::test::Bencher) {
+        build_120k_triangles_bh::<FlatBVH>(b);
     }
 
     #[bench]
     /// Benchmark intersecting 1,200 triangles using the recursive `FlatBVH`.
-    fn bench_intersect_1200_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
-        intersect_1200_triangles_bh::<FlatBVH>(&mut b);
+    fn bench_intersect_1200_triangles_flat_bvh(b: &mut ::test::Bencher) {
+        intersect_1200_triangles_bh::<FlatBVH>(b);
     }
 
     #[bench]
     /// Benchmark intersecting 12,000 triangles using the recursive `FlatBVH`.
-    fn bench_intersect_12k_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
-        intersect_12k_triangles_bh::<FlatBVH>(&mut b);
+    fn bench_intersect_12k_triangles_flat_bvh(b: &mut ::test::Bencher) {
+        intersect_12k_triangles_bh::<FlatBVH>(b);
     }
 
     #[bench]
     /// Benchmark intersecting 120,000 triangles using the recursive `FlatBVH`.
-    fn bench_intersect_120k_triangles_flat_bvh(mut b: &mut ::test::Bencher) {
-        intersect_120k_triangles_bh::<FlatBVH>(&mut b);
+    fn bench_intersect_120k_triangles_flat_bvh(b: &mut ::test::Bencher) {
+        intersect_120k_triangles_bh::<FlatBVH>(b);
     }
 }

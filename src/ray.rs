@@ -72,6 +72,7 @@ impl IntersectionTest for Ray {
     /// use bvh::aabb::AABB;
     /// use bvh::ray::Ray;
     /// use bvh::{Point3,Vector3};
+    /// use bvh::bounding_hierarchy::IntersectionTest;
     ///
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);

@@ -12,6 +12,7 @@ use proptest::prelude::*;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
+use serde::{Serialize, Deserialize};
 
 use crate::aabb::{Bounded, AABB};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
@@ -49,6 +50,7 @@ pub fn tuple_to_vector(tpl: &TupleVec) -> Vector3 {
 
 /// Define some `Bounded` structure.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde_impls", derive(serde::Serialize, serde::Deserialize))]
 pub struct UnitBox {
     pub id: i32,
     pub pos: Point3,
@@ -164,6 +166,7 @@ pub fn traverse_some_bh<BH: BoundingHierarchy>() {
 
 /// A triangle struct. Instance of a more complex `Bounded` primitive.
 #[derive(Copy, Clone, Debug)]
+#[cfg_attr(feature = "serde_impls", derive(serde::Serialize, serde::Deserialize))]
 pub struct Triangle {
     pub a: Point3,
     pub b: Point3,
@@ -406,7 +409,7 @@ pub fn randomly_transform_scene(
     let mut indices: Vec<usize> = (0..triangles.len()).collect();
     let mut seed_array = [0u8; 32];
     for i in 0..seed_array.len() {
-        let bytes: [u8; 8] = unsafe { transmute(seed.to_be()) };
+        let bytes: [u8; 8] = seed.to_be_bytes();
         seed_array[i] = bytes[i % 8];
     }
     let mut rng: StdRng = SeedableRng::from_seed(Default::default());
@@ -486,7 +489,7 @@ pub fn build_120k_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
 pub fn intersect_list(triangles: &[Triangle], bounds: &AABB, b: &mut ::test::Bencher) {
     let mut seed = 0;
     b.iter(|| {
-        let ray = create_ray(&mut seed, &bounds);
+        let ray = create_ray(&mut seed, bounds);
 
         // Iterate over the list of triangles.
         for triangle in triangles {
@@ -520,7 +523,7 @@ pub fn intersect_list_aabb(triangles: &[Triangle], bounds: &AABB, b: &mut ::test
 
     let mut seed = 0;
     b.iter(|| {
-        let ray = create_ray(&mut seed, &bounds);
+        let ray = create_ray(&mut seed, bounds);
 
         // Iterate over the list of triangles.
         for triangle in triangles {

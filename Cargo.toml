@@ -1,7 +1,7 @@
 [package]
 name = "bvh"
 description = "A fast BVH using SAH"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2018"
 authors = [
     "Sven-Hendrik Haase <svenstaro@gmail.com>",
@@ -17,26 +17,33 @@ license = "MIT"
 members = ["bvh-lib"]
 
 [dependencies]
-approx = "0.4"
+approx = "0.5"
 rand = "0.8"
 log = "0.4.14"
 num = "0.4"
 glam = "0.20"
 rayon = "1.5.1"
 smallvec = "1.6.1"
-obj-rs = "0.6"
 stl_io = "0.6.0"
+serde = { optional = true, version = "1", features = ["derive"] }
+
 
 [dev-dependencies]
 proptest = "1.0"
-float_eq = "0.6"
+obj-rs = "0.7"
+float_eq = "0.7"
 criterion = "0.3"
 itertools = "0.10.1"
+serde = { version = "1", features = ["derive"] }
+glam = { version = "0.20", features = ["serde"] }
+serde_json = "1"
 
 [features]
 default = []
 bench = []
 f64 = []
+# Unfortunately can't use "serde" as the feature name until https://github.com/rust-lang/cargo/issues/5565 lands
+serde_impls = ["serde", "glam/serde"]
 
 [profile.release]
 lto = true

@@ -34,6 +34,7 @@ pub trait BoundingHierarchy {
     /// use bvh::aabb::{AABB, Bounded};
     /// use bvh::bounding_hierarchy::BoundingHierarchy;
     /// use bvh::{Point3, Vector3};
+    /// use bvh::Real;
     /// # use bvh::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
@@ -72,7 +73,7 @@ pub trait BoundingHierarchy {
     /// # fn create_bhshapes() -> Vec<UnitBox> {
     /// #     let mut shapes = Vec::new();
     /// #     for i in 0..1000 {
-    /// #         let position = Point3::new(i as f64, i as f64, i as f64);
+    /// #         let position = Point3::new(i as Real, i as Real, i as Real);
     /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
     /// #     shapes
@@ -107,6 +108,7 @@ pub trait BoundingHierarchy {
     /// use bvh::bvh::BVH;
     /// use bvh::{Point3, Vector3};
     /// use bvh::ray::Ray;
+    /// use bvh::Real;
     /// # use bvh::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
@@ -145,7 +147,7 @@ pub trait BoundingHierarchy {
     /// # fn create_bvh() -> (BVH, Vec<UnitBox>) {
     /// #     let mut shapes = Vec::new();
     /// #     for i in 0..1000 {
-    /// #         let position = Point3::new(i as f64, i as f64, i as f64);
+    /// #         let position = Point3::new(i as Real, i as Real, i as Real);
     /// #         shapes.push(UnitBox::new(i, position));
     /// #     }
     /// #     let bvh = BVH::build(&mut shapes);
