@@ -1688,4 +1688,9 @@ mod bench {
     fn bench_intersect_sponza_with_rebuild_50p(b: &mut ::test::Bencher) {
         intersect_sponza_with_rebuild(0.5, b);
     }
+
+    #[bench]
+    fn bench_intersect_sponza_with_rebuild_100p(b: &mut ::test::Bencher) {
+        intersect_sponza_with_rebuild(1.0, b);
+    }
 }
