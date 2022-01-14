@@ -670,33 +670,6 @@ impl BVH {
         BVHTraverseIterator::new(self, test, shapes)
     }
 
-    /*
-        pub fn fix_depth(
-            &mut self,
-            curr_node: usize,
-            correct_depth: u32
-        ) {
-            match self.nodes[curr_node] {
-                BVHNode::Node {
-                    ref mut depth,
-                    child_l_index,
-                    child_r_index,
-                    ..
-                } => {
-                    *depth = correct_depth;
-                    self.fix_depth(child_l_index, correct_depth + 1);
-                    self.fix_depth(child_r_index, correct_depth + 1);
-                }
-                BVHNode::Leaf {
-                    ref mut depth,
-                    ..
-                } => {
-                    *depth = correct_depth;
-                }
-            }
-        }
-    */
-
     /// Prints the [`BVH`] in a tree-like visualization.
     ///
     /// [`BVH`]: struct.BVH.html

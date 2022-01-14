@@ -71,6 +71,9 @@
 //! - `serde_impls` (default **disabled**) - adds `Serialize` and `Deserialize` implementations for some types
 //!
 
+#![deny(missing_docs)]
+#![cfg_attr(feature = "bench", feature(test))]
+
 #[cfg(all(feature = "bench", test))]
 extern crate test;
 
