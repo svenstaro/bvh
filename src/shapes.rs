@@ -1,13 +1,18 @@
+//! This module exports various shapes that can be used to intersect with
 use crate::aabb::AABB;
 use crate::bounding_hierarchy::IntersectionAABB;
 use crate::{Mat4, Point3, Quat, Real, Vector3};
 
+/// A representation of a Sphere
 pub struct Sphere {
-    center: Point3,
-    radius: Real,
+    /// Center of the sphere
+    pub center: Point3,
+    /// Radius of the sphere
+    pub radius: Real,
 }
 
 impl Sphere {
+    /// Creates a sphere centered on a given point with a radius
     pub fn new(center: Point3, radius: Real) -> Sphere {
         Sphere { center, radius }
     }
@@ -20,15 +25,20 @@ impl IntersectionAABB for Sphere {
     }
 }
 
+/// Representation of a capsule
 pub struct Capsule {
-    start: Point3,
-    radius: Real,
-
-    dir: Vector3,
-    len: Real,
+    /// Start point of the line segment for the capsule
+    pub start: Point3,
+    /// Radius of the capsule
+    pub radius: Real,
+    /// Direction of the capsule's line segment
+    pub dir: Vector3,
+    /// Length of the capsules line segment
+    pub len: Real,
 }
 
 impl Capsule {
+    /// Creates a capsule given a start and end point for the center line and the radius around it
     pub fn new(start: Point3, end: Point3, radius: Real) -> Capsule {
         let line = end - start;
         let dir = line.normalize();
@@ -88,9 +98,13 @@ impl IntersectionAABB for Capsule {
     }
 }
 
+/// Represents a box that can be rotated in any direction
 pub struct OBB {
+    /// Orientation of the OBB
     pub orientation: Quat,
+    /// Extents of the box before being transformed by the orientation
     pub extents: Vector3,
+    /// Center of the box
     pub center: Vector3,
 }
 
@@ -252,10 +266,11 @@ fn translation(matrix: Mat4) -> Vector3 {
     matrix.row(3).truncate().into()
 }
 
-pub fn nearest_point_on_line(p1: &Point3, dir: &Vector3, len: Real, pnt: &Point3) -> Point3 {
-    let v = *pnt - *p1;
+/// Helper function that given a line segment and a target point, finds the closest point on the line segment to target
+pub fn nearest_point_on_line(start: &Point3, dir: &Vector3, len: Real, target: &Point3) -> Point3 {
+    let v = *target - *start;
     let d = v.dot(*dir);
-    *p1 + (*dir * d.clamp(0.0, len))
+    *start + (*dir * d.clamp(0.0, len))
 }
 
 #[cfg(test)]

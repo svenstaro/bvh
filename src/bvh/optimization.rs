@@ -98,6 +98,9 @@ impl BVH {
         }
     }
 
+    /// Adds a shape with the given index to the `BVH`
+    /// Significantly slower at building a `BVH` than the full build or rebuild option
+    /// Useful for moving a small subset of nodes around in a large `BVH`
     pub fn add_node<T: BHShape>(&mut self, shapes: &mut [T], new_shape_index: usize) {
         let mut i = 0;
         let new_shape = &shapes[new_shape_index];
@@ -239,6 +242,9 @@ impl BVH {
         }
     }
 
+    /// Removes a shape from the `BVH`
+    /// if swap_shape is true, it swaps the shape you are removing with the last shape in the shape slice
+    /// truncation of the data structure backing the shapes slice must be performed by the user
     pub fn remove_node<T: BHShape>(
         &mut self,
         shapes: &mut [T],

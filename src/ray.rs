@@ -314,6 +314,7 @@ impl Ray {
         }
     }
 
+    /// Returns the position the front of the `Ray` is after traveling dist
     pub fn at(&self, dist: Real) -> Vector3 {
         self.origin + (self.direction * dist)
     }

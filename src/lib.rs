@@ -167,14 +167,18 @@ impl BHShape for Sphere {
 /// A triangle struct. Instance of a more complex `Bounded` primitive.
 #[derive(Debug)]
 pub struct Triangle {
+    /// First point on the triangle
     pub a: Point3,
+    /// Second point on the triangle
     pub b: Point3,
+    /// Third point on the triangle
     pub c: Point3,
     aabb: AABB,
     node_index: usize,
 }
 
 impl Triangle {
+    /// Creates a new triangle given a clockwise set of points
     pub fn new(a: Point3, b: Point3, c: Point3) -> Triangle {
         Triangle {
             a,

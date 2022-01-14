@@ -561,6 +561,10 @@ impl AABB {
         }
     }
 
+    /// Returns the closest point inside the `AABB` to a target point
+    /// 
+    /// [`AABB`]: struct.AABB.html
+    ///
     pub fn closest_point(&self, point: Point3) -> Point3 {
         point.clamp(self.min, self.max)
     }

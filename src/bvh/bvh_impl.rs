@@ -21,7 +21,8 @@ use std::slice;
 const NUM_BUCKETS: usize = 6;
 
 thread_local! {
-    pub static BUCKETS: RefCell<[Vec<usize>; NUM_BUCKETS]> = RefCell::new(Default::default());
+    /// Thread local for the buckets used while building to reduce allocations during build
+    static BUCKETS: RefCell<[Vec<usize>; NUM_BUCKETS]> = RefCell::new(Default::default());
 }
 
 /// The [`BVHNode`] enum that describes a node in a [`BVH`].
@@ -622,6 +623,11 @@ impl BVH {
         BVH { nodes }
     }
 
+    
+    /// Rebuilds a [`BVH`] from the `shapes` slice. Reuses the existing allocated space
+    ///
+    /// [`BVH`]: struct.BVH.html
+    ///
     pub fn rebuild<Shape: BHShape>(&mut self, shapes: &mut [Shape]) {
         let mut indices = (0..shapes.len()).collect::<Vec<usize>>();
         let expected_node_count = shapes.len() * 2 - 1;
@@ -678,7 +684,7 @@ impl BVH {
         self.print_node(0);
     }
 
-    pub fn print_node(&self, node_index: usize) {
+    fn print_node(&self, node_index: usize) {
         let nodes = &self.nodes;
         match nodes[node_index] {
             BVHNode::Node {

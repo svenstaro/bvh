@@ -23,12 +23,11 @@ doctest = false
 [dependencies]
 approx = "0.5"
 rand = "0.8"
-log = "0.4.14"
+log = "0.4"
 num = "0.4"
 glam = "0.20"
 rayon = "1.5.1"
 smallvec = "1.6.1"
-stl_io = "0.6.0"
 serde = { optional = true, version = "1", features = ["derive"] }
 
 
