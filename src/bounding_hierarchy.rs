@@ -31,11 +31,11 @@ pub trait BoundingHierarchy {
     /// # Examples
     ///
     /// ```
-    /// use bvh::aabb::{AABB, Bounded};
-    /// use bvh::bounding_hierarchy::BoundingHierarchy;
-    /// use bvh::{Point3, Vector3};
-    /// use bvh::Real;
-    /// # use bvh::bounding_hierarchy::BHShape;
+    /// use dynbvh_f32::aabb::{AABB, Bounded};
+    /// use dynbvh_f32::bounding_hierarchy::BoundingHierarchy;
+    /// use dynbvh_f32::{Point3, Vector3};
+    /// use dynbvh_f32::Real;
+    /// # use dynbvh_f32::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
     /// #     pub pos: Point3,
@@ -82,13 +82,13 @@ pub trait BoundingHierarchy {
     /// let mut shapes = create_bhshapes();
     /// // Construct a normal `BVH`.
     /// {
-    ///     use bvh::bvh::BVH;
+    ///     use dynbvh_f32::bvh::BVH;
     ///     let bvh = BVH::build(&mut shapes);
     /// }
     ///
     /// // Or construct a `FlatBVH`.
     /// {
-    ///     use bvh::flat_bvh::FlatBVH;
+    ///     use dynbvh_f32::flat_bvh::FlatBVH;
     ///     let bvh = FlatBVH::build(&mut shapes);
     /// }
     /// ```
@@ -103,13 +103,13 @@ pub trait BoundingHierarchy {
     /// # Examples
     ///
     /// ```
-    /// use bvh::aabb::{AABB, Bounded};
-    /// use bvh::bounding_hierarchy::BoundingHierarchy;
-    /// use bvh::bvh::BVH;
-    /// use bvh::{Point3, Vector3};
-    /// use bvh::ray::Ray;
-    /// use bvh::Real;
-    /// # use bvh::bounding_hierarchy::BHShape;
+    /// use dynbvh_f32::aabb::{AABB, Bounded};
+    /// use dynbvh_f32::bounding_hierarchy::BoundingHierarchy;
+    /// use dynbvh_f32::bvh::BVH;
+    /// use dynbvh_f32::{Point3, Vector3};
+    /// use dynbvh_f32::ray::Ray;
+    /// use dynbvh_f32::Real;
+    /// # use dynbvh_f32::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
     /// #     pub pos: Point3,
@@ -167,7 +167,7 @@ pub trait BoundingHierarchy {
     ///
     fn traverse<'a, Shape: BHShape>(
         &'a self,
-        test: &impl IntersectionTest,
+        test: &impl IntersectionAABB,
         shapes: &'a [Shape],
     ) -> Vec<&Shape>;
 
@@ -178,6 +178,6 @@ pub trait BoundingHierarchy {
     fn pretty_print(&self) {}
 }
 
-pub trait IntersectionTest {
+pub trait IntersectionAABB {
     fn intersects_aabb(&self, aabb: &AABB) -> bool;
 }

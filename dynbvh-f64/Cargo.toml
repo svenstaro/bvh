@@ -1,0 +1,60 @@
+[package]
+name = "dynbvh-f64"
+description = "A fast dynamic BVH using SAH"
+version = "0.6.0"
+edition = "2018"
+authors = [
+    "Sven-Hendrik Haase <svenstaro@gmail.com>",
+    "Alexander Dmitriev <alexander.dmitriev2580@gmail.com>"
+]
+readme = "README.md"
+repository = "https://github.com/svenstaro/bvh"
+documentation = "https://docs.rs/crate/bvh"
+keywords = ["bvh", "bounding", "volume", "sah", "aabb"]
+license = "MIT"
+
+
+[lib]
+name = "dynbvh_f64"
+path = "../src/lib.rs"
+required-features = ["f64"]
+doctest = false
+
+[dependencies]
+approx = "0.5"
+rand = "0.8"
+log = "0.4.14"
+num = "0.4"
+glam = "0.20"
+rayon = "1.5.1"
+smallvec = "1.6.1"
+stl_io = "0.6.0"
+serde = { optional = true, version = "1", features = ["derive"] }
+
+
+[dev-dependencies]
+proptest = "1.0"
+obj-rs = "0.7"
+float_eq = "0.7"
+criterion = "0.3"
+itertools = "0.10.1"
+serde = { version = "1", features = ["derive"] }
+glam = { version = "0.20", features = ["serde"] }
+serde_json = "1"
+
+[features]
+default = ["f64"]
+bench = []
+f64 = []
+# Unfortunately can't use "serde" as the feature name until https://github.com/rust-lang/cargo/issues/5565 lands
+serde_impls = ["serde", "glam/serde"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+debug = true
+
+[profile.bench]
+lto = true
+codegen-units = 1
+debug = true

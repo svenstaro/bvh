@@ -1,11 +1,11 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use bvh::aabb::{Bounded, AABB};
-use bvh::bounding_hierarchy::BHShape;
-use bvh::bvh::BVH;
-use bvh::ray::Ray;
-use bvh::shapes::{Capsule, Sphere, OBB};
-use bvh::Vector3;
+use dynbvh_f64::aabb::{Bounded, AABB};
+use dynbvh_f64::bounding_hierarchy::BHShape;
+use dynbvh_f64::bvh::BVH;
+use dynbvh_f64::ray::Ray;
+use dynbvh_f64::shapes::{Capsule, Sphere, OBB};
+use dynbvh_f64::Vector3;
 use flexi_logger::{detailed_format, FileSpec, Logger};
 use glam::DQuat;
 use interoptopus::lang::c::{
@@ -489,7 +489,7 @@ fn bindings_csharp() -> Result<(), Error> {
     Ok(())
 }
 
-#[test]
+//#[test]
 fn gen_bindings() {
     bindings_csharp().unwrap();
 }

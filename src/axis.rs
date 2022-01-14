@@ -12,7 +12,7 @@ struct MyType<T>(T);
 ///
 /// # Examples
 /// ```
-/// use bvh::axis::Axis;
+/// use dynbvh_f32::axis::Axis;
 ///
 /// let mut position = [1.0, 0.5, 42.0];
 /// position[Axis::Y] *= 4.0;
@@ -23,10 +23,9 @@ struct MyType<T>(T);
 /// [`Point3`] and [`Vector3`] are also indexable using `Axis`.
 ///
 /// ```
-/// extern crate bvh;
 ///
-/// use bvh::axis::Axis;
-/// use bvh::Point3;
+/// use dynbvh_f32::axis::Axis;
+/// use dynbvh_f32::Point3;
 ///
 /// # fn main() {
 /// let mut position: Point3 = Point3::new(1.0, 2.0, 3.0);
@@ -131,6 +130,7 @@ mod test {
     use crate::{axis::Axis, Real};
     use proptest::prelude::*;
 
+    #[cfg(not(miri))]
     proptest! {
         // Test whether accessing arrays by index is the same as accessing them by `Axis`.
         #[test]

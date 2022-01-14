@@ -12,7 +12,7 @@ use proptest::prelude::*;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::aabb::{Bounded, AABB};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
@@ -383,7 +383,7 @@ pub fn load_sponza_scene() -> (Vec<Triangle>, AABB) {
     use std::io::BufReader;
 
     let file_input =
-        BufReader::new(File::open("media/sponza.obj").expect("Failed to open .obj file."));
+        BufReader::new(File::open("../media/sponza.obj").expect("Failed to open .obj file."));
     let sponza_obj: Obj<Triangle> = load_obj(file_input).expect("Failed to decode .obj file data.");
     let triangles = sponza_obj.vertices;
 
@@ -519,7 +519,7 @@ fn bench_intersect_sponza_list(b: &mut ::test::Bencher) {
 /// structures.
 #[cfg(feature = "bench")]
 pub fn intersect_list_aabb(triangles: &[Triangle], bounds: &AABB, b: &mut ::test::Bencher) {
-    use crate::bounding_hierarchy::IntersectionTest;
+    use crate::bounding_hierarchy::IntersectionAABB;
 
     let mut seed = 0;
     b.iter(|| {

@@ -1,6 +1,6 @@
 //! Axis Aligned Bounding Boxes.
 
-use crate::bounding_hierarchy::IntersectionTest;
+use crate::bounding_hierarchy::IntersectionAABB;
 use std::fmt;
 use std::ops::Index;
 
@@ -35,8 +35,8 @@ pub trait Bounded {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::{AABB, Bounded};
-    /// use bvh::Point3;
+    /// use dynbvh_f32::aabb::{AABB, Bounded};
+    /// use dynbvh_f32::Point3;
     ///
     /// struct Something;
     ///
@@ -65,8 +65,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0,-1.0,-1.0), Point3::new(1.0,1.0,1.0));
     /// assert_eq!(aabb.min.x, -1.0);
@@ -83,9 +83,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// # extern crate bvh;
     /// # extern crate rand;
-    /// use bvh::aabb::AABB;
+    /// use dynbvh_f32::aabb::AABB;
     ///
     /// # fn main() {
     /// let aabb = AABB::empty();
@@ -116,8 +115,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
     /// let point_inside = Point3::new(0.125, -0.25, 0.5);
@@ -144,9 +143,9 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::EPSILON;
-    /// use bvh::aabb::AABB;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::EPSILON;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
     /// let point_barely_outside = Point3::new(1.000_000_1, -1.000_000_1, 1.000_000_001);
@@ -173,9 +172,9 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::EPSILON;
-    /// use bvh::aabb::AABB;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::EPSILON;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
     /// let point_barely_outside = Point3::new(1.000_000_1, 1.000_000_1, 1.000_000_1);
@@ -196,9 +195,9 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::EPSILON;
-    /// use bvh::aabb::AABB;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::EPSILON;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
     /// let point_barely_outside_min = Point3::new(-1.000_000_1, -1.000_000_1, -1.000_000_1);
@@ -223,8 +222,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::Point3;
     ///
     /// let aabb1 = AABB::with_bounds(Point3::new(-101.0, 0.0, 0.0), Point3::new(-100.0, 1.0, 1.0));
     /// let aabb2 = AABB::with_bounds(Point3::new(100.0, 0.0, 0.0), Point3::new(101.0, 1.0, 1.0));
@@ -268,8 +267,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::{Point3, Vector3};
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::{Point3, Vector3};
     ///
     /// let size = Vector3::new(1.0, 1.0, 1.0);
     /// let aabb_pos = Point3::new(-101.0, 0.0, 0.0);
@@ -317,8 +316,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::Point3;
     ///
     /// let point1 = Point3::new(0.0, 0.0, 0.0);
     /// let point2 = Point3::new(1.0, 1.0, 1.0);
@@ -357,8 +356,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::Point3;
     ///
     /// let point1 = Point3::new(0.0, 0.0, 0.0);
     /// let point2 = Point3::new(1.0, 1.0, 1.0);
@@ -397,8 +396,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::{AABB, Bounded};
-    /// use bvh::Point3;
+    /// use dynbvh_f32::aabb::{AABB, Bounded};
+    /// use dynbvh_f32::Point3;
     ///
     /// struct Something;
     ///
@@ -429,8 +428,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0,-1.0,-1.0), Point3::new(1.0,1.0,1.0));
     /// let size = aabb.size();
@@ -447,8 +446,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::Point3;
     ///
     /// let min = Point3::new(41.0,41.0,41.0);
     /// let max = Point3::new(43.0,43.0,43.0);
@@ -470,8 +469,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::Point3;
     ///
     /// let empty_aabb = AABB::empty();
     /// assert!(empty_aabb.is_empty());
@@ -493,8 +492,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::Point3;
     ///
     /// let min = Point3::new(41.0,41.0,41.0);
     /// let max = Point3::new(43.0,43.0,43.0);
@@ -515,8 +514,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::Point3;
     ///
     /// let min = Point3::new(41.0,41.0,41.0);
     /// let max = Point3::new(43.0,43.0,43.0);
@@ -537,9 +536,9 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::axis::Axis;
-    /// use bvh::Point3;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::axis::Axis;
+    /// use dynbvh_f32::Point3;
     ///
     /// let min = Point3::new(-100.0,0.0,0.0);
     /// let max = Point3::new(100.0,0.0,0.0);
@@ -567,7 +566,7 @@ impl AABB {
     }
 }
 
-impl IntersectionTest for AABB {
+impl IntersectionAABB for AABB {
     fn intersects_aabb(&self, aabb: &AABB) -> bool {
         !(self.max.x < aabb.min.x)
             && !(self.min.x > aabb.max.x)
@@ -592,8 +591,8 @@ impl Default for AABB {
 ///
 /// # Examples
 /// ```
-/// use bvh::aabb::AABB;
-/// use bvh::Point3;
+/// use dynbvh_f32::aabb::AABB;
+/// use dynbvh_f32::Point3;
 ///
 /// let min = Point3::new(3.0,4.0,5.0);
 /// let max = Point3::new(123.0,123.0,123.0);
@@ -621,8 +620,8 @@ impl Index<usize> for AABB {
 ///
 /// # Examples
 /// ```
-/// use bvh::aabb::{AABB, Bounded};
-/// use bvh::Point3;
+/// use dynbvh_f32::aabb::{AABB, Bounded};
+/// use dynbvh_f32::Point3;
 ///
 /// let point_a = Point3::new(3.0,4.0,5.0);
 /// let point_b = Point3::new(17.0,18.0,19.0);
@@ -647,8 +646,8 @@ impl Bounded for AABB {
 ///
 /// # Examples
 /// ```
-/// use bvh::aabb::{AABB, Bounded};
-/// use bvh::Point3;
+/// use dynbvh_f32::aabb::{AABB, Bounded};
+/// use dynbvh_f32::Point3;
 ///
 /// let point = Point3::new(3.0,4.0,5.0);
 ///
@@ -668,14 +667,15 @@ impl Bounded for Point3 {
 #[cfg(test)]
 mod tests {
     use crate::aabb::{Bounded, AABB};
-    use crate::bounding_hierarchy::IntersectionTest;
+    use crate::bounding_hierarchy::IntersectionAABB;
     use crate::testbase::{tuple_to_point, tuple_to_vector, tuplevec_large_strategy, TupleVec};
-    use crate::EPSILON;
     use crate::{Point3, Vector3};
+    use crate::{Real, EPSILON};
 
     use float_eq::assert_float_eq;
     use proptest::prelude::*;
 
+    #[cfg(not(miri))]
     proptest! {
         // Test whether an empty `AABB` does not contains anything.
         #[test]
@@ -709,16 +709,16 @@ mod tests {
             // Define two points which will be the corners of the `AABB`
             let p1 = tuple_to_point(&a);
             let p2 = tuple_to_point(&b);
-
-
             // Span the `AABB`
             let aabb = AABB::empty().grow(&p1).join_bounded(&p2);
 
-            // Its center should be inside the `AABB`
-            if !aabb.contains(&aabb.center()) {
-                dbg!(aabb.center());
+            if aabb.center().abs().max_element() != Real::INFINITY {
+                // Its center should be inside the `AABB`
+                if !aabb.contains(&aabb.center()) {
+                    dbg!(aabb.center());
+                }
+                assert!(aabb.contains(&aabb.center()));
             }
-            assert!(aabb.contains(&aabb.center()));
         }
 
         // Test AABB intersection method.
@@ -730,7 +730,7 @@ mod tests {
 
             // Span the `AABB`
             let aabb = AABB::empty().grow(&p1).join_bounded(&p2);
-            if aabb.size().abs().min_element() > EPSILON {
+            if aabb.size().abs().min_element() > EPSILON && aabb.size().abs().max_element() != Real::INFINITY {
                 // Get its size and center
                 let size = aabb.size();
                 let size_half = size / 2.0;
@@ -836,11 +836,12 @@ mod tests {
             let pos = tuple_to_point(&pos);
             let size_vec = Vector3::new(size, size, size);
             let aabb = AABB::with_bounds(pos, pos + size_vec);
-
-            // Check its surface area
-            let area_a = aabb.surface_area();
-            let area_b = 6.0 * size * size;
-            assert_float_eq!(area_a, area_b, rmax <= EPSILON);
+            if aabb.max.abs().max_element() - size < 10e20 {
+                // Check its surface area
+                let area_a = aabb.surface_area();
+                let area_b = 6.0 * size * size;
+                assert_float_eq!(area_a, area_b, rmax <= EPSILON);
+            }
         }
 
         // Test whether the volume of a nonempty AABB is always positive.

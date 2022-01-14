@@ -1,5 +1,5 @@
 use crate::aabb::AABB;
-use crate::bounding_hierarchy::IntersectionTest;
+use crate::bounding_hierarchy::IntersectionAABB;
 use crate::{Mat4, Point3, Quat, Real, Vector3};
 
 pub struct Sphere {
@@ -13,7 +13,7 @@ impl Sphere {
     }
 }
 
-impl IntersectionTest for Sphere {
+impl IntersectionAABB for Sphere {
     fn intersects_aabb(&self, aabb: &AABB) -> bool {
         let vec = aabb.closest_point(self.center);
         vec.distance_squared(self.center) < self.radius * self.radius
@@ -43,7 +43,7 @@ impl Capsule {
     }
 }
 
-impl IntersectionTest for Capsule {
+impl IntersectionAABB for Capsule {
     fn intersects_aabb(&self, aabb: &AABB) -> bool {
         /*
         // Use Distance from closest point
@@ -94,7 +94,7 @@ pub struct OBB {
     pub center: Vector3,
 }
 
-impl IntersectionTest for OBB {
+impl IntersectionAABB for OBB {
     fn intersects_aabb(&self, aabb: &AABB) -> bool {
         let half_a = self.extents;
         let half_b = (aabb.max - aabb.min) * 0.5;
@@ -261,7 +261,7 @@ pub fn nearest_point_on_line(p1: &Point3, dir: &Vector3, len: Real, pnt: &Point3
 #[cfg(test)]
 mod tests {
     use crate::aabb::AABB;
-    use crate::bounding_hierarchy::IntersectionTest;
+    use crate::bounding_hierarchy::IntersectionAABB;
     use crate::shapes::{Capsule, OBB};
     use crate::{Point3, Quat, Real, Vector3};
 

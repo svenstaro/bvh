@@ -2,7 +2,7 @@
 //! for axis aligned bounding boxes and triangles.
 
 use crate::aabb::AABB;
-use crate::bounding_hierarchy::IntersectionTest;
+use crate::bounding_hierarchy::IntersectionAABB;
 use crate::{Point3, Vector3};
 use crate::{Real, EPSILON};
 
@@ -63,16 +63,16 @@ impl Intersection {
     }
 }
 
-impl IntersectionTest for Ray {
+impl IntersectionAABB for Ray {
     /// Tests the intersection of a [`Ray`] with an [`AABB`] using the optimized algorithm
     /// from [this paper](http://www.cs.utah.edu/~awilliam/box/box.pdf).
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::ray::Ray;
-    /// use bvh::{Point3,Vector3};
-    /// use bvh::bounding_hierarchy::IntersectionTest;
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::ray::Ray;
+    /// use dynbvh_f32::{Point3,Vector3};
+    /// use dynbvh_f32::bounding_hierarchy::IntersectionAABB;
     ///
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
@@ -139,8 +139,8 @@ impl Ray {
     ///
     /// # Examples
     /// ```
-    /// use bvh::ray::Ray;
-    /// use bvh::{Point3,Vector3};
+    /// use dynbvh_f32::ray::Ray;
+    /// use dynbvh_f32::{Point3,Vector3};
     ///
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
@@ -168,9 +168,9 @@ impl Ray {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::ray::Ray;
-    /// use bvh::{Point3,Vector3};
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::ray::Ray;
+    /// use dynbvh_f32::{Point3,Vector3};
     ///
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
@@ -214,9 +214,9 @@ impl Ray {
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
-    /// use bvh::ray::Ray;
-    /// use bvh::{Point3,Vector3};
+    /// use dynbvh_f32::aabb::AABB;
+    /// use dynbvh_f32::ray::Ray;
+    /// use dynbvh_f32::{Point3,Vector3};
     ///
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
@@ -313,6 +313,10 @@ impl Ray {
             Intersection::new(Real::INFINITY, u, v)
         }
     }
+
+    pub fn at(&self, dist: Real) -> Vector3 {
+        self.origin + (self.direction * dist)
+    }
 }
 
 #[cfg(test)]
@@ -321,7 +325,7 @@ mod tests {
     use std::cmp;
 
     use crate::aabb::AABB;
-    use crate::bounding_hierarchy::IntersectionTest;
+    use crate::bounding_hierarchy::IntersectionAABB;
     use crate::ray::Ray;
     use crate::testbase::{tuple_to_point, tuplevec_small_strategy, TupleVec};
     use crate::EPSILON;
@@ -343,6 +347,7 @@ mod tests {
         (ray, aabb)
     }
 
+    #[cfg(not(miri))]
     proptest! {
         // Test whether a `Ray` which points at the center of an `AABB` intersects it.
         // Uses the optimized algorithm.
@@ -483,7 +488,7 @@ mod tests {
 
 #[cfg(all(feature = "bench", test))]
 mod bench {
-    use crate::bounding_hierarchy::IntersectionTest;
+    use crate::bounding_hierarchy::IntersectionAABB;
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
 

@@ -7,63 +7,12 @@
 //!
 
 use crate::bounding_hierarchy::BHShape;
-use crate::{bvh::*, EPSILON};
 use crate::{aabb::AABB, Real};
+use crate::{bvh::*, EPSILON};
 use std::fmt::Debug;
 
 use log::info;
 use rand::{thread_rng, Rng};
-
-// TODO Consider: Instead of getting the scene's shapes passed, let leaf nodes store an AABB
-// that is updated from the outside, perhaps by passing not only the indices of the changed
-// shapes, but also their new AABBs into optimize().
-// TODO Consider: Stop updating AABBs upwards the tree once an AABB didn't get changed.
-
-#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
-#[allow(clippy::upper_case_acronyms)]
-enum OptimizationIndex {
-    Refit(usize),
-    FixAABBs(usize),
-}
-
-impl OptimizationIndex {
-    fn index(&self) -> usize {
-        match *self {
-            OptimizationIndex::Refit(index) | OptimizationIndex::FixAABBs(index) => index,
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-struct NodeData {
-    index: usize,
-    aabb: AABB,
-}
-
-impl BVHNode {
-    // Get the grandchildren's NodeData.
-    fn get_children_node_data(&self) -> Option<(NodeData, NodeData)> {
-        match *self {
-            BVHNode::Node {
-                child_l_index,
-                child_l_aabb,
-                child_r_index,
-                child_r_aabb,
-                ..
-            } => Some((
-                NodeData {
-                    index: child_l_index,
-                    aabb: child_l_aabb,
-                },
-                NodeData {
-                    index: child_r_index,
-                    aabb: child_r_aabb,
-                },
-            )),
-            BVHNode::Leaf { .. } => None,
-        }
-    }
-}
 
 impl BVH {
     /// Optimizes the `BVH` by batch-reorganizing updated nodes.
@@ -84,7 +33,6 @@ impl BVH {
             self.add_node(shapes, *i);
         }
     }
-
 
     /// Optimizes the `BVH` by batch-reorganizing updated nodes.
     /// Based on https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs
@@ -111,7 +59,7 @@ impl BVH {
             // }
             //self.assert_tight(shapes);
         }
-        
+
         // if !self.is_consistent(shapes) {
         //     let bvh = serde_json::to_string_pretty(&prev).expect("bvh to serialize");
         //     let shapes_str = serde_json::to_string_pretty(&prev_shapes).expect("shapes to serialize");
@@ -142,41 +90,13 @@ impl BVH {
             //     std::fs::write("badbvh.json", &bvh).expect("unable to write to file");
             //     std::fs::write("badshapes.json", &shapes_str).expect("unable to write to file");
 
-
             //     dbg!(i);
             //     dbg!(&shapes[*i].aabb());
             //     dbg!(&shapes[*i].bh_node_index());
-                // self.assert_consistent(shapes);
+            // self.assert_consistent(shapes);
             // }
         }
     }
-
-    fn cache_depths(&mut self) -> Vec<usize> {
-        let mut depths = Vec::with_capacity(self.nodes.len());
-        unsafe {
-            depths.set_len(self.nodes.len());
-        }
-
-        let mut stack = Vec::new();
-        stack.push((0 as usize, 0 as usize));
-        while stack.len() > 0 {
-            let (i, depth) = stack.pop().unwrap();
-            depths[i] = depth;
-            match self.nodes[i] {
-                BVHNode::Leaf { .. } => {}
-                BVHNode::Node {
-                    child_l_index,
-                    child_r_index,
-                    ..
-                } => {
-                    stack.push((child_r_index, depth + 1));
-                    stack.push((child_l_index, depth + 1));
-                }
-            }
-        }
-        depths
-    }
-
 
     pub fn add_node<T: BHShape>(&mut self, shapes: &mut [T], new_shape_index: usize) {
         let mut i = 0;
@@ -192,7 +112,6 @@ impl BVH {
             shapes[new_shape_index].set_bh_node_index(0);
             return;
         }
-        let mut depth = 0;
 
         loop {
             match self.nodes[i] {
@@ -317,7 +236,6 @@ impl BVH {
                     return;
                 }
             }
-            depth += 1;
         }
     }
 
@@ -368,14 +286,14 @@ impl BVH {
                 // The other child needs to become the root node
                 // The old root node and the dead child then have to be moved
 
-               // println!("gp == parent {}", parent_index);
+                // println!("gp == parent {}", parent_index);
                 if parent_index != 0 {
                     panic!(
                         "Circular node that wasn't root parent={} node={}",
                         parent_index, dead_node_index
                     );
                 }
-                
+
                 match self.nodes[sibling_index] {
                     BVHNode::Node {
                         child_l_index,
@@ -397,11 +315,10 @@ impl BVH {
                 //println!("nodes_len {}, sib_index {}", self.nodes.len(), sibling_index);
                 //println!("nodes_len {}", self.nodes.len());
             } else {
-
                 let parent_is_left = self.node_is_left_child(parent_index);
 
                 self.connect_nodes(sibling_index, gp_index, parent_is_left, shapes);
-                
+
                 self.fix_aabbs_ascending(shapes, gp_index);
                 //let new_depth = self.nodes[sibling_index].depth() - 1;
                 //*self.nodes[sibling_index].depth_mut() = new_depth;
@@ -484,10 +401,7 @@ impl BVH {
             self.nodes[node_index] = self.nodes[end];
             let parent_index = self.nodes[node_index].parent();
             match self.nodes[parent_index] {
-                BVHNode::Leaf {
-                    parent_index,
-                    shape_index,
-                } => {
+                BVHNode::Leaf { .. } => {
                     // println!(
                     //     "truncating early node_parent={} parent_index={} shape_index={}",
                     //     node_parent, parent_index, shape_index
@@ -500,7 +414,6 @@ impl BVH {
             let parent = self.nodes[parent_index];
             let moved_left = parent.child_l() == end;
             if !moved_left && parent.child_r() != end {
-                panic!("test");
                 self.nodes.truncate(end);
                 return;
             }
@@ -533,329 +446,6 @@ impl BVH {
         self.nodes.truncate(end);
     }
 
-
-
-
-
-
-
-
-
-
-
-    /// This method is called for each node which has been modified and needs to be updated.
-    /// If the specified node is a grandparent, then try to optimize the `BVH` by rotating its
-    /// children.
-    fn update<Shape: BHShape>(
-        &mut self,
-        node_index: usize,
-        shapes: &[Shape],
-    ) -> Option<OptimizationIndex> {
-        info!("   [{}]\t", node_index);
-
-        match self.nodes[node_index] {
-            BVHNode::Leaf {
-                parent_index,
-                shape_index,
-                ..
-            } => {
-                // The current node is a leaf.
-                info!(
-                    "Leaf node. Queueing parent ({}). {}.",
-                    parent_index,
-                    shapes[shape_index].aabb()
-                );
-                Some(OptimizationIndex::Refit(parent_index))
-            }
-            BVHNode::Node {
-                parent_index,
-                child_l_index,
-                child_r_index,
-                ..
-            } => {
-                // The current node is a parent.
-                if let (
-                    &BVHNode::Leaf {
-                        shape_index: shape_l_index,
-                        ..
-                    },
-                    &BVHNode::Leaf {
-                        shape_index: shape_r_index,
-                        ..
-                    },
-                ) = (&self.nodes[child_l_index], &self.nodes[child_r_index])
-                {
-                    // The current node is a final parent. Update its `AABB`s, because at least
-                    // one of its children was updated and queue its parent for refitting.
-                    if let BVHNode::Node {
-                        ref mut child_l_aabb,
-                        ref mut child_r_aabb,
-                        ..
-                    } = self.nodes[node_index]
-                    {
-                        *child_l_aabb = shapes[shape_l_index].aabb();
-                        *child_r_aabb = shapes[shape_r_index].aabb();
-                        info!("Setting {} from {}", child_l_aabb, child_l_index);
-                        info!("\tand {} from {}.", child_r_aabb, child_r_index);
-                        return Some(OptimizationIndex::Refit(parent_index));
-                    }
-                    unreachable!();
-                }
-
-                // The current node is a grandparent and can be optimized by rotating.
-                self.try_rotate(node_index, shapes)
-            }
-        }
-    }
-
-    fn find_better_rotation(
-        &self,
-        child_l_index: usize,
-        child_l_aabb: &AABB,
-        child_r_index: usize,
-        child_r_aabb: &AABB,
-    ) -> Option<(usize, usize)> {
-        // Get indices and `AABB`s of all grandchildren.
-        let left_children_nodes = self.nodes[child_l_index].get_children_node_data();
-        let right_children_nodes = self.nodes[child_r_index].get_children_node_data();
-
-        // Contains the surface area that would result from applying the currently favored rotation.
-        // The rotation with the smallest surface area will be applied in the end.
-        // The value is calculated by `child_l_aabb.surface_area() + child_r_aabb.surface_area()`.
-        let mut best_surface_area = child_l_aabb.surface_area() + child_r_aabb.surface_area();
-
-        // Stores the rotation that would result in the surface area `best_surface_area`,
-        // thus being the favored rotation that will be executed after considering all rotations.
-        let mut best_rotation: Option<(usize, usize)> = None;
-        {
-            let mut consider_rotation = |new_rotation: (usize, usize), surface_area: Real| {
-                if surface_area < best_surface_area {
-                    best_surface_area = surface_area;
-                    best_rotation = Some(new_rotation);
-                }
-            };
-
-            // Child to grandchild rotations
-            if let Some((child_rl, child_rr)) = right_children_nodes {
-                let surface_area_l_rl =
-                    child_rl.aabb.surface_area() + child_l_aabb.join(&child_rr.aabb).surface_area();
-                consider_rotation((child_l_index, child_rl.index), surface_area_l_rl);
-                let surface_area_l_rr =
-                    child_rr.aabb.surface_area() + child_l_aabb.join(&child_rl.aabb).surface_area();
-                consider_rotation((child_l_index, child_rr.index), surface_area_l_rr);
-            }
-            if let Some((child_ll, child_lr)) = left_children_nodes {
-                let surface_area_r_ll =
-                    child_ll.aabb.surface_area() + child_r_aabb.join(&child_lr.aabb).surface_area();
-                consider_rotation((child_r_index, child_ll.index), surface_area_r_ll);
-                let surface_area_r_lr =
-                    child_lr.aabb.surface_area() + child_r_aabb.join(&child_ll.aabb).surface_area();
-                consider_rotation((child_r_index, child_lr.index), surface_area_r_lr);
-
-                // Grandchild to grandchild rotations
-                if let Some((child_rl, child_rr)) = right_children_nodes {
-                    let surface_area_ll_rl = child_rl.aabb.join(&child_lr.aabb).surface_area()
-                        + child_ll.aabb.join(&child_rr.aabb).surface_area();
-                    consider_rotation((child_ll.index, child_rl.index), surface_area_ll_rl);
-                    let surface_area_ll_rr = child_ll.aabb.join(&child_rl.aabb).surface_area()
-                        + child_lr.aabb.join(&child_rr.aabb).surface_area();
-                    consider_rotation((child_ll.index, child_rr.index), surface_area_ll_rr);
-                }
-            }
-        }
-        best_rotation
-    }
-
-    /// Checks if there is a way to rotate a child and a grandchild (or two grandchildren) of
-    /// the given node (specified by `node_index`) that would improve the `BVH`.
-    /// If there is, the best rotation found is performed.
-    ///
-    /// # Preconditions
-    ///
-    /// This function requires that the subtree at `node_index` has correct `AABB`s.
-    ///
-    /// # Returns
-    ///
-    /// `Some(index_of_node)` if a new node was found that should be used for optimization.
-    ///
-    fn try_rotate<Shape: BHShape>(
-        &mut self,
-        node_index: usize,
-        shapes: &[Shape],
-    ) -> Option<OptimizationIndex> {
-        let (parent_index, child_l_index, child_r_index) = if let BVHNode::Node {
-            parent_index,
-            child_l_index,
-            child_r_index,
-            ..
-        } = self.nodes[node_index]
-        {
-            (parent_index, child_l_index, child_r_index)
-        } else {
-            unreachable!()
-        };
-
-        // Recalculate `AABB`s for the children since at least one of them changed.  Don't update
-        // the `AABB`s in the node yet because they're still subject to change during potential
-        // upcoming rotations.
-        let child_l_aabb = self.nodes[child_l_index].get_node_aabb(shapes);
-        let child_r_aabb = self.nodes[child_r_index].get_node_aabb(shapes);
-
-        let best_rotation =
-            self.find_better_rotation(child_l_index, &child_l_aabb, child_r_index, &child_r_aabb);
-
-        if let Some((rotation_node_a, rotation_node_b)) = best_rotation {
-            self.rotate(rotation_node_a, rotation_node_b, shapes);
-
-            // Update the children's children `AABB`s and the children `AABB`s of node.
-            self.fix_children_and_own_aabbs(node_index, shapes);
-
-            // Return parent node's index for upcoming refitting,
-            // since this node just changed its `AABB`.
-            if node_index != 0 {
-                Some(OptimizationIndex::Refit(parent_index))
-            } else {
-                None
-            }
-        } else {
-            info!("    No useful rotation.");
-            // Set the correct children `AABB`s, which have been computed earlier.
-            *self.nodes[node_index].child_l_aabb_mut() = child_l_aabb;
-            *self.nodes[node_index].child_r_aabb_mut() = child_r_aabb;
-
-            // Only execute the following block, if `node_index` does not reference the root node.
-            if node_index != 0 {
-                // Even with no rotation being useful for this node, a parent node's rotation
-                // could be beneficial, so queue the parent *sometimes*. For reference see:
-                // https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH_Node.cs#L307
-                // TODO Evaluate whether this is a smart thing to do.
-                let mut rng = thread_rng();
-                if rng.gen_bool(0.01) {
-                    Some(OptimizationIndex::Refit(parent_index))
-                } else {
-                    // Otherwise, we still have to fix the parent's AABBs
-                    Some(OptimizationIndex::FixAABBs(parent_index))
-                }
-            } else {
-                None
-            }
-        }
-    }
-
-    /// Sets child_l_aabb and child_r_aabb of a BVHNode::Node to match its children,
-    /// right after updating the children themselves. Not recursive.
-    fn fix_children_and_own_aabbs<Shape: BHShape>(&mut self, node_index: usize, shapes: &[Shape]) {
-        let (child_l_index, child_r_index) = if let BVHNode::Node {
-            child_l_index,
-            child_r_index,
-            ..
-        } = self.nodes[node_index]
-        {
-            (child_l_index, child_r_index)
-        } else {
-            unreachable!()
-        };
-
-        self.fix_aabbs(child_l_index, shapes);
-        self.fix_aabbs(child_r_index, shapes);
-
-        *self.nodes[node_index].child_l_aabb_mut() =
-            self.nodes[child_l_index].get_node_aabb(shapes);
-        *self.nodes[node_index].child_r_aabb_mut() =
-            self.nodes[child_r_index].get_node_aabb(shapes);
-    }
-
-    /// Updates `child_l_aabb` and `child_r_aabb` of the `BVHNode::Node`
-    /// with the index `node_index` from its children.
-    fn fix_aabbs<Shape: BHShape>(
-        &mut self,
-        node_index: usize,
-        shapes: &[Shape],
-    ) -> Option<OptimizationIndex> {
-        match self.nodes[node_index] {
-            BVHNode::Node {
-                parent_index,
-                child_l_index,
-                child_r_index,
-                ..
-            } => {
-                *self.nodes[node_index].child_l_aabb_mut() =
-                    self.nodes[child_l_index].get_node_aabb(shapes);
-                *self.nodes[node_index].child_r_aabb_mut() =
-                    self.nodes[child_r_index].get_node_aabb(shapes);
-
-                if node_index > 0 {
-                    Some(OptimizationIndex::FixAABBs(parent_index))
-                } else {
-                    None
-                }
-            }
-            // Don't do anything if the node is a leaf.
-            _ => None,
-        }
-    }
-
-    /// Switch two nodes by rewiring the involved indices (not by moving them in the nodes slice).
-    /// Also updates the AABBs of the parents.
-    fn rotate<Shape: BHShape>(
-        &mut self,
-        node_a_index: usize,
-        node_b_index: usize,
-        shapes: &[Shape],
-    ) {
-        info!("    ROTATING {} and {}", node_a_index, node_b_index);
-
-        // Get parent indices
-        let node_a_parent_index = self.nodes[node_a_index].parent();
-        let node_b_parent_index = self.nodes[node_b_index].parent();
-
-        // Get info about the nodes being a left or right child
-        let node_a_is_left_child = self.node_is_left_child(node_a_index);
-        let node_b_is_left_child = self.node_is_left_child(node_b_index);
-
-        // Perform the switch
-        self.connect_nodes(
-            node_a_index,
-            node_b_parent_index,
-            node_b_is_left_child,
-            shapes,
-        );
-        self.connect_nodes(
-            node_b_index,
-            node_a_parent_index,
-            node_a_is_left_child,
-            shapes,
-        );
-    }
-
-    /*
-        /// Updates the depth of a node, and sets the depth of its descendants accordingly.
-        fn update_depth_recursively(&mut self, node_index: usize, new_depth: u32) {
-            let children = {
-                let node = &mut self.nodes[node_index];
-                match *node {
-                    BVHNode::Node {
-                        ref mut depth,
-                        child_l_index,
-                        child_r_index,
-                        ..
-                    } => {
-                        *depth = new_depth;
-                        Some((child_l_index, child_r_index))
-                    }
-                    BVHNode::Leaf { ref mut depth, .. } => {
-                        *depth = new_depth;
-                        None
-                    }
-                }
-            };
-            if let Some((child_l_index, child_r_index)) = children {
-                self.update_depth_recursively(child_l_index, new_depth + 1);
-                self.update_depth_recursively(child_r_index, new_depth + 1);
-            }
-        }
-    */
-
     fn node_is_left_child(&self, node_index: usize) -> bool {
         // Get the index of the parent.
         let node_parent_index = self.nodes[node_index].parent();
@@ -872,7 +462,7 @@ impl BVH {
         shapes: &[Shape],
     ) {
         if child_index == parent_index {
-            return
+            return;
         }
         let child_aabb = self.nodes[child_index].get_node_aabb(shapes);
         //info!("\tConnecting: {} < {}.", child_index, parent_index);
@@ -911,7 +501,7 @@ mod tests {
     use crate::bounding_hierarchy::BHShape;
     use crate::bvh::{BVHNode, BVH};
     use crate::testbase::{
-        build_some_bh, create_n_cubes, default_bounds, randomly_transform_scene, UnitBox, Triangle,
+        build_some_bh, create_n_cubes, default_bounds, randomly_transform_scene, Triangle, UnitBox,
     };
     use crate::Point3;
     use crate::EPSILON;
@@ -1142,143 +732,6 @@ mod tests {
     }
 
     #[test]
-    fn test_rotate_grandchildren() {
-        let (shapes, mut bvh) = create_predictable_bvh();
-
-        // Switch two nodes.
-        bvh.rotate(3, 5, &shapes);
-
-        // Check if the resulting tree is as expected.
-        let BVH { nodes } = bvh;
-
-        assert_eq!(nodes[0].parent(), 0);
-        assert_eq!(nodes[0].child_l(), 1);
-        assert_eq!(nodes[0].child_r(), 2);
-
-        assert_eq!(nodes[1].parent(), 0);
-        assert_eq!(nodes[1].child_l(), 5);
-        assert_eq!(nodes[1].child_r(), 4);
-
-        assert_eq!(nodes[2].parent(), 0);
-        assert_eq!(nodes[2].child_l(), 3);
-        assert_eq!(nodes[2].child_r(), 6);
-
-        assert_eq!(nodes[3].parent(), 2);
-        assert_eq!(nodes[4].parent(), 1);
-        assert_eq!(nodes[5].parent(), 1);
-        assert_eq!(nodes[6].parent(), 2);
-
-        assert!(nodes[1]
-            .child_l_aabb()
-            .relative_eq(&shapes[2].aabb(), EPSILON));
-        assert!(nodes[1]
-            .child_r_aabb()
-            .relative_eq(&shapes[1].aabb(), EPSILON));
-        assert!(nodes[2]
-            .child_l_aabb()
-            .relative_eq(&shapes[0].aabb(), EPSILON));
-        assert!(nodes[2]
-            .child_r_aabb()
-            .relative_eq(&shapes[3].aabb(), EPSILON));
-    }
-
-    #[test]
-    fn test_rotate_child_grandchild() {
-        let (shapes, mut bvh) = create_predictable_bvh();
-
-        // Switch two nodes.
-        bvh.rotate(1, 5, &shapes);
-
-        // Check if the resulting tree is as expected.
-        let BVH { nodes } = bvh;
-
-        assert_eq!(nodes[0].parent(), 0);
-        assert_eq!(nodes[0].child_l(), 5);
-        assert_eq!(nodes[0].child_r(), 2);
-
-        assert_eq!(nodes[1].parent(), 2);
-        assert_eq!(nodes[1].child_l(), 3);
-        assert_eq!(nodes[1].child_r(), 4);
-
-        assert_eq!(nodes[2].parent(), 0);
-        assert_eq!(nodes[2].child_l(), 1);
-        assert_eq!(nodes[2].child_r(), 6);
-
-        assert_eq!(nodes[3].parent(), 1);
-        assert_eq!(nodes[4].parent(), 1);
-        assert_eq!(nodes[5].parent(), 0);
-        assert_eq!(nodes[6].parent(), 2);
-
-        assert!(nodes[0]
-            .child_l_aabb()
-            .relative_eq(&shapes[2].aabb(), EPSILON));
-        assert!(nodes[2]
-            .child_r_aabb()
-            .relative_eq(&shapes[3].aabb(), EPSILON));
-        assert!(nodes[1]
-            .child_l_aabb()
-            .relative_eq(&shapes[0].aabb(), EPSILON));
-        assert!(nodes[1]
-            .child_r_aabb()
-            .relative_eq(&shapes[1].aabb(), EPSILON));
-    }
-
-    #[test]
-    fn test_try_rotate_child_grandchild() {
-        let (mut shapes, mut bvh) = create_predictable_bvh();
-
-        // Move the second shape.
-        shapes[2].pos = Point3::new(-40.0, 0.0, 0.0);
-
-        // Try to rotate node 2 because node 5 changed.
-        bvh.try_rotate(2, &shapes);
-
-        // Try to rotate node 0 because rotating node 2 should not have yielded a result.
-        bvh.try_rotate(0, &shapes);
-
-        // Check if the resulting tree is as expected.
-        let BVH { nodes } = bvh;
-
-        assert_eq!(nodes[0].parent(), 0);
-        assert_eq!(nodes[0].child_l(), 5);
-        assert_eq!(nodes[0].child_r(), 2);
-
-        assert_eq!(nodes[1].parent(), 2);
-        assert_eq!(nodes[1].child_l(), 3);
-        assert_eq!(nodes[1].child_r(), 4);
-
-        assert_eq!(nodes[2].parent(), 0);
-        assert_eq!(nodes[2].child_l(), 1);
-        assert_eq!(nodes[2].child_r(), 6);
-
-        assert_eq!(nodes[3].parent(), 1);
-        assert_eq!(nodes[4].parent(), 1);
-        assert_eq!(nodes[5].parent(), 0);
-        assert_eq!(nodes[6].parent(), 2);
-
-        assert!(nodes[0]
-            .child_l_aabb()
-            .relative_eq(&shapes[2].aabb(), EPSILON));
-        let right_subtree_aabb = &shapes[0]
-            .aabb()
-            .join(&shapes[1].aabb())
-            .join(&shapes[3].aabb());
-        assert!(nodes[0]
-            .child_r_aabb()
-            .relative_eq(right_subtree_aabb, EPSILON));
-
-        assert!(nodes[2]
-            .child_r_aabb()
-            .relative_eq(&shapes[3].aabb(), EPSILON));
-        assert!(nodes[1]
-            .child_l_aabb()
-            .relative_eq(&shapes[0].aabb(), EPSILON));
-        assert!(nodes[1]
-            .child_r_aabb()
-            .relative_eq(&shapes[1].aabb(), EPSILON));
-    }
-
-    #[test]
     /// Test optimizing `BVH` after randomizing 50% of the shapes.
     fn test_optimize_bvh_12k_75p() {
         let c = 1000;
@@ -1417,7 +870,6 @@ mod tests {
         bvh.assert_tight(&triangles);
     }
 
-    
     #[test]
     fn test_optimizing_nodes() {
         let bounds = default_bounds();
@@ -1434,12 +886,11 @@ mod tests {
         // match the tree entries.
         let mut seed = 0;
 
-
         for _ in 0..1000 {
             let updated = randomly_transform_scene(&mut triangles, 1, &bounds, None, &mut seed);
             assert!(!bvh.is_consistent(&triangles), "BVH is consistent.");
             //bvh.pretty_print();
-    
+
             // After fixing the `AABB` consistency should be restored.
             bvh.optimize(&updated, &mut triangles);
             //bvh.pretty_print();

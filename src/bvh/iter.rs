@@ -1,7 +1,7 @@
 use smallvec::SmallVec;
 
 use crate::aabb::Bounded;
-use crate::bounding_hierarchy::IntersectionTest;
+use crate::bounding_hierarchy::IntersectionAABB;
 use crate::bvh::{BVHNode, BVH};
 
 /// Iterator to traverse a [`BVH`] without memory allocations
@@ -10,7 +10,7 @@ pub struct BVHTraverseIterator<'a, Shape: Bounded> {
     /// Reference to the BVH to traverse
     bvh: &'a BVH,
     /// Reference to the input ray
-    test: &'a dyn IntersectionTest,
+    test: &'a dyn IntersectionAABB,
     /// Reference to the input shapes array
     shapes: &'a [Shape],
     /// Traversal stack. Allocates if exceeds depth of 64
@@ -23,7 +23,7 @@ pub struct BVHTraverseIterator<'a, Shape: Bounded> {
 
 impl<'a, Shape: Bounded> BVHTraverseIterator<'a, Shape> {
     /// Creates a new `BVHTraverseIterator`
-    pub fn new(bvh: &'a BVH, test: &'a impl IntersectionTest, shapes: &'a [Shape]) -> Self {
+    pub fn new(bvh: &'a BVH, test: &'a impl IntersectionAABB, shapes: &'a [Shape]) -> Self {
         BVHTraverseIterator {
             bvh,
             test,

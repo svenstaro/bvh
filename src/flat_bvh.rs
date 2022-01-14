@@ -1,7 +1,7 @@
 //! This module exports methods to flatten the `BVH` and traverse it iteratively.
 
 use crate::aabb::{Bounded, AABB};
-use crate::bounding_hierarchy::{BHShape, BoundingHierarchy, IntersectionTest};
+use crate::bounding_hierarchy::{BHShape, BoundingHierarchy, IntersectionAABB};
 use crate::bvh::{BVHNode, BVH};
 
 /// A structure of a node of a flat [`BVH`]. The structure of the nodes allows for an
@@ -162,12 +162,12 @@ impl BVH {
     /// # Example
     ///
     /// ```
-    /// use bvh::aabb::{AABB, Bounded};
-    /// use bvh::bvh::BVH;
-    /// use bvh::{Point3, Vector3};
-    /// use bvh::ray::Ray;
-    /// use bvh::Real;
-    /// # use bvh::bounding_hierarchy::BHShape;
+    /// use dynbvh_f32::aabb::{AABB, Bounded};
+    /// use dynbvh_f32::bvh::BVH;
+    /// use dynbvh_f32::{Point3, Vector3};
+    /// use dynbvh_f32::ray::Ray;
+    /// use dynbvh_f32::Real;
+    /// # use dynbvh_f32::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
     /// #     pub pos: Point3,
@@ -251,12 +251,12 @@ impl BVH {
     /// # Example
     ///
     /// ```
-    /// use bvh::aabb::{AABB, Bounded};
-    /// use bvh::bvh::BVH;
-    /// use bvh::{Point3, Vector3};
-    /// use bvh::ray::Ray;
-    /// use bvh::Real;
-    /// # use bvh::bounding_hierarchy::BHShape;
+    /// use dynbvh_f32::aabb::{AABB, Bounded};
+    /// use dynbvh_f32::bvh::BVH;
+    /// use dynbvh_f32::{Point3, Vector3};
+    /// use dynbvh_f32::ray::Ray;
+    /// use dynbvh_f32::Real;
+    /// # use dynbvh_f32::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
     /// #     pub pos: Point3,
@@ -332,13 +332,13 @@ impl BoundingHierarchy for FlatBVH {
     /// # Examples
     ///
     /// ```
-    /// use bvh::aabb::{AABB, Bounded};
-    /// use bvh::bounding_hierarchy::BoundingHierarchy;
-    /// use bvh::flat_bvh::FlatBVH;
-    /// use bvh::{Point3, Vector3};
-    /// use bvh::ray::Ray;
-    /// use bvh::Real;
-    /// # use bvh::bounding_hierarchy::BHShape;
+    /// use dynbvh_f32::aabb::{AABB, Bounded};
+    /// use dynbvh_f32::bounding_hierarchy::BoundingHierarchy;
+    /// use dynbvh_f32::flat_bvh::FlatBVH;
+    /// use dynbvh_f32::{Point3, Vector3};
+    /// use dynbvh_f32::ray::Ray;
+    /// use dynbvh_f32::Real;
+    /// # use dynbvh_f32::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
     /// #     pub pos: Point3,
@@ -389,7 +389,7 @@ impl BoundingHierarchy for FlatBVH {
     /// let flat_bvh = FlatBVH::build(&mut shapes);
     /// let hit_shapes = flat_bvh.traverse(&ray, &shapes);
     /// ```
-    fn traverse<'a, T: Bounded>(&'a self, ray: &impl IntersectionTest, shapes: &'a [T]) -> Vec<&T> {
+    fn traverse<'a, T: Bounded>(&'a self, ray: &impl IntersectionAABB, shapes: &'a [T]) -> Vec<&T> {
         let mut hit_shapes = Vec::new();
         let mut index = 0;
 

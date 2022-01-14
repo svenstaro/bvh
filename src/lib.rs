@@ -15,12 +15,12 @@
 //! ## Example
 //!
 //! ```
-//! use bvh::aabb::{AABB, Bounded};
-//! use bvh::bounding_hierarchy::{BoundingHierarchy, BHShape};
-//! use bvh::bvh::BVH;
-//! use bvh::{Point3, Vector3};
-//! use bvh::ray::Ray;
-//! use bvh::Real;
+//! use dynbvh_f32::aabb::{AABB, Bounded};
+//! use dynbvh_f32::bounding_hierarchy::{BoundingHierarchy, BHShape};
+//! use dynbvh_f32::bvh::BVH;
+//! use dynbvh_f32::{Point3, Vector3};
+//! use dynbvh_f32::ray::Ray;
+//! use dynbvh_f32::Real;
 //!
 //! let origin = Point3::new(0.0,0.0,0.0);
 //! let direction = Vector3::new(1.0,0.0,0.0);
@@ -130,9 +130,9 @@ mod utils;
 #[cfg(test)]
 mod testbase;
 
+use crate::bvh::BVH;
 use aabb::{Bounded, AABB};
 use bounding_hierarchy::BHShape;
-use crate::bvh::BVH;
 use num::{FromPrimitive, Integer};
 
 #[derive(Debug)]

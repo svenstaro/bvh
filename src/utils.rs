@@ -22,6 +22,9 @@ pub struct Bucket {
 
     /// The joint `AABB` of the shapes in this `Bucket`.
     pub aabb: AABB,
+
+    /// the `AABB` of the centroid of the centers of the shapes in this `Bucket`
+    pub centroid: AABB,
 }
 
 impl Bucket {
@@ -30,13 +33,15 @@ impl Bucket {
         Bucket {
             size: 0,
             aabb: AABB::empty(),
+            centroid: AABB::empty(),
         }
     }
 
     /// Extend this `Bucket` by a shape with the given `AABB`.
     pub fn add_aabb(&mut self, aabb: &AABB) {
         self.size += 1;
-        self.aabb = self.aabb.join(aabb);
+        self.aabb.join_mut(aabb);
+        self.centroid.grow_mut(&aabb.center());
     }
 
     /// Join the contents of two `Bucket`s.
@@ -44,17 +49,20 @@ impl Bucket {
         Bucket {
             size: a.size + b.size,
             aabb: a.aabb.join(&b.aabb),
+            centroid: a.centroid.join(&b.centroid),
         }
     }
 }
 
-pub fn joint_aabb_of_shapes<Shape: BHShape>(indices: &[usize], shapes: &[Shape]) -> AABB {
+pub fn joint_aabb_of_shapes<Shape: BHShape>(indices: &[usize], shapes: &[Shape]) -> (AABB, AABB) {
     let mut aabb = AABB::empty();
+    let mut centroid = AABB::empty();
     for index in indices {
         let shape = &shapes[*index];
         aabb.join_mut(&shape.aabb());
+        centroid.grow_mut(&shape.aabb().center());
     }
-    aabb
+    (aabb, centroid)
 }
 
 #[cfg(test)]
