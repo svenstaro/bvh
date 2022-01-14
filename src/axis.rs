@@ -12,7 +12,7 @@ struct MyType<T>(T);
 ///
 /// # Examples
 /// ```
-/// use dynbvh_f32::axis::Axis;
+/// use bvh::axis::Axis;
 ///
 /// let mut position = [1.0, 0.5, 42.0];
 /// position[Axis::Y] *= 4.0;
@@ -24,8 +24,8 @@ struct MyType<T>(T);
 ///
 /// ```
 ///
-/// use dynbvh_f32::axis::Axis;
-/// use dynbvh_f32::Point3;
+/// use bvh::axis::Axis;
+/// use bvh::Point3;
 ///
 /// # fn main() {
 /// let mut position: Point3 = Point3::new(1.0, 2.0, 3.0);

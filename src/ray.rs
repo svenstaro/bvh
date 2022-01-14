@@ -69,10 +69,10 @@ impl IntersectionAABB for Ray {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::ray::Ray;
-    /// use dynbvh_f32::{Point3,Vector3};
-    /// use dynbvh_f32::bounding_hierarchy::IntersectionAABB;
+    /// use bvh::aabb::AABB;
+    /// use bvh::ray::Ray;
+    /// use bvh::{Point3,Vector3};
+    /// use bvh::bounding_hierarchy::IntersectionAABB;
     ///
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
@@ -139,8 +139,8 @@ impl Ray {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::ray::Ray;
-    /// use dynbvh_f32::{Point3,Vector3};
+    /// use bvh::ray::Ray;
+    /// use bvh::{Point3,Vector3};
     ///
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
@@ -168,9 +168,9 @@ impl Ray {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::ray::Ray;
-    /// use dynbvh_f32::{Point3,Vector3};
+    /// use bvh::aabb::AABB;
+    /// use bvh::ray::Ray;
+    /// use bvh::{Point3,Vector3};
     ///
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);
@@ -214,9 +214,9 @@ impl Ray {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::ray::Ray;
-    /// use dynbvh_f32::{Point3,Vector3};
+    /// use bvh::aabb::AABB;
+    /// use bvh::ray::Ray;
+    /// use bvh::{Point3,Vector3};
     ///
     /// let origin = Point3::new(0.0,0.0,0.0);
     /// let direction = Vector3::new(1.0,0.0,0.0);

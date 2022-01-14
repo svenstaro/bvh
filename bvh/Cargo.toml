@@ -1,5 +1,5 @@
 [package]
-name = "dynbvh-f32"
+name = "bvh"
 description = "A fast dynamic BVH using SAH"
 version = "0.6.0"
 edition = "2018"
@@ -15,7 +15,7 @@ license = "MIT"
 
 
 [lib]
-name = "dynbvh_f32"
+name = "bvh"
 path = "../src/lib.rs"
 required-features = []
 

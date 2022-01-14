@@ -35,8 +35,8 @@ pub trait Bounded {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::{AABB, Bounded};
-    /// use dynbvh_f32::Point3;
+    /// use bvh::aabb::{AABB, Bounded};
+    /// use bvh::Point3;
     ///
     /// struct Something;
     ///
@@ -65,8 +65,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::aabb::AABB;
+    /// use bvh::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0,-1.0,-1.0), Point3::new(1.0,1.0,1.0));
     /// assert_eq!(aabb.min.x, -1.0);
@@ -84,7 +84,7 @@ impl AABB {
     /// # Examples
     /// ```
     /// # extern crate rand;
-    /// use dynbvh_f32::aabb::AABB;
+    /// use bvh::aabb::AABB;
     ///
     /// # fn main() {
     /// let aabb = AABB::empty();
@@ -115,8 +115,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::aabb::AABB;
+    /// use bvh::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
     /// let point_inside = Point3::new(0.125, -0.25, 0.5);
@@ -143,9 +143,9 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::EPSILON;
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::EPSILON;
+    /// use bvh::aabb::AABB;
+    /// use bvh::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
     /// let point_barely_outside = Point3::new(1.000_000_1, -1.000_000_1, 1.000_000_001);
@@ -172,9 +172,9 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::EPSILON;
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::EPSILON;
+    /// use bvh::aabb::AABB;
+    /// use bvh::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
     /// let point_barely_outside = Point3::new(1.000_000_1, 1.000_000_1, 1.000_000_1);
@@ -195,9 +195,9 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::EPSILON;
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::EPSILON;
+    /// use bvh::aabb::AABB;
+    /// use bvh::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
     /// let point_barely_outside_min = Point3::new(-1.000_000_1, -1.000_000_1, -1.000_000_1);
@@ -222,8 +222,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::aabb::AABB;
+    /// use bvh::Point3;
     ///
     /// let aabb1 = AABB::with_bounds(Point3::new(-101.0, 0.0, 0.0), Point3::new(-100.0, 1.0, 1.0));
     /// let aabb2 = AABB::with_bounds(Point3::new(100.0, 0.0, 0.0), Point3::new(101.0, 1.0, 1.0));
@@ -267,8 +267,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::{Point3, Vector3};
+    /// use bvh::aabb::AABB;
+    /// use bvh::{Point3, Vector3};
     ///
     /// let size = Vector3::new(1.0, 1.0, 1.0);
     /// let aabb_pos = Point3::new(-101.0, 0.0, 0.0);
@@ -316,8 +316,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::aabb::AABB;
+    /// use bvh::Point3;
     ///
     /// let point1 = Point3::new(0.0, 0.0, 0.0);
     /// let point2 = Point3::new(1.0, 1.0, 1.0);
@@ -356,8 +356,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::aabb::AABB;
+    /// use bvh::Point3;
     ///
     /// let point1 = Point3::new(0.0, 0.0, 0.0);
     /// let point2 = Point3::new(1.0, 1.0, 1.0);
@@ -396,8 +396,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::{AABB, Bounded};
-    /// use dynbvh_f32::Point3;
+    /// use bvh::aabb::{AABB, Bounded};
+    /// use bvh::Point3;
     ///
     /// struct Something;
     ///
@@ -428,8 +428,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::aabb::AABB;
+    /// use bvh::Point3;
     ///
     /// let aabb = AABB::with_bounds(Point3::new(-1.0,-1.0,-1.0), Point3::new(1.0,1.0,1.0));
     /// let size = aabb.size();
@@ -446,8 +446,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::aabb::AABB;
+    /// use bvh::Point3;
     ///
     /// let min = Point3::new(41.0,41.0,41.0);
     /// let max = Point3::new(43.0,43.0,43.0);
@@ -469,8 +469,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::aabb::AABB;
+    /// use bvh::Point3;
     ///
     /// let empty_aabb = AABB::empty();
     /// assert!(empty_aabb.is_empty());
@@ -492,8 +492,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::aabb::AABB;
+    /// use bvh::Point3;
     ///
     /// let min = Point3::new(41.0,41.0,41.0);
     /// let max = Point3::new(43.0,43.0,43.0);
@@ -514,8 +514,8 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::aabb::AABB;
+    /// use bvh::Point3;
     ///
     /// let min = Point3::new(41.0,41.0,41.0);
     /// let max = Point3::new(43.0,43.0,43.0);
@@ -536,9 +536,9 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// use dynbvh_f32::aabb::AABB;
-    /// use dynbvh_f32::axis::Axis;
-    /// use dynbvh_f32::Point3;
+    /// use bvh::aabb::AABB;
+    /// use bvh::axis::Axis;
+    /// use bvh::Point3;
     ///
     /// let min = Point3::new(-100.0,0.0,0.0);
     /// let max = Point3::new(100.0,0.0,0.0);
@@ -595,8 +595,8 @@ impl Default for AABB {
 ///
 /// # Examples
 /// ```
-/// use dynbvh_f32::aabb::AABB;
-/// use dynbvh_f32::Point3;
+/// use bvh::aabb::AABB;
+/// use bvh::Point3;
 ///
 /// let min = Point3::new(3.0,4.0,5.0);
 /// let max = Point3::new(123.0,123.0,123.0);
@@ -624,8 +624,8 @@ impl Index<usize> for AABB {
 ///
 /// # Examples
 /// ```
-/// use dynbvh_f32::aabb::{AABB, Bounded};
-/// use dynbvh_f32::Point3;
+/// use bvh::aabb::{AABB, Bounded};
+/// use bvh::Point3;
 ///
 /// let point_a = Point3::new(3.0,4.0,5.0);
 /// let point_b = Point3::new(17.0,18.0,19.0);
@@ -650,8 +650,8 @@ impl Bounded for AABB {
 ///
 /// # Examples
 /// ```
-/// use dynbvh_f32::aabb::{AABB, Bounded};
-/// use dynbvh_f32::Point3;
+/// use bvh::aabb::{AABB, Bounded};
+/// use bvh::Point3;
 ///
 /// let point = Point3::new(3.0,4.0,5.0);
 ///

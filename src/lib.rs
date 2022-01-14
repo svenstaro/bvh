@@ -1,4 +1,3 @@
-#![feature(test)]
 //! A crate which exports rays, axis-aligned bounding boxes, and binary bounding
 //! volume hierarchies.
 //!
@@ -15,12 +14,12 @@
 //! ## Example
 //!
 //! ```
-//! use dynbvh_f32::aabb::{AABB, Bounded};
-//! use dynbvh_f32::bounding_hierarchy::{BoundingHierarchy, BHShape};
-//! use dynbvh_f32::bvh::BVH;
-//! use dynbvh_f32::{Point3, Vector3};
-//! use dynbvh_f32::ray::Ray;
-//! use dynbvh_f32::Real;
+//! use bvh::aabb::{AABB, Bounded};
+//! use bvh::bounding_hierarchy::{BoundingHierarchy, BHShape};
+//! use bvh::bvh::BVH;
+//! use bvh::{Point3, Vector3};
+//! use bvh::ray::Ray;
+//! use bvh::Real;
 //!
 //! let origin = Point3::new(0.0,0.0,0.0);
 //! let direction = Vector3::new(1.0,0.0,0.0);

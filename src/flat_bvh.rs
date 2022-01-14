@@ -162,12 +162,12 @@ impl BVH {
     /// # Example
     ///
     /// ```
-    /// use dynbvh_f32::aabb::{AABB, Bounded};
-    /// use dynbvh_f32::bvh::BVH;
-    /// use dynbvh_f32::{Point3, Vector3};
-    /// use dynbvh_f32::ray::Ray;
-    /// use dynbvh_f32::Real;
-    /// # use dynbvh_f32::bounding_hierarchy::BHShape;
+    /// use bvh::aabb::{AABB, Bounded};
+    /// use bvh::bvh::BVH;
+    /// use bvh::{Point3, Vector3};
+    /// use bvh::ray::Ray;
+    /// use bvh::Real;
+    /// # use bvh::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
     /// #     pub pos: Point3,
@@ -251,12 +251,12 @@ impl BVH {
     /// # Example
     ///
     /// ```
-    /// use dynbvh_f32::aabb::{AABB, Bounded};
-    /// use dynbvh_f32::bvh::BVH;
-    /// use dynbvh_f32::{Point3, Vector3};
-    /// use dynbvh_f32::ray::Ray;
-    /// use dynbvh_f32::Real;
-    /// # use dynbvh_f32::bounding_hierarchy::BHShape;
+    /// use bvh::aabb::{AABB, Bounded};
+    /// use bvh::bvh::BVH;
+    /// use bvh::{Point3, Vector3};
+    /// use bvh::ray::Ray;
+    /// use bvh::Real;
+    /// # use bvh::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
     /// #     pub pos: Point3,
@@ -332,13 +332,13 @@ impl BoundingHierarchy for FlatBVH {
     /// # Examples
     ///
     /// ```
-    /// use dynbvh_f32::aabb::{AABB, Bounded};
-    /// use dynbvh_f32::bounding_hierarchy::BoundingHierarchy;
-    /// use dynbvh_f32::flat_bvh::FlatBVH;
-    /// use dynbvh_f32::{Point3, Vector3};
-    /// use dynbvh_f32::ray::Ray;
-    /// use dynbvh_f32::Real;
-    /// # use dynbvh_f32::bounding_hierarchy::BHShape;
+    /// use bvh::aabb::{AABB, Bounded};
+    /// use bvh::bounding_hierarchy::BoundingHierarchy;
+    /// use bvh::flat_bvh::FlatBVH;
+    /// use bvh::{Point3, Vector3};
+    /// use bvh::ray::Ray;
+    /// use bvh::Real;
+    /// # use bvh::bounding_hierarchy::BHShape;
     /// # pub struct UnitBox {
     /// #     pub id: i32,
     /// #     pub pos: Point3,

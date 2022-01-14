@@ -1,2 +1,2 @@
 [workspace]
-members = ["bvh-lib", "dynbvh-f32", "dynbvh-f64"]
+members = ["bvh-lib", "bvh", "bvh-f64"]

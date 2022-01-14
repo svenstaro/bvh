@@ -6,8 +6,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dynbvh-f32 = { path = "../dynbvh-f32" }
-dynbvh-f64 = { path = "../dynbvh-f64" }
+bvh = { path = "../bvh" }
+bvh-f64 = { path = "../bvh-f64" }
 interoptopus = "0.13.12"
 interoptopus_backend_csharp = "0.13.12"
 flexi_logger = "0.19.3"
@@ -16,5 +16,5 @@ log = "0.4.14"
 glam = "0.20"
 
 [lib]
-name="bvh_f64"
+name="bvh_lib"
 crate-type = ["rlib", "dylib"]
