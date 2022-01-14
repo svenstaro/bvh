@@ -130,10 +130,10 @@ mod utils;
 #[cfg(test)]
 mod testbase;
 
-use crate::bvh::BVH;
+
 use aabb::{Bounded, AABB};
 use bounding_hierarchy::BHShape;
-use num::{FromPrimitive, Integer};
+
 
 #[derive(Debug)]
 struct Sphere {

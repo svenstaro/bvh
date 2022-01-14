@@ -7,12 +7,12 @@
 //!
 
 use crate::bounding_hierarchy::BHShape;
-use crate::{aabb::AABB, Real};
+
 use crate::{bvh::*, EPSILON};
-use std::fmt::Debug;
+
 
 use log::info;
-use rand::{thread_rng, Rng};
+
 
 impl BVH {
     /// Optimizes the `BVH` by batch-reorganizing updated nodes.
@@ -501,7 +501,7 @@ mod tests {
     use crate::bounding_hierarchy::BHShape;
     use crate::bvh::{BVHNode, BVH};
     use crate::testbase::{
-        build_some_bh, create_n_cubes, default_bounds, randomly_transform_scene, Triangle, UnitBox,
+        build_some_bh, create_n_cubes, default_bounds, randomly_transform_scene, UnitBox,
     };
     use crate::Point3;
     use crate::EPSILON;

@@ -12,7 +12,7 @@ use crate::utils::{joint_aabb_of_shapes, Bucket};
 use crate::EPSILON;
 use crate::{Point3, Real};
 use rayon::prelude::*;
-use smallvec::SmallVec;
+
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::iter::repeat;
