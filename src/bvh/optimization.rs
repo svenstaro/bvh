@@ -21,7 +21,7 @@ impl BVH {
     /// Needs all the scene's shapes, plus the indices of the shapes that were updated.
     ///
     #[cfg(not(feature = "serde_impls"))]
-    pub fn optimize<'a, Shape: BHShape + Clone>(
+    pub fn optimize<'a, Shape: BHShape>(
         &mut self,
         refit_shape_indices: impl IntoIterator<Item = &'a usize> + Copy,
         shapes: &mut [Shape],
