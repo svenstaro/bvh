@@ -3,9 +3,11 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use bvh_f64::aabb::{Bounded, AABB};
 use bvh_f64::bounding_hierarchy::BHShape;
 use bvh_f64::bvh::BVH;
+use bvh_f64::capsule::Capsule;
+use bvh_f64::obb::OBB;
 use bvh_f64::ray::Ray;
-use bvh_f64::shapes::{Capsule, Sphere, OBB};
 use bvh_f64::Vector3;
+use bvh_f64::sphere::Sphere;
 use flexi_logger::{detailed_format, FileSpec, Logger};
 use glam::DQuat;
 use interoptopus::lang::c::{

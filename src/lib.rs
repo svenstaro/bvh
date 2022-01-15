@@ -120,19 +120,18 @@ pub type Real = f32;
 /// TODO: replace by/add ULPS/relative float comparison methods.
 pub const EPSILON: Real = 0.00001;
 
-pub mod aabb;
 pub mod axis;
 pub mod bounding_hierarchy;
 pub mod bvh;
 pub mod flat_bvh;
-pub mod ray;
-pub mod shapes;
+mod shapes;
 mod utils;
 
 #[cfg(test)]
 mod testbase;
 
-
+pub use shapes::*;
+//pub use shapes::{Ray, AABB, OBB, Capsule, Sphere};
 use aabb::{Bounded, AABB};
 use bounding_hierarchy::BHShape;
 
@@ -194,83 +193,3 @@ impl Bounded for Triangle {
         self.aabb
     }
 }
-
-impl BHShape for Triangle {
-    fn set_bh_node_index(&mut self, index: usize) {
-        self.node_index = index;
-    }
-
-    fn bh_node_index(&self) -> usize {
-        self.node_index
-    }
-}
-
-// impl<I: FromPrimitive + Integer> FromRawVertex<I> for Triangle {
-//     fn process(
-//         vertices: Vec<(f32, f32, f32, f32)>,
-//         _: Vec<(f32, f32, f32)>,
-//         _: Vec<(f32, f32, f32)>,
-//         polygons: Vec<Polygon>,
-//     ) -> ObjResult<(Vec<Self>, Vec<I>)> {
-//         // Convert the vertices to `Point3`s.
-//         let points = vertices
-//             .into_iter()
-//             .map(|v| Point3::new(v.0.into(), v.1.into(), v.2.into()))
-//             .collect::<Vec<_>>();
-
-//         // Estimate for the number of triangles, assuming that each polygon is a triangle.
-//         let mut triangles = Vec::with_capacity(polygons.len());
-//         {
-//             let mut push_triangle = |indices: &Vec<usize>| {
-//                 let mut indices_iter = indices.iter();
-//                 let anchor = points[*indices_iter.next().unwrap()];
-//                 let mut second = points[*indices_iter.next().unwrap()];
-//                 for third_index in indices_iter {
-//                     let third = points[*third_index];
-//                     triangles.push(Triangle::new(anchor, second, third));
-//                     second = third;
-//                 }
-//             };
-
-//             // Iterate over the polygons and populate the `Triangle`s vector.
-//             for polygon in polygons.into_iter() {
-//                 match polygon {
-//                     Polygon::P(ref vec) => push_triangle(vec),
-//                     Polygon::PT(ref vec) | Polygon::PN(ref vec) => {
-//                         push_triangle(&vec.iter().map(|vertex| vertex.0).collect())
-//                     }
-//                     Polygon::PTN(ref vec) => {
-//                         push_triangle(&vec.iter().map(|vertex| vertex.0).collect())
-//                     }
-//                 }
-//             }
-//         }
-//         Ok((triangles, Vec::new()))
-//     }
-// }
-
-// pub fn load_sponza_scene() -> (Vec<Triangle>, AABB) {
-//     use std::fs::File;
-//     use std::io::BufReader;
-
-//     let file_input =
-//         BufReader::new(File::open("media/sponza.obj").expect("Failed to open .obj file."));
-//     let sponza_obj: Obj<Triangle> = load_obj(file_input).expect("Failed to decode .obj file data.");
-//     let triangles = sponza_obj.vertices;
-
-//     let mut bounds = AABB::empty();
-//     for triangle in &triangles {
-//         bounds.join_mut(&triangle.aabb());
-//     }
-
-//     (triangles, bounds)
-// }
-
-// pub fn main() {
-//     let (mut triangles, _bounds) = load_sponza_scene();
-//     let mut bvh = BVH::build(triangles.as_mut_slice());
-
-//     for _i in 0..10 {
-//         bvh.rebuild(triangles.as_mut_slice());
-//     }
-// }

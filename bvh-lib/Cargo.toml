@@ -18,3 +18,13 @@ glam = "0.20"
 [lib]
 name="bvh_lib"
 crate-type = ["rlib", "dylib"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+debug = true
+
+[profile.bench]
+lto = true
+codegen-units = 1
+debug = true

@@ -43,6 +43,9 @@ pub struct Ray {
     sign_z: usize,
 }
 
+
+
+
 /// A struct which is returned by the `intersects_triangle` method.
 pub struct Intersection {
     /// Distance from the ray origin to the intersection point.
@@ -53,14 +56,26 @@ pub struct Intersection {
 
     /// V coordinate of the intersection.
     pub v: Real,
+
+    /// Normal of the intersection
+    pub norm: Vector3,
+
+    /// Whether the intersect was a backface
+    pub back_face: bool
 }
 
 impl Intersection {
     /// Constructs an `Intersection`. `distance` should be set to positive infinity,
     /// if the intersection does not occur.
-    pub fn new(distance: Real, u: Real, v: Real) -> Intersection {
-        Intersection { distance, u, v }
+    pub fn new(distance: Real, u: Real, v: Real, norm: Vector3, back_face: bool) -> Intersection {
+        Intersection { distance, u, v, norm, back_face }
     }
+}
+
+/// This trait can be implemented on anything that can intersect with a `Ray`
+pub trait IntersectionRay {
+    /// Returns true if there is an intersection with the given `Ray`
+    fn intersects_ray(&self, ray: &Ray, t_min: Real, t_max: Real) -> Option<Intersection>;
 }
 
 impl IntersectionAABB for Ray {
@@ -279,7 +294,7 @@ impl Ray {
         // If backface culling is not desired write:
         // det < EPSILON && det > -EPSILON
         if det < EPSILON {
-            return Intersection::new(Real::INFINITY, 0.0, 0.0);
+            return Intersection::new(Real::INFINITY, 0.0, 0.0, Vector3::ZERO, false);
         }
 
         let inv_det = 1.0 / det;
@@ -292,7 +307,7 @@ impl Ray {
 
         // Test bounds: u < 0 || u > 1 => outside of triangle
         if !(0.0..=1.0).contains(&u) {
-            return Intersection::new(Real::INFINITY, u, 0.0);
+            return Intersection::new(Real::INFINITY, u, 0.0, Vector3::ZERO, false);
         }
 
         // Prepare to test v parameter
@@ -302,15 +317,15 @@ impl Ray {
         let v = self.direction.dot(v_vec) * inv_det;
         // The intersection lies outside of the triangle
         if v < 0.0 || u + v > 1.0 {
-            return Intersection::new(Real::INFINITY, u, v);
+            return Intersection::new(Real::INFINITY, u, v, Vector3::ZERO, false);
         }
 
         let dist = a_to_c.dot(v_vec) * inv_det;
 
         if dist > EPSILON {
-            Intersection::new(dist, u, v)
+            Intersection::new(dist, u, v, Vector3::ZERO, false)
         } else {
-            Intersection::new(Real::INFINITY, u, v)
+            Intersection::new(Real::INFINITY, u, v, Vector3::ZERO, false)
         }
     }
 
@@ -318,7 +333,19 @@ impl Ray {
     pub fn at(&self, dist: Real) -> Vector3 {
         self.origin + (self.direction * dist)
     }
+
+    /// Given an outward normal returns whether it hit a back_face and adjusts the normal
+    pub fn face_normal(&self, out_norm: Vector3) -> (Vector3, bool) {
+        let back_face = self.direction.dot(out_norm) >= 0.;
+        let norm = if back_face {
+            -out_norm
+        } else {
+            out_norm
+        };
+        (norm, back_face)
+    }
 }
+
 
 #[cfg(test)]
 mod tests {

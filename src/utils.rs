@@ -1,5 +1,6 @@
 //! Utilities module.
 
+use crate::{Point3, Vector3, Real};
 use crate::aabb::AABB;
 use crate::bounding_hierarchy::BHShape;
 
@@ -63,6 +64,13 @@ pub fn joint_aabb_of_shapes<Shape: BHShape>(indices: &[usize], shapes: &[Shape])
         centroid.grow_mut(&shape.aabb().center());
     }
     (aabb, centroid)
+}
+
+/// Helper function that given a line segment and a target point, finds the closest point on the line segment to target
+pub fn nearest_point_on_line(start: &Point3, dir: &Vector3, len: Real, target: &Point3) -> Point3 {
+    let v = *target - *start;
+    let d = v.dot(*dir);
+    *start + (*dir * d.clamp(0.0, len))
 }
 
 #[cfg(test)]
