@@ -609,6 +609,12 @@ impl BVH {
     /// [`BVH`]: struct.BVH.html
     ///
     pub fn build<Shape: BHShape>(shapes: &mut [Shape]) -> BVH {
+        if shapes.len() == 0 {
+            return BVH {
+                nodes: Vec::new()
+            }
+        }
+
         let mut indices = (0..shapes.len()).collect::<Vec<usize>>();
         let expected_node_count = shapes.len() * 2 - 1;
         let mut nodes = Vec::with_capacity(expected_node_count);
@@ -631,10 +637,8 @@ impl BVH {
     pub fn rebuild<Shape: BHShape>(&mut self, shapes: &mut [Shape]) {
         let mut indices = (0..shapes.len()).collect::<Vec<usize>>();
         let expected_node_count = shapes.len() * 2 - 1;
-        let additional_nodes = self.nodes.capacity() as i32 - expected_node_count as i32;
-        if additional_nodes > 0 {
-            self.nodes.reserve(additional_nodes as usize);
-        }
+        self.nodes.clear();
+        self.nodes.reserve(expected_node_count);
         unsafe {
             self.nodes.set_len(expected_node_count);
         }
@@ -668,11 +672,11 @@ impl BVH {
     /// [`BVH`]: struct.BVH.html
     /// [`AABB`]: ../aabb/struct.AABB.html
     ///
-    pub fn traverse_iterator<'a, Shape: Bounded>(
-        &'a self,
-        test: &'a impl IntersectionAABB,
-        shapes: &'a [Shape],
-    ) -> BVHTraverseIterator<Shape> {
+    pub fn traverse_iterator<'bvh, 'test, 'shapes, Shape: Bounded>(
+        &'bvh self,
+        test: &'test impl IntersectionAABB,
+        shapes: &'shapes [Shape],
+    ) -> BVHTraverseIterator<'bvh, 'test, 'shapes, Shape> {
         BVHTraverseIterator::new(self, test, shapes)
     }
 

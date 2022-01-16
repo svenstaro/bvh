@@ -6,13 +6,13 @@ use crate::bvh::{BVHNode, BVH};
 
 /// Iterator to traverse a [`BVH`] without memory allocations
 #[allow(clippy::upper_case_acronyms)]
-pub struct BVHTraverseIterator<'a, Shape: Bounded> {
+pub struct BVHTraverseIterator<'bvh, 'test, 'shapes, Shape: Bounded> {
     /// Reference to the BVH to traverse
-    bvh: &'a BVH,
+    bvh: &'bvh BVH,
     /// Reference to the input ray
-    test: &'a dyn IntersectionAABB,
+    test: &'test dyn IntersectionAABB,
     /// Reference to the input shapes array
-    shapes: &'a [Shape],
+    shapes: &'shapes [Shape],
     /// Traversal stack. Allocates if exceeds depth of 64
     stack: SmallVec<[usize; 64]>,
     /// Position of the iterator in bvh.nodes
@@ -21,9 +21,9 @@ pub struct BVHTraverseIterator<'a, Shape: Bounded> {
     has_node: bool,
 }
 
-impl<'a, Shape: Bounded> BVHTraverseIterator<'a, Shape> {
+impl<'bvh, 'test, 'shapes, Shape: Bounded> BVHTraverseIterator<'bvh, 'test, 'shapes, Shape> {
     /// Creates a new `BVHTraverseIterator`
-    pub fn new(bvh: &'a BVH, test: &'a impl IntersectionAABB, shapes: &'a [Shape]) -> Self {
+    pub fn new(bvh: &'bvh BVH, test: &'test impl IntersectionAABB, shapes: &'shapes [Shape]) -> Self {
         BVHTraverseIterator {
             bvh,
             test,
@@ -102,10 +102,10 @@ impl<'a, Shape: Bounded> BVHTraverseIterator<'a, Shape> {
     }
 }
 
-impl<'a, Shape: Bounded> Iterator for BVHTraverseIterator<'a, Shape> {
-    type Item = &'a Shape;
+impl<'bvh, 'test, 'shapes, Shape: Bounded> Iterator for BVHTraverseIterator<'bvh, 'test, 'shapes, Shape> {
+    type Item = &'shapes Shape;
 
-    fn next(&mut self) -> Option<&'a Shape> {
+    fn next(&mut self) -> Option<&'shapes Shape> {
         loop {
             if self.is_stack_empty() && !self.has_node {
                 // Completed traversal.

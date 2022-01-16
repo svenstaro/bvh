@@ -1,8 +1,11 @@
 //! This module defines a Sphere and it's intersection algorithms
-use crate::{Point3, Real, bounding_hierarchy::IntersectionAABB, aabb::AABB, ray::{IntersectionRay, Ray, Intersection}, Vector3};
+use std::f32::consts::PI;
+
+use crate::{Point3, Real, bounding_hierarchy::IntersectionAABB, aabb::{AABB, Bounded}, ray::{IntersectionRay, Ray, Intersection}, Vector3};
 
 
 /// A representation of a Sphere
+#[derive(Debug, Clone, Copy)]
 pub struct Sphere {
     /// Center of the sphere
     pub center: Point3,
@@ -46,8 +49,24 @@ impl IntersectionRay for Sphere {
             }
         }
 
-        let out_norm = (ray.at(toi) - self.center).normalize();
+        let hit = ray.at(toi);
+
+        let out_norm = (hit - self.center) / self.radius;
+
+        let theta = (-out_norm.y).acos();
+        let phi = (-out_norm.z).atan2(out_norm.x) + PI;
+        let u = phi / (2. * PI);
+        let v = theta / PI;
+
         let (norm, back_face) = ray.face_normal(out_norm);
-        Some(Intersection::new(toi, 0., 0., norm, back_face))
+        Some(Intersection::new(toi, u, v, norm, back_face))
+    }
+}
+
+impl Bounded for Sphere {
+    fn aabb(&self) -> AABB {
+        let min = self.center - Vector3::splat(self.radius);
+        let max = self.center + Vector3::splat(self.radius);
+        AABB::with_bounds(min, max)
     }
 }

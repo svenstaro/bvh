@@ -7,7 +7,7 @@ use crate::{Point3, Vector3};
 use crate::{Real, EPSILON};
 
 /// A struct which defines a ray and some of its cached values.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Ray {
     /// The ray origin.
     pub origin: Point3,
@@ -47,6 +47,7 @@ pub struct Ray {
 
 
 /// A struct which is returned by the `intersects_triangle` method.
+#[derive(Debug, Clone, Copy)]
 pub struct Intersection {
     /// Distance from the ray origin to the intersection point.
     pub distance: Real,
@@ -323,7 +324,11 @@ impl Ray {
         let dist = a_to_c.dot(v_vec) * inv_det;
 
         if dist > EPSILON {
-            Intersection::new(dist, u, v, Vector3::ZERO, false)
+            let mut normal = Vector3::ZERO;
+            normal.x = (a_to_b.y * a_to_c.z) - (a_to_b.z * a_to_c.y);
+            normal.y = (a_to_b.z * a_to_c.x) - (a_to_b.x * a_to_c.z);
+            normal.z = (a_to_b.x * a_to_c.y) - (a_to_b.y * a_to_c.x);
+            Intersection::new(dist, u, v, normal.normalize(), false)
         } else {
             Intersection::new(Real::INFINITY, u, v, Vector3::ZERO, false)
         }

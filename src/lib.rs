@@ -134,33 +134,7 @@ pub use shapes::*;
 //pub use shapes::{Ray, AABB, OBB, Capsule, Sphere};
 use aabb::{Bounded, AABB};
 use bounding_hierarchy::BHShape;
-
-
-#[derive(Debug)]
-struct Sphere {
-    position: Point3,
-    radius: Real,
-    node_index: usize,
-}
-
-impl Bounded for Sphere {
-    fn aabb(&self) -> AABB {
-        let half_size = Vector3::new(self.radius, self.radius, self.radius);
-        let min = self.position - half_size;
-        let max = self.position + half_size;
-        AABB::with_bounds(min, max)
-    }
-}
-
-impl BHShape for Sphere {
-    fn set_bh_node_index(&mut self, index: usize) {
-        self.node_index = index;
-    }
-
-    fn bh_node_index(&self) -> usize {
-        self.node_index
-    }
-}
+use shapes::ray::IntersectionRay;
 
 /// A triangle struct. Instance of a more complex `Bounded` primitive.
 #[derive(Debug)]
@@ -172,18 +146,16 @@ pub struct Triangle {
     /// Third point on the triangle
     pub c: Point3,
     aabb: AABB,
-    node_index: usize,
 }
 
 impl Triangle {
-    /// Creates a new triangle given a clockwise set of points
+    /// Creates a new triangle given a counter clockwise set of points
     pub fn new(a: Point3, b: Point3, c: Point3) -> Triangle {
         Triangle {
             a,
             b,
             c,
             aabb: AABB::empty().grow(&a).grow(&b).grow(&c),
-            node_index: 0,
         }
     }
 }
@@ -191,5 +163,16 @@ impl Triangle {
 impl Bounded for Triangle {
     fn aabb(&self) -> AABB {
         self.aabb
+    }
+}
+
+impl IntersectionRay for Triangle {
+    fn intersects_ray(&self, ray: &ray::Ray, t_min: Real, t_max: Real) -> Option<ray::Intersection> {
+        let inter = ray.intersects_triangle(&self.a, &self.b, &self.c);
+        if inter.distance < Real::INFINITY {
+            Some(inter)
+        } else {
+            None
+        }
     }
 }
