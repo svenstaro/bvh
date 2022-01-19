@@ -4,7 +4,6 @@ pub mod obb;
 pub mod ray;
 pub mod sphere;
 
-
 #[cfg(test)]
 mod tests {
     use crate::aabb::AABB;

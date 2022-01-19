@@ -1,8 +1,8 @@
 //! Utilities module.
 
-use crate::{Point3, Vector3, Real};
 use crate::aabb::AABB;
 use crate::bounding_hierarchy::BHShape;
+use crate::{Point3, Real, Vector3};
 
 /// Concatenates the list of vectors into a single vector.
 /// Drains the elements from the source `vectors`.

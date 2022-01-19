@@ -610,9 +610,7 @@ impl BVH {
     ///
     pub fn build<Shape: BHShape>(shapes: &mut [Shape]) -> BVH {
         if shapes.len() == 0 {
-            return BVH {
-                nodes: Vec::new()
-            }
+            return BVH { nodes: Vec::new() };
         }
 
         let mut indices = (0..shapes.len()).collect::<Vec<usize>>();
@@ -629,7 +627,6 @@ impl BVH {
         BVH { nodes }
     }
 
-    
     /// Rebuilds a [`BVH`] from the `shapes` slice. Reuses the existing allocated space
     ///
     /// [`BVH`]: struct.BVH.html

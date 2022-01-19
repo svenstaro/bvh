@@ -21,7 +21,9 @@ pub struct BVHTraverseIterator<'bvh, 'test, 'shapes, Shape: Bounded, Test: Inter
     has_node: bool,
 }
 
-impl<'bvh, 'test, 'shapes, Shape: Bounded, Test: IntersectionAABB> BVHTraverseIterator<'bvh, 'test, 'shapes, Shape, Test> {
+impl<'bvh, 'test, 'shapes, Shape: Bounded, Test: IntersectionAABB>
+    BVHTraverseIterator<'bvh, 'test, 'shapes, Shape, Test>
+{
     /// Creates a new `BVHTraverseIterator`
     pub fn new(bvh: &'bvh BVH, test: &'test Test, shapes: &'shapes [Shape]) -> Self {
         BVHTraverseIterator {
@@ -102,7 +104,9 @@ impl<'bvh, 'test, 'shapes, Shape: Bounded, Test: IntersectionAABB> BVHTraverseIt
     }
 }
 
-impl<'bvh, 'test, 'shapes, Shape: Bounded, Test: IntersectionAABB> Iterator for BVHTraverseIterator<'bvh, 'test, 'shapes, Shape, Test> {
+impl<'bvh, 'test, 'shapes, Shape: Bounded, Test: IntersectionAABB> Iterator
+    for BVHTraverseIterator<'bvh, 'test, 'shapes, Shape, Test>
+{
     type Item = &'shapes Shape;
 
     fn next(&mut self) -> Option<&'shapes Shape> {

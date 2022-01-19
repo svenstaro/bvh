@@ -1,6 +1,5 @@
 //! This module defines an Oriented Bounding Box and its intersection properties
-use crate::{Quat, Vector3, aabb::AABB, bounding_hierarchy::IntersectionAABB, Mat4};
-
+use crate::{aabb::AABB, bounding_hierarchy::IntersectionAABB, Mat4, Quat, Vector3};
 
 /// Represents a box that can be rotated in any direction
 pub struct OBB {

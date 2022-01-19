@@ -10,9 +10,7 @@ use crate::bounding_hierarchy::BHShape;
 
 use crate::{bvh::*, EPSILON};
 
-
 use log::info;
-
 
 impl BVH {
     /// Optimizes the `BVH` by batch-reorganizing updated nodes.

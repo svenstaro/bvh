@@ -6,8 +6,8 @@ use bvh_f64::bvh::BVH;
 use bvh_f64::capsule::Capsule;
 use bvh_f64::obb::OBB;
 use bvh_f64::ray::Ray;
-use bvh_f64::Vector3;
 use bvh_f64::sphere::Sphere;
+use bvh_f64::Vector3;
 use flexi_logger::{detailed_format, FileSpec, Logger};
 use glam::DQuat;
 use interoptopus::lang::c::{

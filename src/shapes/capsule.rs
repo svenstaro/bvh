@@ -1,6 +1,8 @@
 //! This module defines Capsules and their intersection algorithms
-use crate::{Point3, Vector3, Real, bounding_hierarchy::IntersectionAABB, aabb::AABB, utils::nearest_point_on_line};
-
+use crate::{
+    aabb::AABB, bounding_hierarchy::IntersectionAABB, utils::nearest_point_on_line, Point3, Real,
+    Vector3,
+};
 
 /// Representation of a capsule
 pub struct Capsule {

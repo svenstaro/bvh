@@ -1,6 +1,11 @@
 //! This module defines a Sphere and it's intersection algorithms
 
-use crate::{Point3, Real, bounding_hierarchy::IntersectionAABB, aabb::{AABB, Bounded}, ray::{IntersectionRay, Ray, Intersection}, Vector3, PI};
+use crate::{
+    aabb::{Bounded, AABB},
+    bounding_hierarchy::IntersectionAABB,
+    ray::{Intersection, IntersectionRay, Ray},
+    Point3, Real, Vector3, PI,
+};
 
 /// A representation of a Sphere
 #[derive(Debug, Clone, Copy)]
@@ -31,7 +36,7 @@ impl IntersectionRay for Sphere {
         let a = ray.direction.length_squared();
         let half_b = oc.dot(ray.direction);
         let c = oc.length_squared() - self.radius * self.radius;
-        let discriminant = half_b*half_b - a*c;
+        let discriminant = half_b * half_b - a * c;
 
         if discriminant < 0. {
             return None;
@@ -43,7 +48,7 @@ impl IntersectionRay for Sphere {
         if toi < t_min || t_max < toi {
             toi = (-half_b + sqrtd) / a;
             if toi < t_min || t_max < toi {
-                return None
+                return None;
             }
         }
 

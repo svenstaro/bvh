@@ -169,7 +169,12 @@ impl Bounded for Triangle {
 }
 
 impl IntersectionRay for Triangle {
-    fn intersects_ray(&self, ray: &ray::Ray, t_min: Real, t_max: Real) -> Option<ray::Intersection> {
+    fn intersects_ray(
+        &self,
+        ray: &ray::Ray,
+        t_min: Real,
+        t_max: Real,
+    ) -> Option<ray::Intersection> {
         let inter = ray.intersects_triangle(&self.a, &self.b, &self.c);
         if inter.distance < Real::INFINITY {
             Some(inter)

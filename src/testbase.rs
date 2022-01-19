@@ -3,7 +3,6 @@
 
 use std::collections::HashSet;
 
-
 use crate::{Point3, Real, Vector3};
 use num::{FromPrimitive, Integer};
 use obj::raw::object::Polygon;
@@ -12,7 +11,6 @@ use proptest::prelude::*;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
-
 
 use crate::aabb::{Bounded, AABB};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};

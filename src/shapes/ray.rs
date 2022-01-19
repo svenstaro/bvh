@@ -43,9 +43,6 @@ pub struct Ray {
     sign_z: usize,
 }
 
-
-
-
 /// A struct which is returned by the `intersects_triangle` method.
 #[derive(Debug, Clone, Copy)]
 pub struct Intersection {
@@ -62,14 +59,20 @@ pub struct Intersection {
     pub norm: Vector3,
 
     /// Whether the intersect was a backface
-    pub back_face: bool
+    pub back_face: bool,
 }
 
 impl Intersection {
     /// Constructs an `Intersection`. `distance` should be set to positive infinity,
     /// if the intersection does not occur.
     pub fn new(distance: Real, u: Real, v: Real, norm: Vector3, back_face: bool) -> Intersection {
-        Intersection { distance, u, v, norm, back_face }
+        Intersection {
+            distance,
+            u,
+            v,
+            norm,
+            back_face,
+        }
     }
 }
 
@@ -334,6 +337,58 @@ impl Ray {
         }
     }
 
+    /// Returns the t_min of the aabb intersection
+    pub fn intersects_aabb_dist(&self, aabb: &AABB) -> Option<Real> {
+        let x_min = (aabb[self.sign_x].x - self.origin.x) * self.inv_direction.x;
+        let x_max = (aabb[1 - self.sign_x].x - self.origin.x) * self.inv_direction.x;
+        let mut ray_min = x_min;
+        let mut ray_max = x_max;
+
+        let y_min = (aabb[self.sign_y].y - self.origin.y) * self.inv_direction.y;
+        let y_max = (aabb[1 - self.sign_y].y - self.origin.y) * self.inv_direction.y;
+
+        if (ray_min > y_max) || (y_min > ray_max) {
+            return None;
+        }
+
+        if y_min > ray_min {
+            ray_min = y_min;
+        }
+        // Using the following solution significantly decreases the performance
+        // ray_min = ray_min.max(y_min);
+
+        if y_max < ray_max {
+            ray_max = y_max;
+        }
+        // Using the following solution significantly decreases the performance
+        // ray_max = ray_max.min(y_max);
+
+        let z_min = (aabb[self.sign_z].z - self.origin.z) * self.inv_direction.z;
+        let z_max = (aabb[1 - self.sign_z].z - self.origin.z) * self.inv_direction.z;
+
+        if (ray_min > z_max) || (z_min > ray_max) {
+            return None;
+        }
+
+        // Only required for bounded intersection intervals.
+        // if z_min > ray_min {
+        // ray_min = z_min;
+        // }
+
+        if z_max < ray_max {
+            ray_max = z_max;
+        }
+        // Using the following solution significantly decreases the performance
+        // ray_max = ray_max.min(y_max);
+
+        if ray_max < 0.0 {
+            return None;
+        } else {
+            let min = Vector3::new(x_min, y_min, z_min).length_squared();
+            Some(min)
+        }
+    }
+
     /// Returns the position the front of the `Ray` is after traveling dist
     pub fn at(&self, dist: Real) -> Vector3 {
         self.origin + (self.direction * dist)
@@ -342,15 +397,10 @@ impl Ray {
     /// Given an outward normal returns whether it hit a back_face and adjusts the normal
     pub fn face_normal(&self, out_norm: Vector3) -> (Vector3, bool) {
         let back_face = self.direction.dot(out_norm) >= 0.;
-        let norm = if back_face {
-            -out_norm
-        } else {
-            out_norm
-        };
+        let norm = if back_face { -out_norm } else { out_norm };
         (norm, back_face)
     }
 }
-
 
 #[cfg(test)]
 mod tests {

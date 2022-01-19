@@ -180,11 +180,11 @@ pub trait BoundingHierarchy {
 
 /// This trait can be implemented on anything that can intersect with an `AABB`
 /// Used to traverse the `BVH`
-/// 
+///
 /// [`AABB`]: ../aabb/struct.AABB.html
-/// 
+///
 /// [`BVH`]: ../bvh/struct.BVH.html
-/// 
+///
 pub trait IntersectionAABB {
     /// Returns true if there is an intersection with the given AABB
     fn intersects_aabb(&self, aabb: &AABB) -> bool;
