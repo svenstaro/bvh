@@ -1,8 +1,6 @@
 //! This module defines a Sphere and it's intersection algorithms
-use std::f32::consts::PI;
 
-use crate::{Point3, Real, bounding_hierarchy::IntersectionAABB, aabb::{AABB, Bounded}, ray::{IntersectionRay, Ray, Intersection}, Vector3};
-
+use crate::{Point3, Real, bounding_hierarchy::IntersectionAABB, aabb::{AABB, Bounded}, ray::{IntersectionRay, Ray, Intersection}, Vector3, PI};
 
 /// A representation of a Sphere
 #[derive(Debug, Clone, Copy)]

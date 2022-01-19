@@ -672,11 +672,11 @@ impl BVH {
     /// [`BVH`]: struct.BVH.html
     /// [`AABB`]: ../aabb/struct.AABB.html
     ///
-    pub fn traverse_iterator<'bvh, 'test, 'shapes, Shape: Bounded>(
+    pub fn traverse_iterator<'bvh, 'test, 'shapes, Shape: Bounded, Test: IntersectionAABB>(
         &'bvh self,
-        test: &'test impl IntersectionAABB,
+        test: &'test Test,
         shapes: &'shapes [Shape],
-    ) -> BVHTraverseIterator<'bvh, 'test, 'shapes, Shape> {
+    ) -> BVHTraverseIterator<'bvh, 'test, 'shapes, Shape, Test> {
         BVHTraverseIterator::new(self, test, shapes)
     }
 

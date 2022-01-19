@@ -119,6 +119,8 @@ pub type Real = f32;
 /// A minimal floating value used as a lower bound.
 /// TODO: replace by/add ULPS/relative float comparison methods.
 pub const EPSILON: Real = 0.00001;
+/// Const for PI
+pub const PI: Real = std::f64::consts::PI as Real;
 
 pub mod axis;
 pub mod bounding_hierarchy;
