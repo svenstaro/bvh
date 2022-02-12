@@ -492,6 +492,7 @@ fn bindings_csharp() -> Result<(), Error> {
     Ok(())
 }
 
+#[allow(dead_code)]
 fn gen_bindings() {
     bindings_csharp().unwrap();
 }

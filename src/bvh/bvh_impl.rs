@@ -11,13 +11,9 @@ use crate::bvh::iter::BVHTraverseIterator;
 use crate::utils::{joint_aabb_of_shapes, Bucket};
 use crate::EPSILON;
 use crate::{Point3, Real};
-use rayon::prelude::*;
 
-use std::borrow::BorrowMut;
 use std::cell::RefCell;
-use std::iter::repeat;
 use std::mem::MaybeUninit;
-use std::ptr::slice_from_raw_parts;
 use std::slice;
 
 const NUM_BUCKETS: usize = 6;
@@ -204,12 +200,11 @@ impl BVHNode {
     /// Returns the depth of the node. The root node has depth `0`.
     pub fn depth(&self, nodes: &[BVHNode]) -> u32 {
         let parent_i = self.parent();
-        if parent_i == 0 {
-            if nodes[parent_i].eq(&self) {
-                return 0;
-            }
+        if parent_i == 0 && nodes[parent_i].eq(self) {
+            0
+        } else {
+            1 + nodes[parent_i].depth(nodes)
         }
-        return 1 + nodes[parent_i].depth(nodes);
     }
 
     /// Gets the `AABB` for a `BVHNode`.
@@ -247,20 +242,12 @@ impl BVHNode {
         }
     }
 
-    /// The build function sometimes needs to add nodes while their data is not available yet.
-    /// A dummy cerated by this function serves the purpose of being changed later on.
-    fn create_dummy() -> BVHNode {
-        BVHNode::Leaf {
-            parent_index: 0,
-            shape_index: 0,
-        }
-    }
-
     /// Builds a [`BVHNode`] recursively using SAH partitioning.
     /// Returns the index of the new node in the nodes vector.
     ///
     /// [`BVHNode`]: enum.BVHNode.html
     ///
+    #[allow(clippy::too_many_arguments)]
     pub fn build<T: BHShape>(
         shapes: &mut [T],
         indices: &mut [usize],
@@ -456,6 +443,7 @@ impl BVHNode {
         node_index
     }
 
+    #[allow(clippy::type_complexity)]
     fn build_buckets<'a, T: BHShape>(
         shapes: &mut [T],
         indices: &'a mut [usize],
@@ -606,7 +594,7 @@ impl BVH {
     /// [`BVH`]: struct.BVH.html
     ///
     pub fn build<Shape: BHShape>(shapes: &mut [Shape]) -> BVH {
-        if shapes.len() == 0 {
+        if shapes.is_empty() {
             return BVH { nodes: Vec::new() };
         }
 
@@ -702,7 +690,7 @@ impl BVH {
                 ..
             } => {
                 let depth = nodes[node_index].depth(nodes);
-                let padding: String = repeat(" ").take(depth as usize).collect();
+                let padding: String = " ".repeat(depth as usize);
                 println!(
                     "{}node={} parent={}",
                     padding,
@@ -716,7 +704,7 @@ impl BVH {
             }
             BVHNode::Leaf { shape_index, .. } => {
                 let depth = nodes[node_index].depth(nodes);
-                let padding: String = repeat(" ").take(depth as usize).collect();
+                let padding: String = " ".repeat(depth as usize);
                 println!(
                     "{}node={} parent={}",
                     padding,
@@ -826,7 +814,7 @@ impl BVH {
         node_count: &mut usize,
         shapes: &[Shape],
     ) {
-        if self.nodes.len() == 0 {
+        if self.nodes.is_empty() {
             return;
         }
 

@@ -105,7 +105,7 @@ impl BVH {
         let shape_aabb = new_shape.aabb();
         let shape_sa = shape_aabb.surface_area();
 
-        if self.nodes.len() == 0 {
+        if self.nodes.is_empty() {
             self.nodes.push(BVHNode::Leaf {
                 parent_index: 0,
                 shape_index: new_shape_index,
@@ -150,9 +150,9 @@ impl BVH {
 
                         let r_index = self.nodes.len();
                         let new_right = BVHNode::Node {
-                            child_l_aabb: child_l_aabb,
+                            child_l_aabb,
                             child_l_index,
-                            child_r_aabb: child_r_aabb.clone(),
+                            child_r_aabb,
                             child_r_index,
                             parent_index: i,
                         };
@@ -220,7 +220,7 @@ impl BVH {
                     let child_r_index = self.nodes.len();
                     let new_right = BVHNode::Leaf {
                         parent_index: i,
-                        shape_index: shape_index,
+                        shape_index,
                     };
                     shapes[shape_index].set_bh_node_index(child_r_index);
                     self.nodes.push(new_right);
@@ -249,7 +249,7 @@ impl BVH {
         deleted_shape_index: usize,
         swap_shape: bool,
     ) {
-        if self.nodes.len() == 0 {
+        if self.nodes.is_empty() {
             return;
             //panic!("can't remove a node from a bvh with only one node");
         }
@@ -349,9 +349,8 @@ impl BVH {
             if deleted_shape_index < end_shape {
                 shapes.swap(deleted_shape_index, end_shape);
                 let node_index = shapes[deleted_shape_index].bh_node_index();
-                match self.nodes[node_index].shape_index_mut() {
-                    Some(index) => *index = deleted_shape_index,
-                    _ => {}
+                if let Some(index) = self.nodes[node_index].shape_index_mut() {
+                    *index = deleted_shape_index
                 }
             }
         }
@@ -404,16 +403,10 @@ impl BVH {
         if node_index != end {
             self.nodes[node_index] = self.nodes[end];
             let parent_index = self.nodes[node_index].parent();
-            match self.nodes[parent_index] {
-                BVHNode::Leaf { .. } => {
-                    // println!(
-                    //     "truncating early node_parent={} parent_index={} shape_index={}",
-                    //     node_parent, parent_index, shape_index
-                    // );
-                    self.nodes.truncate(end);
-                    return;
-                }
-                _ => {}
+
+            if let BVHNode::Leaf { .. } = self.nodes[parent_index] {
+                self.nodes.truncate(end);
+                return;
             }
             let parent = self.nodes[parent_index];
             let moved_left = parent.child_l() == end;

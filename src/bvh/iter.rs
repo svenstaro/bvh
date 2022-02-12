@@ -38,7 +38,7 @@ impl<'bvh, 'test, 'shapes, Shape: Bounded, Test: IntersectionAABB>
 
     /// Test if stack is empty.
     fn is_stack_empty(&self) -> bool {
-        self.stack.len() == 0
+        self.stack.is_empty()
     }
 
     /// Push node onto stack.

@@ -1,10 +1,9 @@
-use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
 use crate::bvh::BVH;
-use crate::{aabb::AABB, bounding_hierarchy::BHShape, Real};
+use crate::{aabb::AABB, Real};
 
 use super::BVHNode;
 
@@ -42,7 +41,7 @@ impl Ord for BvhTraversalRes {
 }
 impl PartialOrd for BvhTraversalRes {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(&other))
+        Some(self.cmp(other))
     }
 }
 

@@ -139,12 +139,12 @@ impl AABB {
     /// [`Point3`]: glam::Vec3
     ///
     pub fn contains(&self, p: &Point3) -> bool {
-        !(p.x < self.min.x
-            || p.x > self.max.x
-            || p.y < self.min.y
-            || p.y > self.max.y
-            || p.z < self.min.z
-            || p.z > self.max.z)
+        p.x >= self.min.x
+            && p.x <= self.max.x
+            && p.y >= self.min.y
+            && p.y <= self.max.y
+            && p.z >= self.min.z
+            && p.z <= self.max.z
     }
 
     /// Returns true if the [`Point3`] is approximately inside the [`AABB`]
@@ -257,6 +257,7 @@ impl AABB {
     ///
     /// [`AABB`]: struct.AABB.html
     ///
+    #[must_use]
     pub fn join(&self, other: &AABB) -> AABB {
         AABB::with_bounds(
             Point3::new(
@@ -346,6 +347,7 @@ impl AABB {
     /// [`AABB`]: struct.AABB.html
     /// [`Point3`]: glam::Vec3
     ///
+    #[must_use]
     pub fn grow(&self, other: &Point3) -> AABB {
         AABB::with_bounds(
             Point3::new(
@@ -429,6 +431,7 @@ impl AABB {
     /// [`AABB`]: struct.AABB.html
     /// [`Bounded`]: trait.Bounded.html
     ///
+    #[must_use]
     pub fn join_bounded<T: Bounded>(&self, other: &T) -> AABB {
         self.join(&other.aabb())
     }
@@ -581,10 +584,12 @@ impl AABB {
 
 impl IntersectionAABB for AABB {
     fn intersects_aabb(&self, aabb: &AABB) -> bool {
-        !(self.max.x < aabb.min.x)
-            && !(self.min.x > aabb.max.x)
-            && (!(self.max.y < aabb.min.y) && !(self.min.y > aabb.max.y))
-            && (!(self.max.z < aabb.min.z) && !(self.min.z > aabb.max.z))
+        self.max.x >= aabb.min.x
+            && self.min.x <= aabb.max.x
+            && self.max.y >= aabb.min.y
+            && self.min.y <= aabb.max.y
+            && self.max.z >= aabb.min.z
+            && self.min.z <= aabb.max.z
     }
 }
 

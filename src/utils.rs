@@ -6,6 +6,7 @@ use crate::{Point3, Real, Vector3};
 
 /// Concatenates the list of vectors into a single vector.
 /// Drains the elements from the source `vectors`.
+#[allow(dead_code)]
 pub fn concatenate_vectors<T: Sized>(vectors: &mut [Vec<T>]) -> Vec<T> {
     let mut result = Vec::new();
     for vector in vectors.iter_mut() {

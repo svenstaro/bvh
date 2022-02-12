@@ -135,7 +135,6 @@ mod testbase;
 pub use shapes::*;
 //pub use shapes::{Ray, AABB, OBB, Capsule, Sphere};
 use aabb::{Bounded, AABB};
-use bounding_hierarchy::BHShape;
 use shapes::ray::IntersectionRay;
 
 /// A triangle struct. Instance of a more complex `Bounded` primitive.
@@ -176,7 +175,7 @@ impl IntersectionRay for Triangle {
         t_max: Real,
     ) -> Option<ray::Intersection> {
         let inter = ray.intersects_triangle(&self.a, &self.b, &self.c);
-        if inter.distance < Real::INFINITY {
+        if inter.distance <= t_max && inter.distance >= t_min {
             Some(inter)
         } else {
             None

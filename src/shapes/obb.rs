@@ -165,6 +165,7 @@ fn back(matrix: Mat4) -> Vector3 {
     matrix.row(2).truncate()
 }
 
+#[allow(dead_code)]
 fn translation(matrix: Mat4) -> Vector3 {
     matrix.row(3).truncate()
 }
