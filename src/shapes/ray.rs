@@ -7,7 +7,8 @@ use crate::{Point3, Vector3};
 use crate::{Real, EPSILON};
 
 /// A struct which defines a ray and some of its cached values.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde_impls", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ray {
     /// The ray origin.
     pub origin: Point3,

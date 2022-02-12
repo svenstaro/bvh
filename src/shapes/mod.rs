@@ -3,6 +3,7 @@ pub mod capsule;
 pub mod obb;
 pub mod ray;
 pub mod sphere;
+pub mod triangle;
 
 #[cfg(test)]
 mod tests {

@@ -811,35 +811,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(feature = "serde_impls")]
-    fn test_bad_bvh() {
-        let bvh_str = std::fs::read_to_string("bvh_2.json").expect("unable to read file");
-        let refit_str = std::fs::read_to_string("refitshapes_2.json").expect("unable to read file");
-        let shapes_str = std::fs::read_to_string("shapes_2.json").expect("unable to read file");
-
-        let mut bvh: BVH = serde_json::from_str(&bvh_str).expect("to parse");
-        dbg!(&bvh.nodes[1]);
-        let mut shapes: Vec<Triangle> = serde_json::from_str(&shapes_str).expect("to parse");
-        let refit_shapes: Vec<usize> = serde_json::from_str(&refit_str).expect("to parse");
-        for (i, shape) in shapes.iter().enumerate() {
-            let bh_index = shape.bh_node_index();
-            let node = bvh.nodes[bh_index];
-            let parent = bvh.nodes[node.parent()];
-            let bh_aabb = if bvh.node_is_left_child(bh_index) {
-                parent.child_l_aabb()
-            } else {
-                parent.child_r_aabb()
-            };
-            if refit_shapes.contains(&i) {
-                assert!(!bh_aabb.relative_eq(&shape.aabb(), EPSILON))
-            } else {
-                assert!(bh_aabb.relative_eq(&shape.aabb(), EPSILON))
-            }
-        }
-        bvh.optimize(&refit_shapes, &mut shapes);
-    }
-
-    #[test]
     fn test_optimize_bvh_12_75p() {
         let bounds = default_bounds();
         let mut triangles = create_n_cubes(10, &bounds);

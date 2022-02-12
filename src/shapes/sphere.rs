@@ -1,4 +1,4 @@
-//! This module defines a Sphere and it's intersection algorithms
+//! This module defines a Sphere and its intersection algorithms
 
 use crate::{
     aabb::{Bounded, AABB},
@@ -8,7 +8,8 @@ use crate::{
 };
 
 /// A representation of a Sphere
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde_impls", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sphere {
     /// Center of the sphere
     pub center: Point3,

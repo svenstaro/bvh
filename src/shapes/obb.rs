@@ -2,6 +2,8 @@
 use crate::{aabb::AABB, bounding_hierarchy::IntersectionAABB, Mat4, Quat, Vector3};
 
 /// Represents a box that can be rotated in any direction
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde_impls", derive(serde::Serialize, serde::Deserialize))]
 pub struct OBB {
     /// Orientation of the OBB
     pub orientation: Quat,

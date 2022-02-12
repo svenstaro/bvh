@@ -5,6 +5,8 @@ use crate::{
 };
 
 /// Representation of a capsule
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde_impls", derive(serde::Serialize, serde::Deserialize))]
 pub struct Capsule {
     /// Start point of the line segment for the capsule
     pub start: Point3,
