@@ -82,8 +82,10 @@ pub trait IntersectionRay {
     fn intersects_ray(&self, ray: &Ray, t_min: Real, t_max: Real) -> Option<Intersection>;
 }
 
-
-impl<T: ?Sized> IntersectionRay for &T where T: IntersectionRay {
+impl<T: ?Sized> IntersectionRay for &T
+where
+    T: IntersectionRay,
+{
     fn intersects_ray(&self, ray: &Ray, t_min: Real, t_max: Real) -> Option<Intersection> {
         (*self).intersects_ray(ray, t_min, t_max)
     }

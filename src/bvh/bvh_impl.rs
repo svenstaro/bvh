@@ -614,11 +614,15 @@ impl BVH {
         let expected_node_count = shapes.len() * 2 - 1;
         let mut nodes = Vec::with_capacity(expected_node_count);
 
-        
-        let uninit_slice = unsafe { slice::from_raw_parts_mut(nodes.as_mut_ptr() as *mut MaybeUninit<BVHNode>, expected_node_count) };
+        let uninit_slice = unsafe {
+            slice::from_raw_parts_mut(
+                nodes.as_mut_ptr() as *mut MaybeUninit<BVHNode>,
+                expected_node_count,
+            )
+        };
         let (aabb, centroid) = joint_aabb_of_shapes(&indices, shapes);
         BVHNode::build(shapes, &mut indices, uninit_slice, 0, 0, 0, aabb, centroid);
-        
+
         unsafe {
             nodes.set_len(expected_node_count);
         }
@@ -636,7 +640,9 @@ impl BVH {
         self.nodes.reserve(expected_node_count);
         let ptr = self.nodes.as_mut_ptr();
 
-        let uninit_slice = unsafe { slice::from_raw_parts_mut(ptr as *mut MaybeUninit<BVHNode>, expected_node_count) };
+        let uninit_slice = unsafe {
+            slice::from_raw_parts_mut(ptr as *mut MaybeUninit<BVHNode>, expected_node_count)
+        };
         let (aabb, centroid) = joint_aabb_of_shapes(&indices, shapes);
         BVHNode::build(shapes, &mut indices, uninit_slice, 0, 0, 0, aabb, centroid);
         unsafe {

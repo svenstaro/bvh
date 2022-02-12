@@ -177,7 +177,6 @@ pub extern "C" fn init_logger(log_path: AsciiPointer) {
     }
 }
 
-
 /// # Safety
 ///
 /// This function should not be called with invalid pointers

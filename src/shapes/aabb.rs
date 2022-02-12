@@ -60,7 +60,10 @@ pub trait Bounded {
     fn aabb(&self) -> AABB;
 }
 
-impl<T: ?Sized> Bounded for &T where T: Bounded {
+impl<T: ?Sized> Bounded for &T
+where
+    T: Bounded,
+{
     fn aabb(&self) -> AABB {
         (*self).aabb()
     }
