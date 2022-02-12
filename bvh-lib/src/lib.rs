@@ -177,6 +177,10 @@ pub extern "C" fn init_logger(log_path: AsciiPointer) {
     }
 }
 
+
+/// # Safety
+///
+/// This function should not be called with invalid pointers
 #[no_mangle]
 pub unsafe extern "C" fn add_vecs(a_ptr: *mut Float3, b_ptr: *mut Float3, out_ptr: *mut Float3) {
     let a = *a_ptr;
@@ -227,7 +231,7 @@ pub extern "C" fn query_ray(
     let ray = Ray::new(to_vec(origin_vec), to_vec(dir_vec));
     let mut i = 0;
 
-    for x in bvh.traverse_iterator(&ray, &shapes) {
+    for x in bvh.traverse_iterator(&ray, shapes) {
         if i < buffer.len() {
             buffer[i as usize] = *x;
         }
@@ -252,7 +256,7 @@ pub extern "C" fn batch_query_rays(
     for r in 0..ray_count as usize {
         let ray = Ray::new(to_vec(&origins[r]), to_vec(&dirs[r]));
         let mut res = 0;
-        for x in bvh.traverse_iterator(&ray, &shapes) {
+        for x in bvh.traverse_iterator(&ray, shapes) {
             if i < buffer.len() {
                 buffer[i as usize] = *x;
             }
@@ -277,7 +281,7 @@ pub extern "C" fn query_sphere(
     let test_shape = Sphere::new(to_vec(center), radius);
     let mut i = 0;
 
-    for x in bvh.traverse_iterator(&test_shape, &shapes) {
+    for x in bvh.traverse_iterator(&test_shape, shapes) {
         if i < buffer.len() {
             buffer[i as usize] = *x;
         }
@@ -301,7 +305,7 @@ pub extern "C" fn query_capsule(
     let test_shape = Capsule::new(to_vec(start), to_vec(end), radius);
     let mut i = 0;
 
-    for x in bvh.traverse_iterator(&test_shape, &shapes) {
+    for x in bvh.traverse_iterator(&test_shape, shapes) {
         if i < buffer.len() {
             buffer[i as usize] = *x;
         }
@@ -325,7 +329,7 @@ pub extern "C" fn query_aabb(
     let test_shape = AABB::with_bounds(min, max);
     let mut i = 0;
 
-    for x in bvh.traverse_iterator(&test_shape, &shapes) {
+    for x in bvh.traverse_iterator(&test_shape, shapes) {
         if i < buffer.len() {
             buffer[i as usize] = *x;
         }
@@ -353,7 +357,7 @@ pub extern "C" fn query_obb(
 
     let mut i = 0;
 
-    for x in bvh.traverse_iterator(&obb, &shapes) {
+    for x in bvh.traverse_iterator(&obb, shapes) {
         if i < buffer.len() {
             buffer[i as usize] = *x;
         }
@@ -489,7 +493,6 @@ fn bindings_csharp() -> Result<(), Error> {
     Ok(())
 }
 
-#[test]
 fn gen_bindings() {
     bindings_csharp().unwrap();
 }

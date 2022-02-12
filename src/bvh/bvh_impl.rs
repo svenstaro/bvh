@@ -17,6 +17,7 @@ use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::iter::repeat;
 use std::mem::MaybeUninit;
+use std::ptr::slice_from_raw_parts;
 use std::slice;
 
 const NUM_BUCKETS: usize = 6;
@@ -612,15 +613,15 @@ impl BVH {
         let mut indices = (0..shapes.len()).collect::<Vec<usize>>();
         let expected_node_count = shapes.len() * 2 - 1;
         let mut nodes = Vec::with_capacity(expected_node_count);
+
+        
+        let uninit_slice = unsafe { slice::from_raw_parts_mut(nodes.as_mut_ptr() as *mut MaybeUninit<BVHNode>, expected_node_count) };
+        let (aabb, centroid) = joint_aabb_of_shapes(&indices, shapes);
+        BVHNode::build(shapes, &mut indices, uninit_slice, 0, 0, 0, aabb, centroid);
+        
         unsafe {
             nodes.set_len(expected_node_count);
         }
-        //println!("shapes={} nodes={}", shapes.len(), nodes.len());
-        let n = nodes.as_mut_slice();
-
-        let (aabb, centroid) = joint_aabb_of_shapes(&indices, shapes);
-        BVHNode::build(shapes, &mut indices, n, 0, 0, 0, aabb, centroid);
-        let nodes = unsafe { std::mem::transmute(nodes) };
         BVH { nodes }
     }
 
@@ -633,9 +634,11 @@ impl BVH {
         let expected_node_count = shapes.len() * 2 - 1;
         self.nodes.clear();
         self.nodes.reserve(expected_node_count);
-        let n = unsafe { std::mem::transmute(self.nodes.as_mut_slice()) };
+        let ptr = self.nodes.as_mut_ptr();
+
+        let uninit_slice = unsafe { slice::from_raw_parts_mut(ptr as *mut MaybeUninit<BVHNode>, expected_node_count) };
         let (aabb, centroid) = joint_aabb_of_shapes(&indices, shapes);
-        BVHNode::build(shapes, &mut indices, n, 0, 0, 0, aabb, centroid);
+        BVHNode::build(shapes, &mut indices, uninit_slice, 0, 0, 0, aabb, centroid);
         unsafe {
             self.nodes.set_len(expected_node_count);
         }
