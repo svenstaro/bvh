@@ -82,6 +82,13 @@ pub trait IntersectionRay {
     fn intersects_ray(&self, ray: &Ray, t_min: Real, t_max: Real) -> Option<Intersection>;
 }
 
+
+impl<T: ?Sized> IntersectionRay for &T where T: IntersectionRay {
+    fn intersects_ray(&self, ray: &Ray, t_min: Real, t_max: Real) -> Option<Intersection> {
+        (*self).intersects_ray(ray, t_min, t_max)
+    }
+}
+
 impl IntersectionAABB for Ray {
     /// Tests the intersection of a [`Ray`] with an [`AABB`] using the optimized algorithm
     /// from [this paper](http://www.cs.utah.edu/~awilliam/box/box.pdf).
@@ -382,7 +389,7 @@ impl Ray {
         // ray_max = ray_max.min(y_max);
 
         if ray_max < 0.0 {
-            return None;
+            None
         } else {
             let min = Vector3::new(x_min, y_min, z_min).length_squared();
             Some(min)

@@ -16,6 +16,7 @@ use rayon::prelude::*;
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::iter::repeat;
+use std::mem::MaybeUninit;
 use std::slice;
 
 const NUM_BUCKETS: usize = 6;
@@ -262,7 +263,7 @@ impl BVHNode {
     pub fn build<T: BHShape>(
         shapes: &mut [T],
         indices: &mut [usize],
-        nodes: &mut [BVHNode],
+        nodes: &mut [MaybeUninit<BVHNode>],
         parent_index: usize,
         depth: u32,
         node_index: usize,
@@ -272,10 +273,10 @@ impl BVHNode {
         // If there is only one element left, don't split anymore
         if indices.len() == 1 {
             let shape_index = indices[0];
-            nodes[0] = BVHNode::Leaf {
+            nodes[0].write(BVHNode::Leaf {
                 parent_index,
                 shape_index,
-            };
+            });
             // Let the shape know the index of the node that represents it.
             shapes[shape_index].set_bh_node_index(node_index);
             return node_index;
@@ -284,10 +285,6 @@ impl BVHNode {
         if indices.len() > 64 {
             parallel_recurse = true;
         }
-
-        // From here on we handle the recursive case. This dummy is required, because the children
-        // must know their parent, and it's easier to update one parent node than the child nodes.
-        nodes[0] = BVHNode::create_dummy();
 
         // Find the axis along which the shapes are spread the most.
         let split_axis = centroid_bounds.largest_axis();
@@ -448,14 +445,13 @@ impl BVHNode {
         // Construct the actual data structure and replace the dummy node.
         //assert!(!child_l_aabb.is_empty());
         //assert!(!child_r_aabb.is_empty());
-        nodes[0] = BVHNode::Node {
+        nodes[0].write(BVHNode::Node {
             parent_index,
             child_l_aabb,
             child_l_index,
             child_r_aabb,
             child_r_index,
-        };
-
+        });
         node_index
     }
 
@@ -624,6 +620,7 @@ impl BVH {
 
         let (aabb, centroid) = joint_aabb_of_shapes(&indices, shapes);
         BVHNode::build(shapes, &mut indices, n, 0, 0, 0, aabb, centroid);
+        let nodes = unsafe { std::mem::transmute(nodes) };
         BVH { nodes }
     }
 
@@ -636,12 +633,12 @@ impl BVH {
         let expected_node_count = shapes.len() * 2 - 1;
         self.nodes.clear();
         self.nodes.reserve(expected_node_count);
+        let n = unsafe { std::mem::transmute(self.nodes.as_mut_slice()) };
+        let (aabb, centroid) = joint_aabb_of_shapes(&indices, shapes);
+        BVHNode::build(shapes, &mut indices, n, 0, 0, 0, aabb, centroid);
         unsafe {
             self.nodes.set_len(expected_node_count);
         }
-        let n = self.nodes.as_mut_slice();
-        let (aabb, centroid) = joint_aabb_of_shapes(&indices, shapes);
-        BVHNode::build(shapes, &mut indices, n, 0, 0, 0, aabb, centroid);
     }
 
     /// Traverses the [`BVH`].

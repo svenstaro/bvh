@@ -17,7 +17,7 @@ impl IntersectionAABB for OBB {
         let half_b = (aabb.max - aabb.min) * 0.5;
         let value = (aabb.max + aabb.min) * 0.5;
         let translation = self.orientation * (value - self.center);
-        let mat = Mat4::from_rotation_translation(self.orientation, translation.into());
+        let mat = Mat4::from_rotation_translation(self.orientation, translation);
 
         let vec_1 = Vector3::new(
             translation.x.abs(),
@@ -149,22 +149,22 @@ impl IntersectionAABB for OBB {
             return false;
         }
         // Intersection
-        return true;
+        true
     }
 }
 
 fn right(matrix: Mat4) -> Vector3 {
-    matrix.row(0).truncate().into()
+    matrix.row(0).truncate()
 }
 
 fn up(matrix: Mat4) -> Vector3 {
-    matrix.row(1).truncate().into()
+    matrix.row(1).truncate()
 }
 
 fn back(matrix: Mat4) -> Vector3 {
-    matrix.row(2).truncate().into()
+    matrix.row(2).truncate()
 }
 
 fn translation(matrix: Mat4) -> Vector3 {
-    matrix.row(3).truncate().into()
+    matrix.row(3).truncate()
 }

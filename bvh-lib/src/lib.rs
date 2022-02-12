@@ -163,7 +163,7 @@ pub extern "C" fn init_logger(log_path: AsciiPointer) {
         let path = log_path.as_str().unwrap();
         let file = FileSpec::default()
             .directory(path)
-            .basename("bvh_f64")
+            .basename("bvh_lib")
             .suffix("log");
         Logger::try_with_str("info")
             .unwrap()
@@ -178,11 +178,11 @@ pub extern "C" fn init_logger(log_path: AsciiPointer) {
 }
 
 #[no_mangle]
-pub extern "C" fn add_vecs(a_ptr: *mut Float3, b_ptr: *mut Float3, out_ptr: *mut Float3) {
-    let a = unsafe { *a_ptr };
+pub unsafe extern "C" fn add_vecs(a_ptr: *mut Float3, b_ptr: *mut Float3, out_ptr: *mut Float3) {
+    let a = *a_ptr;
 
     let a = glam::Vec3::new(a.x, a.y, a.z);
-    let b = unsafe { *b_ptr };
+    let b = *b_ptr;
     let b = glam::Vec3::new(b.x, b.y, b.z);
     let mut c = glam::Vec3::new(0.0, 0.0, 0.0);
 
@@ -190,13 +190,11 @@ pub extern "C" fn add_vecs(a_ptr: *mut Float3, b_ptr: *mut Float3, out_ptr: *mut
         c = a + b + c;
     }
 
-    unsafe {
-        *out_ptr = Float3 {
-            x: c.x,
-            y: c.y,
-            z: c.z,
-        };
-    }
+    *out_ptr = Float3 {
+        x: c.x,
+        y: c.y,
+        z: c.z,
+    };
 }
 
 #[ffi_function]
@@ -477,7 +475,7 @@ fn bindings_csharp() -> Result<(), Error> {
     Generator::new(
         Config {
             class: "NativeBvhInterop".to_string(),
-            dll_name: "bvh_f64".to_string(),
+            dll_name: "bvh_lib".to_string(),
             namespace_mappings: NamespaceMappings::new("Assets.Scripts.Native"),
             use_unsafe: Unsafe::UnsafePlatformMemCpy,
             ..Config::default()
@@ -491,7 +489,7 @@ fn bindings_csharp() -> Result<(), Error> {
     Ok(())
 }
 
-//#[test]
+#[test]
 fn gen_bindings() {
     bindings_csharp().unwrap();
 }
