@@ -45,13 +45,3 @@ default = []
 bench = []
 # Unfortunately can't use "serde" as the feature name until https://github.com/rust-lang/cargo/issues/5565 lands
 serde_impls = ["serde", "glam/serde"]
-
-[profile.release]
-lto = true
-codegen-units = 1
-debug = true
-
-[profile.bench]
-lto = true
-codegen-units = 1
-debug = true

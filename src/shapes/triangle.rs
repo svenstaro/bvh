@@ -15,24 +15,18 @@ pub struct Triangle {
     pub b: Point3,
     /// Third point on the triangle
     pub c: Point3,
-    aabb: AABB,
 }
 
 impl Triangle {
     /// Creates a new triangle given a counter clockwise set of points
     pub fn new(a: Point3, b: Point3, c: Point3) -> Triangle {
-        Triangle {
-            a,
-            b,
-            c,
-            aabb: AABB::empty().grow(&a).grow(&b).grow(&c),
-        }
+        Triangle { a, b, c }
     }
 }
 
 impl Bounded for Triangle {
     fn aabb(&self) -> AABB {
-        self.aabb
+        AABB::empty().grow(&self.a).grow(&self.b).grow(&self.c)
     }
 }
 
@@ -62,30 +56,23 @@ impl IntersectionAABB for Triangle {
 
         let normals = [Vector3::X, Vector3::Y, Vector3::Z];
 
-        let mut axis: [[Vector3; 3]; 3] = Default::default();
-
-        for (u, u_axis) in normals.iter().zip(axis.iter_mut()) {
-            for (f, curr_axis) in lines.iter().zip(u_axis.iter_mut()) {
-                *curr_axis = u.cross(*f);
-            }
-        }
-
-        for u_axis in axis {
-            for a in u_axis {
-                if !test_axis(&verts, &normals, &extents, a) {
+        for u in normals.iter() {
+            for f in lines.iter() {
+                let axis = u.cross(*f);
+                if !separating_axis_test(&verts, &normals, &extents, axis) {
                     return false;
                 }
             }
         }
 
         for a in normals {
-            if !test_axis(&verts, &normals, &extents, a) {
+            if !separating_axis_test(&verts, &normals, &extents, a) {
                 return false;
             }
         }
 
         let triangle_normal = lines[0].cross(lines[1]);
-        if !test_axis(&verts, &normals, &extents, triangle_normal) {
+        if !separating_axis_test(&verts, &normals, &extents, triangle_normal) {
             return false;
         }
 
@@ -93,7 +80,7 @@ impl IntersectionAABB for Triangle {
     }
 }
 
-fn test_axis(
+fn separating_axis_test(
     verts: &[Vector3; 3],
     normals: &[Vector3; 3],
     extents: &[Real; 3],

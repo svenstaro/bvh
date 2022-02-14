@@ -26,8 +26,8 @@ impl Sphere {
 
 impl IntersectionAABB for Sphere {
     fn intersects_aabb(&self, aabb: &AABB) -> bool {
-        let vec = aabb.closest_point(self.center);
-        vec.distance_squared(self.center) < self.radius * self.radius
+        let closest = aabb.closest_point(self.center);
+        closest.distance_squared(self.center) <= self.radius * self.radius
     }
 }
 

@@ -243,7 +243,6 @@ impl BVHNode {
     }
 
     /// Builds a [`BVHNode`] recursively using SAH partitioning.
-    /// Returns the index of the new node in the nodes vector.
     ///
     /// [`BVHNode`]: enum.BVHNode.html
     ///
@@ -257,7 +256,7 @@ impl BVHNode {
         node_index: usize,
         aabb_bounds: AABB,
         centroid_bounds: AABB,
-    ) -> usize {
+    ) {
         // If there is only one element left, don't split anymore
         if indices.len() == 1 {
             let shape_index = indices[0];
@@ -267,7 +266,7 @@ impl BVHNode {
             });
             // Let the shape know the index of the node that represents it.
             shapes[shape_index].set_bh_node_index(node_index);
-            return node_index;
+            return;
         }
         let mut parallel_recurse = false;
         if indices.len() > 64 {
@@ -440,7 +439,6 @@ impl BVHNode {
             child_r_aabb,
             child_r_index,
         });
-        node_index
     }
 
     #[allow(clippy::type_complexity)]
@@ -1301,7 +1299,7 @@ mod bench {
 
     #[cfg(feature = "bench")]
     fn build_by_add<T: BHShape>(shapes: &mut [T]) -> BVH {
-        let (first, rest) = shapes.split_at_mut(1);
+        let (first, _rest) = shapes.split_at_mut(1);
         let mut bvh = BVH::build(first);
         for i in 1..shapes.len() {
             bvh.add_node(shapes, i)
