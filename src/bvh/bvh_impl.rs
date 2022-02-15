@@ -1136,7 +1136,7 @@ mod tests {
 
             let ray = Ray::new(Vector3::new(x, 2.0, 0.0), dir);
             let res = bvh.traverse(&ray, shapes);
-            if count == 0 && res.len() > 0 {
+            if count == 0 && !res.is_empty() {
                 println!("hit={} node={}", res[0].pos, res[0].bh_node_index());
             }
             assert_eq!(res.len(), count);
@@ -1147,8 +1147,8 @@ mod tests {
         for x in -23..23 {
             let point = Point3::new(x as Real, 0.0, 0.0);
             let mut delete_i = 0;
-            for i in 0..shapes.len() {
-                if shapes[i].pos.distance_squared(point) < 0.01 {
+            for (i, shape) in shapes.iter().enumerate() {
+                if shape.pos.distance_squared(point) < 0.01 {
                     delete_i = i;
                     break;
                 }
@@ -1169,8 +1169,7 @@ mod tests {
     #[test]
     fn test_random_deletions() {
         let xs = -3..3;
-        let x_values = xs.clone().collect::<Vec<i32>>();
-        for x_values in xs.clone().permutations(x_values.len() - 1) {
+        for x_values in xs.clone().permutations(xs.clone().count() - 1) {
             let mut shapes = Vec::new();
             for x in xs.clone() {
                 shapes.push(UnitBox::new(x, Point3::new(x as Real, 0.0, 0.0)));
@@ -1183,8 +1182,8 @@ mod tests {
 
                 let point = Point3::new(x as Real, 0.0, 0.0);
                 let mut delete_i = 0;
-                for i in 0..shapes.len() {
-                    if shapes[i].pos.distance_squared(point) < 0.01 {
+                for (i, shape) in shapes.iter().enumerate() {
+                    if shape.pos.distance_squared(point) < 0.01 {
                         delete_i = i;
                         break;
                     }
@@ -1355,14 +1354,14 @@ mod bench {
 
     #[bench]
     /// Benchmark intersecting 1,200 triangles using the recursive `BVH`.
-    fn bench_intersect_1200_triangles_bvh_add(mut b: &mut ::test::Bencher) {
-        intersect_n_triangles_add(1200, &mut b);
+    fn bench_intersect_1200_triangles_bvh_add(b: &mut ::test::Bencher) {
+        intersect_n_triangles_add(1200, b);
     }
 
     #[bench]
     /// Benchmark intersecting 1,200 triangles using the recursive `BVH`.
-    fn bench_intersect_12000_triangles_bvh_add(mut b: &mut ::test::Bencher) {
-        intersect_n_triangles_add(12000, &mut b);
+    fn bench_intersect_12000_triangles_bvh_add(b: &mut ::test::Bencher) {
+        intersect_n_triangles_add(12000, b);
     }
 
     #[bench]

@@ -211,7 +211,7 @@ impl<I: FromPrimitive + Integer> FromRawVertex<I> for Triangle {
         // Convert the vertices to `Point3`s.
         let points = vertices
             .into_iter()
-            .map(|v| Point3::new(v.0.into(), v.1.into(), v.2.into()))
+            .map(|v| Point3::new(v.0 as Real, v.1 as Real, v.2 as Real))
             .collect::<Vec<_>>();
 
         // Estimate for the number of triangles, assuming that each polygon is a triangle.

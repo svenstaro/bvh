@@ -949,7 +949,7 @@ mod bench {
 
         for _ in 0..iterations {
             let updated =
-                randomly_transform_scene(triangles, num_move, &bounds, max_offset, &mut seed);
+                randomly_transform_scene(triangles, num_move, bounds, max_offset, &mut seed);
             let updated: Vec<usize> = updated.into_iter().collect();
             bvh.optimize(&updated, triangles);
         }

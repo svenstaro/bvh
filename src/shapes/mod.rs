@@ -11,7 +11,7 @@ mod tests {
     use crate::bounding_hierarchy::IntersectionAABB;
     use crate::capsule::Capsule;
     use crate::obb::OBB;
-    use crate::{Point3, Quat, Real, Vector3};
+    use crate::{Point3, Quat, Real, Vector3, PI};
 
     #[test]
     fn basic_test_capsule() {
@@ -51,7 +51,7 @@ mod tests {
         let max = Point3::new(1.0, 1.0, 1.0);
         let aabb = AABB::empty().grow(&min).grow(&max);
 
-        let ori = Quat::from_axis_angle(Vector3::new(1.0, 0.0, 0.0).into(), 0.785398);
+        let ori = Quat::from_axis_angle(Vector3::new(1.0, 0.0, 0.0), PI / 4.);
         let extents = Vector3::new(0.5, 0.5, 0.5);
         let pos = Vector3::new(0.5, 2.2, 0.5);
 
