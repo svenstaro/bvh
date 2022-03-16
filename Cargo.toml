@@ -1,2 +1,12 @@
 [workspace]
-members = ["bvh-lib", "bvh", "bvh-f64"]
+members = ["bvh", "bvh-f64"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+debug = true
+
+[profile.bench]
+lto = true
+codegen-units = 1
+debug = true

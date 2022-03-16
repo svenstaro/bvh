@@ -43,11 +43,11 @@ impl IntersectionRay for Sphere {
             return None;
         }
 
-        let sqrtd = discriminant.sqrt();
+        let d_sqrt = discriminant.sqrt();
 
-        let mut toi = (-half_b - sqrtd) / a;
+        let mut toi = (-half_b - d_sqrt) / a;
         if toi < t_min || t_max < toi {
-            toi = (-half_b + sqrtd) / a;
+            toi = (-half_b + d_sqrt) / a;
             if toi < t_min || t_max < toi {
                 return None;
             }
