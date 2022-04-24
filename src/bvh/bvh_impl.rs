@@ -403,7 +403,7 @@ impl BVHNode {
 /// [`BVH`]: struct.BVH.html
 ///
 #[allow(clippy::upper_case_acronyms)]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde_impls", derive(serde::Serialize, serde::Deserialize))]
 pub struct BVH {
     /// The list of nodes of the [`BVH`].
