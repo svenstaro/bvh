@@ -15,7 +15,7 @@
 //!
 //! ```
 //! use bvh::aabb::{AABB, Bounded};
-//! use bvh::bounding_hierarchy::{BoundingHierarchy, BHShape};
+//! use bvh::bounding_hierarchy::BHShape;
 //! use bvh::bvh::BVH;
 //! use bvh::{Point3, Vector3};
 //! use bvh::ray::Ray;
