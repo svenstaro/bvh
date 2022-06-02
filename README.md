@@ -23,6 +23,7 @@ iterative traversal of the BVH.
 
 ```rust
 use bvh::aabb::{AABB, Bounded};
+use bvh::bounding_hierarchy::BHShape;
 use bvh::bvh::BVH;
 use bvh::{Point3, Vector3};
 use bvh::ray::Ray;
@@ -34,6 +35,7 @@ let ray = Ray::new(origin, direction);
 struct Sphere {
     position: Point3,
     radius: f32,
+    node_index: usize,
 }
 
 impl Bounded for Sphere {
@@ -45,6 +47,15 @@ impl Bounded for Sphere {
     }
 }
 
+impl BHShape for Sphere {
+    fn set_bh_node_index(&mut self, index: usize) {
+        self.node_index = index;
+    }
+    fn bh_node_index(&self) -> usize {
+        self.node_index
+    }
+}
+
 let mut spheres = Vec::new();
 for i in 0..1000u32 {
     let position = Point3::new(i as f32, i as f32, i as f32);
@@ -52,11 +63,12 @@ for i in 0..1000u32 {
     spheres.push(Sphere {
         position: position,
         radius: radius,
+        node_index: 0,
     });
 }
 
-let bvh = BVH::build(&spheres);
-let hit_sphere_aabbs = bvh.traverse_recursive(&ray, &spheres);
+let bvh = BVH::build(&mut spheres);
+let hit_sphere_aabbs = bvh.traverse(&ray, &spheres);
 ```
 
 ## Optimization
