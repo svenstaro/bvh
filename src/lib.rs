@@ -95,3 +95,6 @@ mod utils;
 
 #[cfg(test)]
 mod testbase;
+
+#[cfg(doctest)]
+doc_comment::doctest!("../README.md", readme);
