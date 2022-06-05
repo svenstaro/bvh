@@ -23,6 +23,7 @@ iterative traversal of the BVH.
 
 ```rust
 use bvh::aabb::{AABB, Bounded};
+use bvh::bounding_hierarchy::BHShape;
 use bvh::bvh::BVH;
 use bvh::{Point3, Vector3};
 use bvh::ray::Ray;
@@ -34,6 +35,7 @@ let ray = Ray::new(origin, direction);
 struct Sphere {
     position: Point3,
     radius: f32,
+    node_index: usize,
 }
 
 impl Bounded for Sphere {
@@ -45,6 +47,15 @@ impl Bounded for Sphere {
     }
 }
 
+impl BHShape for Sphere {
+    fn set_bh_node_index(&mut self, index: usize) {
+        self.node_index = index;
+    }
+    fn bh_node_index(&self) -> usize {
+        self.node_index
+    }
+}
+
 let mut spheres = Vec::new();
 for i in 0..1000u32 {
     let position = Point3::new(i as f32, i as f32, i as f32);
@@ -52,11 +63,12 @@ for i in 0..1000u32 {
     spheres.push(Sphere {
         position: position,
         radius: radius,
+        node_index: 0,
     });
 }
 
-let bvh = BVH::build(&spheres);
-let hit_sphere_aabbs = bvh.traverse_recursive(&ray, &spheres);
+let bvh = BVH::build(&mut spheres);
+let hit_sphere_aabbs = bvh.traverse(&ray, &spheres);
 ```
 
 ## Optimization
@@ -85,7 +97,7 @@ The following benchmarks are run with two different datasets:
 
 ### Intersection via traversal of the list of triangles
 
-```rust
+```C
 test testbase::bench_intersect_120k_triangles_list                       ... bench:     653,607 ns/iter (+/- 18,796)
 test testbase::bench_intersect_sponza_list                               ... bench:     542,108 ns/iter (+/- 8,705)
 ```
@@ -94,7 +106,7 @@ This is the most naive approach to intersecting a scene with a ray. It defines t
 
 ### Intersection via traversal of the list of triangles with AABB checks
 
-```rust
+```C
 test testbase::bench_intersect_120k_triangles_list_aabb                  ... bench:     229,088 ns/iter (+/- 6,727)
 test testbase::bench_intersect_sponza_list_aabb                          ... bench:     107,514 ns/iter (+/- 1,511)
 ```
@@ -104,7 +116,7 @@ increase intersection speed by filtering negative results a lot faster.
 
 ### Build of a BVH from scratch
 
-```rust
+```C
 test flat_bvh::bench::bench_build_1200_triangles_flat_bvh                ... bench:     538,474 ns/iter (+/- 4,001)
 test flat_bvh::bench::bench_build_12k_triangles_flat_bvh                 ... bench:   6,373,530 ns/iter (+/- 37,217)
 test flat_bvh::bench::bench_build_120k_triangles_flat_bvh                ... bench:  74,005,254 ns/iter (+/- 564,271)
@@ -116,7 +128,7 @@ test bvh::bvh::bench::bench_build_sponza_bvh                             ... ben
 
 ### Flatten a BVH
 
-```rust
+```C
 test flat_bvh::bench::bench_flatten_120k_triangles_bvh                   ... bench:   3,891,505 ns/iter (+/- 42,360)
 ```
 
@@ -126,7 +138,7 @@ number of intersections is `1280 * 720` for an HD image.
 
 ### Intersection via BVH traversal
 
-```rust
+```C
 test flat_bvh::bench::bench_intersect_1200_triangles_flat_bvh            ... bench:         168 ns/iter (+/- 2)
 test flat_bvh::bench::bench_intersect_12k_triangles_flat_bvh             ... bench:         397 ns/iter (+/- 4)
 test flat_bvh::bench::bench_intersect_120k_triangles_flat_bvh            ... bench:         913 ns/iter (+/- 11)
@@ -145,7 +157,7 @@ These performance measurements show that traversing a BVH is much faster than tr
 
 The benchmarks for how long it takes to update the scene also contain a randomization process which takes some time.
 
-```rust
+```C
 test bvh::optimization::bench::bench_optimize_bvh_120k_00p               ... bench:   1,123,662 ns/iter (+/- 3,797)
 test bvh::optimization::bench::bench_optimize_bvh_120k_01p               ... bench:   6,584,151 ns/iter (+/- 1,375,770)
 test bvh::optimization::bench::bench_optimize_bvh_120k_10p               ... bench:  39,725,368 ns/iter (+/- 12,175,627)
@@ -165,7 +177,7 @@ These intersection tests are grouped by dataset and by the BVH generation method
 * `_with_rebuild` uses the same triangle data as `_after_optimize`, but constructs a BVH from scratch.
 
 *120K Triangles*
-```rust
+```C
 test bvh::optimization::bench::bench_intersect_120k_after_optimize_00p   ... bench:         857 ns/iter (+/- 8)
 test bvh::optimization::bench::bench_intersect_120k_after_optimize_01p   ... bench:     139,767 ns/iter (+/- 10,031)
 test bvh::optimization::bench::bench_intersect_120k_after_optimize_10p   ... bench:   1,307,082 ns/iter (+/- 315,000)
@@ -178,7 +190,7 @@ test bvh::optimization::bench::bench_intersect_120k_with_rebuild_50p     ... ben
 ```
 
 *Sponza*
-```rust
+```C
 test bvh::optimization::bench::bench_intersect_sponza_after_optimize_00p ... bench:       1,433 ns/iter (+/- 17)
 test bvh::optimization::bench::bench_intersect_sponza_after_optimize_01p ... bench:       2,745 ns/iter (+/- 56)
 test bvh::optimization::bench::bench_intersect_sponza_after_optimize_10p ... bench:       3,729 ns/iter (+/- 97)

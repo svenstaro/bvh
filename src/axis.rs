@@ -35,7 +35,7 @@ struct MyType<T>(T);
 /// assert_eq!(position[Axis::X], 1000.0);
 /// # }
 /// ```
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Axis {
     /// Index of the X axis.
     X = 0,
