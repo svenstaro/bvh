@@ -18,7 +18,7 @@ approx = "0.5"
 rand = "0.8"
 log = "0.4"
 num = "0.4"
-glam = "0.20"
+glam = "0.21"
 serde = { optional = true, version = "1", features = ["derive"] }
 
 [dev-dependencies]
