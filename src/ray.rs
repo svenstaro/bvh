@@ -482,64 +482,71 @@ mod bench {
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
 
+    use test::{black_box, Bencher};
+
     use crate::aabb::AABB;
     use crate::ray::Ray;
 
     use crate::testbase::{tuple_to_point, tuple_to_vector, TupleVec};
 
-    /// Generates some random deterministic `Ray`/`AABB` pairs.
-    fn gen_random_ray_aabb(rng: &mut StdRng) -> (Ray, AABB) {
+    /// Generate a random deterministic `Ray`.
+    fn random_ray(rng: &mut StdRng) -> Ray {
+        let a = tuple_to_point(&rng.gen::<TupleVec>());
+        let b = tuple_to_vector(&rng.gen::<TupleVec>());
+        Ray::new(a, b)
+    }
+
+    /// Generate a random deterministic `AABB`.
+    fn random_aabb(rng: &mut StdRng) -> AABB {
         let a = tuple_to_point(&rng.gen::<TupleVec>());
         let b = tuple_to_point(&rng.gen::<TupleVec>());
-        let c = tuple_to_point(&rng.gen::<TupleVec>());
-        let d = tuple_to_vector(&rng.gen::<TupleVec>());
 
-        let aabb = AABB::empty().grow(&a).grow(&b);
-        let ray = Ray::new(c, d);
-        (ray, aabb)
+        AABB::empty().grow(&a).grow(&b)
+    }
+
+    /// Generate the ray and boxes used for benchmarks.
+    fn random_ray_and_boxes() -> (Ray, Vec<AABB>) {
+        let seed = [0; 32];
+        let mut rng = StdRng::from_seed(seed);
+
+        let ray = random_ray(&mut rng);
+        let boxes = (0..1000).map(|_| random_aabb(&mut rng)).collect::<Vec<_>>();
+
+        black_box((ray, boxes))
     }
 
     /// Benchmark for the optimized intersection algorithm.
     #[bench]
-    fn bench_intersects_aabb(b: &mut ::test::Bencher) {
-        let seed = [0; 32];
-        let mut rng = StdRng::from_seed(seed);
+    fn bench_intersects_aabb(b: &mut Bencher) {
+        let (ray, boxes) = random_ray_and_boxes();
 
         b.iter(|| {
-            let one_thousand = ::test::black_box(1000);
-            for _ in 0..one_thousand {
-                let (ray, aabb) = gen_random_ray_aabb(&mut rng);
-                ray.intersects_aabb(&aabb);
+            for aabb in &boxes {
+                black_box(ray.intersects_aabb(aabb));
             }
         });
     }
 
     /// Benchmark for the naive intersection algorithm.
     #[bench]
-    fn bench_intersects_aabb_naive(b: &mut ::test::Bencher) {
-        let seed = [0; 32];
-        let mut rng = StdRng::from_seed(seed);
+    fn bench_intersects_aabb_naive(b: &mut Bencher) {
+        let (ray, boxes) = random_ray_and_boxes();
 
         b.iter(|| {
-            let one_thousand = ::test::black_box(1000);
-            for _ in 0..one_thousand {
-                let (ray, aabb) = gen_random_ray_aabb(&mut rng);
-                ray.intersects_aabb_naive(&aabb);
+            for aabb in &boxes {
+                black_box(ray.intersects_aabb_naive(aabb));
             }
         });
     }
 
     /// Benchmark for the branchless intersection algorithm.
     #[bench]
-    fn bench_intersects_aabb_branchless(b: &mut ::test::Bencher) {
-        let seed = [0; 32];
-        let mut rng = StdRng::from_seed(seed);
+    fn bench_intersects_aabb_branchless(b: &mut Bencher) {
+        let (ray, boxes) = random_ray_and_boxes();
 
         b.iter(|| {
-            let one_thousand = ::test::black_box(1000);
-            for _ in 0..one_thousand {
-                let (ray, aabb) = gen_random_ray_aabb(&mut rng);
-                ray.intersects_aabb_branchless(&aabb);
+            for aabb in &boxes {
+                black_box(ray.intersects_aabb_branchless(aabb));
             }
         });
     }
