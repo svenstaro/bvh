@@ -25,7 +25,6 @@ serde = { optional = true, version = "1", features = ["derive"] }
 proptest = "1.0"
 obj-rs = "0.7"
 float_eq = "1"
-criterion = "0.3"
 doc-comment = "0.3"
 
 [features]
