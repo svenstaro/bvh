@@ -23,8 +23,6 @@ struct MyType<T>(T);
 /// [`Point3`] and [`Vector3`] are also indexable using `Axis`.
 ///
 /// ```
-/// extern crate bvh;
-///
 /// use bvh::axis::Axis;
 /// use bvh::Point3;
 ///
