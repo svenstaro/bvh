@@ -305,7 +305,7 @@ impl BVH {
 }
 
 impl BoundingHierarchy for FlatBVH {
-    /// A [`FlatBVH`] is built from a regular [`BVH`] using the [`flatten`] method.
+    /// A [`FlatBVH`] is built from a regular [`BVH`] using the [`BVH::flatten`] method.
     ///
     /// [`FlatBVH`]: struct.FlatBVH.html
     /// [`BVH`]: ../bvh/struct.BVH.html
