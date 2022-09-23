@@ -63,6 +63,54 @@ impl Intersection {
     }
 }
 
+/// Fast floating point minimum.  This function matches the semantics of
+///
+/// ```no_compile
+/// if x < y { x } else { y }
+/// ```
+///
+/// which has efficient instruction sequences on many platforms (1 instruction on x86).  For most
+/// values, it matches the semantics of `x.min(y)`; the special cases are:
+///
+/// ```text
+/// min(-0.0, +0.0); +0.0
+/// min(+0.0, -0.0): -0.0
+/// min( NaN,  1.0):  1.0
+/// min( 1.0,  NaN):  NaN
+/// ```
+#[inline(always)]
+fn min(x: f32, y: f32) -> f32 {
+    if x < y {
+        x
+    } else {
+        y
+    }
+}
+
+/// Fast floating point maximum.  This function matches the semantics of
+///
+/// ```no_compile
+/// if x > y { x } else { y }
+/// ```
+///
+/// which has efficient instruction sequences on many platforms (1 instruction on x86).  For most
+/// values, it matches the semantics of `x.max(y)`; the special cases are:
+///
+/// ```text
+/// max(-0.0, +0.0); +0.0
+/// max(+0.0, -0.0): -0.0
+/// max( NaN,  1.0):  1.0
+/// max( 1.0,  NaN):  NaN
+/// ```
+#[inline(always)]
+fn max(x: f32, y: f32) -> f32 {
+    if x > y {
+        x
+    } else {
+        y
+    }
+}
+
 impl Ray {
     /// Creates a new [`Ray`] from an `origin` and a `direction`.
     /// `direction` will be normalized.
@@ -124,41 +172,19 @@ impl Ray {
         let y_min = (aabb[self.sign_y].y - self.origin.y) * self.inv_direction.y;
         let y_max = (aabb[1 - self.sign_y].y - self.origin.y) * self.inv_direction.y;
 
-        if (ray_min > y_max) || (y_min > ray_max) {
-            return false;
-        }
-
-        if y_min > ray_min {
-            ray_min = y_min;
-        }
         // Using the following solution significantly decreases the performance
         // ray_min = ray_min.max(y_min);
-
-        if y_max < ray_max {
-            ray_max = y_max;
-        }
-        // Using the following solution significantly decreases the performance
         // ray_max = ray_max.min(y_max);
+        ray_min = max(ray_min, y_min);
+        ray_max = min(ray_max, y_max);
 
         let z_min = (aabb[self.sign_z].z - self.origin.z) * self.inv_direction.z;
         let z_max = (aabb[1 - self.sign_z].z - self.origin.z) * self.inv_direction.z;
 
-        if (ray_min > z_max) || (z_min > ray_max) {
-            return false;
-        }
+        ray_min = max(ray_min, z_min);
+        ray_max = min(ray_max, z_max);
 
-        // Only required for bounded intersection intervals.
-        // if z_min > ray_min {
-        // ray_min = z_min;
-        // }
-
-        if z_max < ray_max {
-            ray_max = z_max;
-        }
-        // Using the following solution significantly decreases the performance
-        // ray_max = ray_max.min(y_max);
-
-        ray_max > 0.0
+        max(ray_min, 0.0) <= ray_max
     }
 
     /// Naive implementation of a [`Ray`]/[`AABB`] intersection algorithm.
@@ -206,7 +232,7 @@ impl Ray {
         latest_entry < earliest_exit && earliest_exit > 0.0
     }
 
-    /// Implementation of the algorithm described [here](https://tavianator.com/fast-branchless-raybounding-box-intersections/).
+    /// Implementation of the algorithm described [here](https://tavianator.com/2022/ray_box_boundary.html).
     ///
     /// # Examples
     /// ```
@@ -229,25 +255,28 @@ impl Ray {
     /// [`AABB`]: struct.AABB.html
     ///
     pub fn intersects_aabb_branchless(&self, aabb: &AABB) -> bool {
+        let mut tmin = 0.0;
+        let mut tmax = INFINITY;
+
         let tx1 = (aabb.min.x - self.origin.x) * self.inv_direction.x;
         let tx2 = (aabb.max.x - self.origin.x) * self.inv_direction.x;
 
-        let mut tmin = tx1.min(tx2);
-        let mut tmax = tx1.max(tx2);
+        tmin = min(max(tx1, tmin), max(tx2, tmin));
+        tmax = max(min(tx1, tmax), min(tx2, tmax));
 
         let ty1 = (aabb.min.y - self.origin.y) * self.inv_direction.y;
         let ty2 = (aabb.max.y - self.origin.y) * self.inv_direction.y;
 
-        tmin = tmin.max(ty1.min(ty2));
-        tmax = tmax.min(ty1.max(ty2));
+        tmin = min(max(ty1, tmin), max(ty2, tmin));
+        tmax = max(min(ty1, tmax), min(ty2, tmax));
 
         let tz1 = (aabb.min.z - self.origin.z) * self.inv_direction.z;
         let tz2 = (aabb.max.z - self.origin.z) * self.inv_direction.z;
 
-        tmin = tmin.max(tz1.min(tz2));
-        tmax = tmax.min(tz1.max(tz2));
+        tmin = min(max(tz1, tmin), max(tz2, tmin));
+        tmax = max(min(tz1, tmax), min(tz2, tmax));
 
-        tmax >= tmin && tmax >= 0.0
+        tmin <= tmax
     }
 
     /// Implementation of the
@@ -482,64 +511,71 @@ mod bench {
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
 
+    use test::{black_box, Bencher};
+
     use crate::aabb::AABB;
     use crate::ray::Ray;
 
     use crate::testbase::{tuple_to_point, tuple_to_vector, TupleVec};
 
-    /// Generates some random deterministic `Ray`/`AABB` pairs.
-    fn gen_random_ray_aabb(rng: &mut StdRng) -> (Ray, AABB) {
+    /// Generate a random deterministic `Ray`.
+    fn random_ray(rng: &mut StdRng) -> Ray {
+        let a = tuple_to_point(&rng.gen::<TupleVec>());
+        let b = tuple_to_vector(&rng.gen::<TupleVec>());
+        Ray::new(a, b)
+    }
+
+    /// Generate a random deterministic `AABB`.
+    fn random_aabb(rng: &mut StdRng) -> AABB {
         let a = tuple_to_point(&rng.gen::<TupleVec>());
         let b = tuple_to_point(&rng.gen::<TupleVec>());
-        let c = tuple_to_point(&rng.gen::<TupleVec>());
-        let d = tuple_to_vector(&rng.gen::<TupleVec>());
 
-        let aabb = AABB::empty().grow(&a).grow(&b);
-        let ray = Ray::new(c, d);
-        (ray, aabb)
+        AABB::empty().grow(&a).grow(&b)
+    }
+
+    /// Generate the ray and boxes used for benchmarks.
+    fn random_ray_and_boxes() -> (Ray, Vec<AABB>) {
+        let seed = [0; 32];
+        let mut rng = StdRng::from_seed(seed);
+
+        let ray = random_ray(&mut rng);
+        let boxes = (0..1000).map(|_| random_aabb(&mut rng)).collect::<Vec<_>>();
+
+        black_box((ray, boxes))
     }
 
     /// Benchmark for the optimized intersection algorithm.
     #[bench]
-    fn bench_intersects_aabb(b: &mut ::test::Bencher) {
-        let seed = [0; 32];
-        let mut rng = StdRng::from_seed(seed);
+    fn bench_intersects_aabb(b: &mut Bencher) {
+        let (ray, boxes) = random_ray_and_boxes();
 
         b.iter(|| {
-            let one_thousand = ::test::black_box(1000);
-            for _ in 0..one_thousand {
-                let (ray, aabb) = gen_random_ray_aabb(&mut rng);
-                ray.intersects_aabb(&aabb);
+            for aabb in &boxes {
+                black_box(ray.intersects_aabb(aabb));
             }
         });
     }
 
     /// Benchmark for the naive intersection algorithm.
     #[bench]
-    fn bench_intersects_aabb_naive(b: &mut ::test::Bencher) {
-        let seed = [0; 32];
-        let mut rng = StdRng::from_seed(seed);
+    fn bench_intersects_aabb_naive(b: &mut Bencher) {
+        let (ray, boxes) = random_ray_and_boxes();
 
         b.iter(|| {
-            let one_thousand = ::test::black_box(1000);
-            for _ in 0..one_thousand {
-                let (ray, aabb) = gen_random_ray_aabb(&mut rng);
-                ray.intersects_aabb_naive(&aabb);
+            for aabb in &boxes {
+                black_box(ray.intersects_aabb_naive(aabb));
             }
         });
     }
 
     /// Benchmark for the branchless intersection algorithm.
     #[bench]
-    fn bench_intersects_aabb_branchless(b: &mut ::test::Bencher) {
-        let seed = [0; 32];
-        let mut rng = StdRng::from_seed(seed);
+    fn bench_intersects_aabb_branchless(b: &mut Bencher) {
+        let (ray, boxes) = random_ray_and_boxes();
 
         b.iter(|| {
-            let one_thousand = ::test::black_box(1000);
-            for _ in 0..one_thousand {
-                let (ray, aabb) = gen_random_ray_aabb(&mut rng);
-                ray.intersects_aabb_branchless(&aabb);
+            for aabb in &boxes {
+                black_box(ray.intersects_aabb_branchless(aabb));
             }
         });
     }
