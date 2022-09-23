@@ -206,8 +206,7 @@ impl Ray {
         latest_entry < earliest_exit && earliest_exit > 0.0
     }
 
-    /// Implementation of the algorithm described [here]
-    /// (https://tavianator.com/fast-branchless-raybounding-box-intersections/).
+    /// Implementation of the algorithm described [here](https://tavianator.com/fast-branchless-raybounding-box-intersections/).
     ///
     /// # Examples
     /// ```
@@ -251,8 +250,8 @@ impl Ray {
         tmax >= tmin && tmax >= 0.0
     }
 
-    /// Implementation of the [Möller-Trumbore triangle/ray intersection algorithm]
-    /// (https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm).
+    /// Implementation of the
+    /// [Möller-Trumbore triangle/ray intersection algorithm](https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm).
     /// Returns the distance to the intersection, as well as
     /// the u and v coordinates of the intersection.
     /// The distance is set to +INFINITY if the ray does not intersect the triangle, or hits

@@ -83,8 +83,6 @@ impl AABB {
     ///
     /// # Examples
     /// ```
-    /// # extern crate bvh;
-    /// # extern crate rand;
     /// use bvh::aabb::AABB;
     ///
     /// # fn main() {

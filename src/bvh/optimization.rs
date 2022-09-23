@@ -1,7 +1,7 @@
 //! This module defines the optimization function for the [`BVH`].
 //! By passing the indices of shapes that have changed, the function determines possible
 //! tree rotations and optimizes the BVH using a SAH.
-//! Based on http://www.cs.utah.edu/~thiago/papers/rotations.pdf
+//! Based on [`http://www.cs.utah.edu/~thiago/papers/rotations.pdf`]
 //!
 //! [`BVH`]: struct.BVH.html
 //!
@@ -67,7 +67,8 @@ impl BVHNode {
 
 impl BVH {
     /// Optimizes the `BVH` by batch-reorganizing updated nodes.
-    /// Based on https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs
+    /// Based on
+    /// [`https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs`]
     ///
     /// Needs all the scene's shapes, plus the indices of the shapes that were updated.
     ///
