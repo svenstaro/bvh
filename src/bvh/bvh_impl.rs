@@ -675,12 +675,7 @@ impl BVH {
     /// Check that the `AABB`s in the `BVH` are tight, which means, that parent `AABB`s are not
     /// larger than they should be. This function checks, whether the children of node `node_index`
     /// lie inside `outer_aabb`.
-    pub fn assert_tight_subtree<Shape: BHShape>(
-        &self,
-        node_index: usize,
-        outer_aabb: &AABB,
-        shapes: &[Shape],
-    ) {
+    pub fn assert_tight_subtree(&self, node_index: usize, outer_aabb: &AABB) {
         if let BVHNode::Node {
             child_l_index,
             child_l_aabb,
@@ -691,14 +686,14 @@ impl BVH {
         {
             let joint_aabb = child_l_aabb.join(&child_r_aabb);
             assert!(joint_aabb.relative_eq(outer_aabb, EPSILON));
-            self.assert_tight_subtree(child_l_index, &child_l_aabb, shapes);
-            self.assert_tight_subtree(child_r_index, &child_r_aabb, shapes);
+            self.assert_tight_subtree(child_l_index, &child_l_aabb);
+            self.assert_tight_subtree(child_r_index, &child_r_aabb);
         }
     }
 
     /// Check that the `AABB`s in the `BVH` are tight, which means, that parent `AABB`s are not
     /// larger than they should be.
-    pub fn assert_tight<Shape: BHShape>(&self, shapes: &[Shape]) {
+    pub fn assert_tight(&self) {
         // When starting to check whether the `BVH` is tight, we cannot provide a minimum
         // outer `AABB`, therefore we compute the correct one in this instance.
         if let BVHNode::Node {
@@ -708,7 +703,7 @@ impl BVH {
         } = self.nodes[0]
         {
             let joint_aabb = child_l_aabb.join(&child_r_aabb);
-            self.assert_tight_subtree(0, &joint_aabb, shapes);
+            self.assert_tight_subtree(0, &joint_aabb);
         }
     }
 }

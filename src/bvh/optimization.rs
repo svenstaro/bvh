@@ -919,7 +919,7 @@ mod tests {
 
         // The initial BVH should be consistent.
         bvh.assert_consistent(&triangles);
-        bvh.assert_tight(&triangles);
+        bvh.assert_tight();
 
         // After moving triangles, the BVH should be inconsistent, because the shape `AABB`s do not
         // match the tree entries.
@@ -931,7 +931,7 @@ mod tests {
         // After fixing the `AABB` consistency should be restored.
         bvh.optimize(&updated, &triangles);
         bvh.assert_consistent(&triangles);
-        bvh.assert_tight(&triangles);
+        bvh.assert_tight();
     }
 }
 
