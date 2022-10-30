@@ -23,6 +23,26 @@ pub trait BHShape: Bounded {
     fn bh_node_index(&self) -> usize;
 }
 
+impl<T: BHShape> BHShape for &mut T {
+    fn set_bh_node_index(&mut self, idx: usize) {
+        T::set_bh_node_index(self, idx)
+    }
+
+    fn bh_node_index(&self) -> usize {
+        T::bh_node_index(self)
+    }
+}
+
+impl<T: BHShape> BHShape for Box<T> {
+    fn set_bh_node_index(&mut self, idx: usize) {
+        T::set_bh_node_index(self, idx)
+    }
+
+    fn bh_node_index(&self) -> usize {
+        T::bh_node_index(self)
+    }
+}
+
 /// This trait defines an acceleration structure with space partitioning.
 /// This structure is used to efficiently compute ray-scene intersections.
 pub trait BoundingHierarchy {
@@ -170,4 +190,14 @@ pub trait BoundingHierarchy {
     /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
     ///
     fn pretty_print(&self) {}
+}
+
+impl<T: BoundingHierarchy> BoundingHierarchy for Box<T> {
+    fn build<Shape: BHShape>(shapes: &mut [Shape]) -> Self {
+        Box::new(T::build(shapes))
+    }
+
+    fn traverse<'a, Shape: BHShape>(&'a self, ray: &Ray, shapes: &'a [Shape]) -> Vec<&Shape> {
+        T::traverse(self, ray, shapes)
+    }
 }

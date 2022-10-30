@@ -60,6 +60,24 @@ pub trait Bounded {
     fn aabb(&self) -> AABB;
 }
 
+impl<T: Bounded> Bounded for &T {
+    fn aabb(&self) -> AABB {
+        T::aabb(self)
+    }
+}
+
+impl<T: Bounded> Bounded for &mut T {
+    fn aabb(&self) -> AABB {
+        T::aabb(self)
+    }
+}
+
+impl<T: Bounded> Bounded for Box<T> {
+    fn aabb(&self) -> AABB {
+        T::aabb(self)
+    }
+}
+
 impl AABB {
     /// Creates a new [`AABB`] with the given bounds.
     ///
