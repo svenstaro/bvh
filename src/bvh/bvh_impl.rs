@@ -23,7 +23,7 @@ use std::f32;
 /// [`BVH`]: struct.BVHNode.html
 ///
 #[derive(Debug, Copy, Clone)]
-#[cfg_attr(feature = "serde_impls", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[allow(clippy::upper_case_acronyms)]
 pub enum BVHNode {
     /// Leaf node.
@@ -404,7 +404,7 @@ impl BVHNode {
 ///
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde_impls", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct BVH {
     /// The list of nodes of the [`BVH`].
     ///

@@ -10,7 +10,7 @@ use crate::axis::Axis;
 
 /// AABB struct.
 #[derive(Debug, Copy, Clone)]
-#[cfg_attr(feature = "serde_impls", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[allow(clippy::upper_case_acronyms)]
 pub struct AABB {
     /// Minimum coordinates

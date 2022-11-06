@@ -12,6 +12,7 @@ repository = "https://github.com/svenstaro/bvh"
 documentation = "https://docs.rs/crate/bvh"
 keywords = ["bvh", "bounding", "volume", "sah", "aabb"]
 license = "MIT"
+resolver = "2"
 
 [dependencies]
 approx = "0.5"
@@ -29,8 +30,7 @@ doc-comment = "0.3"
 
 [features]
 bench = []
-# Unfortunately can't use "serde" as the feature name until https://github.com/rust-lang/cargo/issues/5565 lands
-serde_impls = ["serde", "glam/serde"]
+serde = ["dep:serde", "glam/serde"]
 
 [profile.release]
 lto = true

@@ -66,7 +66,7 @@
 //!
 //! ## Features
 //!
-//! - `serde_impls` (default **disabled**) - adds `Serialize` and `Deserialize` implementations for some types
+//! - `serde` (default **disabled**) - adds `Serialize` and `Deserialize` implementations for some types
 //!
 
 #![deny(missing_docs)]
