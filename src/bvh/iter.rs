@@ -4,13 +4,13 @@ use crate::ray::Ray;
 
 /// Iterator to traverse a [`BVH`] without memory allocations
 #[allow(clippy::upper_case_acronyms)]
-pub struct BVHTraverseIterator<'a, Shape: Bounded> {
+pub struct BVHTraverseIterator<'bvh, 'shape, Shape: Bounded> {
     /// Reference to the BVH to traverse
-    bvh: &'a BVH,
+    bvh: &'bvh BVH,
     /// Reference to the input ray
-    ray: &'a Ray,
+    ray: &'bvh Ray,
     /// Reference to the input shapes array
-    shapes: &'a [Shape],
+    shapes: &'shape [Shape],
     /// Traversal stack. 4 billion items seems enough?
     stack: [usize; 32],
     /// Position of the iterator in bvh.nodes
@@ -21,9 +21,9 @@ pub struct BVHTraverseIterator<'a, Shape: Bounded> {
     has_node: bool,
 }
 
-impl<'a, Shape: Bounded> BVHTraverseIterator<'a, Shape> {
+impl<'bvh, 'shape, Shape: Bounded> BVHTraverseIterator<'bvh, 'shape, Shape> {
     /// Creates a new `BVHTraverseIterator`
-    pub fn new(bvh: &'a BVH, ray: &'a Ray, shapes: &'a [Shape]) -> Self {
+    pub fn new(bvh: &'bvh BVH, ray: &'bvh Ray, shapes: &'shape [Shape]) -> Self {
         BVHTraverseIterator {
             bvh,
             ray,
@@ -105,10 +105,10 @@ impl<'a, Shape: Bounded> BVHTraverseIterator<'a, Shape> {
     }
 }
 
-impl<'a, Shape: Bounded> Iterator for BVHTraverseIterator<'a, Shape> {
-    type Item = &'a Shape;
+impl<'bvh, 'shape, Shape: Bounded> Iterator for BVHTraverseIterator<'bvh, 'shape, Shape> {
+    type Item = &'shape Shape;
 
-    fn next(&mut self) -> Option<&'a Shape> {
+    fn next(&mut self) -> Option<&'shape Shape> {
         loop {
             if self.is_stack_empty() && !self.has_node {
                 // Completed traversal.
