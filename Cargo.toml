@@ -5,7 +5,7 @@ version = "0.7.2"
 edition = "2018"
 authors = [
     "Sven-Hendrik Haase <svenstaro@gmail.com>",
-    "Alexander Dmitriev <alexander.dmitriev2580@gmail.com>"
+    "Alexander Dmitriev <alexander.dmitriev2580@gmail.com>",
 ]
 readme = "README.md"
 repository = "https://github.com/svenstaro/bvh"
@@ -18,9 +18,9 @@ resolver = "2"
 approx = "0.5"
 rand = "0.8"
 log = "0.4"
-num = "0.4"
-glam = "0.23"
 serde = { optional = true, version = "1", features = ["derive"] }
+num = "0.4.0"
+nalgebra = { version = "0.32.2", features = ["serde"] }
 
 [dev-dependencies]
 proptest = "1.0"
@@ -30,7 +30,6 @@ doc-comment = "0.3"
 
 [features]
 bench = []
-serde = ["dep:serde", "glam/serde"]
 
 [profile.release]
 lto = true

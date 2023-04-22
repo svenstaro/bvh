@@ -25,21 +25,21 @@ iterative traversal of the BVH.
 use bvh::aabb::{AABB, Bounded};
 use bvh::bounding_hierarchy::BHShape;
 use bvh::bvh::BVH;
-use bvh::{Point3, Vector3};
 use bvh::ray::Ray;
+use nalgebra::{Point3, Vector3};
 
 let origin = Point3::new(0.0,0.0,0.0);
 let direction = Vector3::new(1.0,0.0,0.0);
 let ray = Ray::new(origin, direction);
 
 struct Sphere {
-    position: Point3,
+    position: Point3<f32>,
     radius: f32,
     node_index: usize,
 }
 
-impl Bounded for Sphere {
-    fn aabb(&self) -> AABB {
+impl Bounded<f32, 3> for Sphere {
+    fn aabb(&self) -> AABB<f32, 3> {
         let half_size = Vector3::new(self.radius, self.radius, self.radius);
         let min = self.position - half_size;
         let max = self.position + half_size;
@@ -47,7 +47,7 @@ impl Bounded for Sphere {
     }
 }
 
-impl BHShape for Sphere {
+impl BHShape<f32, 3> for Sphere {
     fn set_bh_node_index(&mut self, index: usize) {
         self.node_index = index;
     }

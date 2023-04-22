@@ -4,14 +4,15 @@
 //! [`BVHNode`]: struct.BVHNode.html
 //!
 
+use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
+use num::{Float, FromPrimitive, Signed, ToPrimitive, Zero};
+
 use crate::aabb::{Bounded, AABB};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
+//use crate::bounds::ScalarType;
 use crate::bvh::iter::BVHTraverseIterator;
 use crate::ray::Ray;
 use crate::utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
-use crate::Point3;
-use crate::EPSILON;
-use std::f32;
 
 /// The [`BVHNode`] enum that describes a node in a [`BVH`].
 /// It's either a leaf node and references a shape (by holding its index)
@@ -25,7 +26,7 @@ use std::f32;
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[allow(clippy::upper_case_acronyms)]
-pub enum BVHNode {
+pub enum BVHNode<T: Scalar + Copy, const D: usize> {
     /// Leaf node.
     Leaf {
         /// The node's parent.
@@ -49,19 +50,19 @@ pub enum BVHNode {
         child_l_index: usize,
 
         /// The convex hull of the shapes' `AABB`s in child_l.
-        child_l_aabb: AABB,
+        child_l_aabb: AABB<T, D>,
 
         /// Index of the right subtree's root node.
         child_r_index: usize,
 
         /// The convex hull of the shapes' `AABB`s in child_r.
-        child_r_aabb: AABB,
+        child_r_aabb: AABB<T, D>,
     },
 }
 
-impl PartialEq for BVHNode {
+impl<T: Scalar + Copy, const D: usize> PartialEq for BVHNode<T, D> {
     // TODO Consider also comparing AABBs
-    fn eq(&self, other: &BVHNode) -> bool {
+    fn eq(&self, other: &BVHNode<T, D>) -> bool {
         match (self, other) {
             (
                 &BVHNode::Node {
@@ -105,7 +106,7 @@ impl PartialEq for BVHNode {
     }
 }
 
-impl BVHNode {
+impl<T: Scalar + Copy, const D: usize> BVHNode<T, D> {
     /// Returns the index of the parent node.
     pub fn parent(&self) -> usize {
         match *self {
@@ -136,7 +137,7 @@ impl BVHNode {
     }
 
     /// Returns the `AABB` of the right child node.
-    pub fn child_l_aabb(&self) -> AABB {
+    pub fn child_l_aabb(&self) -> AABB<T, D> {
         match *self {
             BVHNode::Node { child_l_aabb, .. } => child_l_aabb,
             _ => panic!(),
@@ -144,7 +145,7 @@ impl BVHNode {
     }
 
     /// Returns a mutable reference to the `AABB` of the left child node.
-    pub fn child_l_aabb_mut(&mut self) -> &mut AABB {
+    pub fn child_l_aabb_mut(&mut self) -> &mut AABB<T, D> {
         match *self {
             BVHNode::Node {
                 ref mut child_l_aabb,
@@ -163,7 +164,7 @@ impl BVHNode {
     }
 
     /// Returns the `AABB` of the right child node.
-    pub fn child_r_aabb(&self) -> AABB {
+    pub fn child_r_aabb(&self) -> AABB<T, D> {
         match *self {
             BVHNode::Node { child_r_aabb, .. } => child_r_aabb,
             _ => panic!(),
@@ -171,7 +172,7 @@ impl BVHNode {
     }
 
     /// Returns a mutable reference to the `AABB` of the right child node.
-    pub fn child_r_aabb_mut(&mut self) -> &mut AABB {
+    pub fn child_r_aabb_mut(&mut self) -> &mut AABB<T, D> {
         match *self {
             BVHNode::Node {
                 ref mut child_r_aabb,
@@ -191,7 +192,10 @@ impl BVHNode {
     /// Gets the `AABB` for a `BVHNode`.
     /// Returns the shape's `AABB` for leaves, and the joined `AABB` of
     /// the two children's `AABB`s for non-leaves.
-    pub fn get_node_aabb<Shape: BHShape>(&self, shapes: &[Shape]) -> AABB {
+    pub fn get_node_aabb<Shape: BHShape<T, D>>(&self, shapes: &[Shape]) -> AABB<T, D>
+    where
+        T: SimdPartialOrd,
+    {
         match *self {
             BVHNode::Node {
                 child_l_aabb,
@@ -213,7 +217,7 @@ impl BVHNode {
 
     /// The build function sometimes needs to add nodes while their data is not available yet.
     /// A dummy cerated by this function serves the purpose of being changed later on.
-    fn create_dummy() -> BVHNode {
+    fn create_dummy() -> BVHNode<T, D> {
         BVHNode::Leaf {
             parent_index: 0,
             depth: 0,
@@ -226,15 +230,31 @@ impl BVHNode {
     ///
     /// [`BVHNode`]: enum.BVHNode.html
     ///
-    pub fn build<T: BHShape>(
-        shapes: &mut [T],
+    pub fn build<S: BHShape<T, D>>(
+        shapes: &mut [S],
         indices: &[usize],
-        nodes: &mut Vec<BVHNode>,
+        nodes: &mut Vec<BVHNode<T, D>>,
         parent_index: usize,
         depth: u32,
-    ) -> usize {
+    ) -> usize
+    where
+        T: FromPrimitive + ClosedSub + ClosedAdd + SimdPartialOrd + ClosedMul + Float,
+    {
         // Helper function to accumulate the AABB joint and the centroids AABB
-        fn grow_convex_hull(convex_hull: (AABB, AABB), shape_aabb: &AABB) -> (AABB, AABB) {
+        fn grow_convex_hull<
+            T: Scalar
+                + Copy
+                + ClosedSub
+                + ClosedMul
+                + SimdPartialOrd
+                + ClosedAdd
+                + FromPrimitive
+                + ToPrimitive,
+            const D: usize,
+        >(
+            convex_hull: (AABB<T, D>, AABB<T, D>),
+            shape_aabb: &AABB<T, D>,
+        ) -> (AABB<T, D>, AABB<T, D>) {
             let center = &shape_aabb.center();
             let convex_hull_aabbs = &convex_hull.0;
             let convex_hull_centroids = &convex_hull.1;
@@ -275,7 +295,7 @@ impl BVHNode {
 
         // The following `if` partitions `indices` for recursively calling `BVH::build`.
         let (child_l_index, child_l_aabb, child_r_index, child_r_aabb) = if split_axis_size
-            < EPSILON
+            < T::epsilon()
         {
             // In this branch the shapes lie too close together so that splitting them in a
             // sensible way is not possible. Instead we just split the list of shapes in half.
@@ -307,7 +327,11 @@ impl BVHNode {
                     (shape_center[split_axis] - centroid_bounds.min[split_axis]) / split_axis_size;
 
                 // Convert that to the actual `Bucket` number.
-                let bucket_num = (bucket_num_relative * (NUM_BUCKETS as f32 - 0.01)) as usize;
+                // TODO check this for integers
+                let bucket_num = (bucket_num_relative
+                    * (T::from_usize(NUM_BUCKETS).unwrap() - T::from_f32(0.01).unwrap()))
+                .to_usize()
+                .unwrap();
 
                 // Extend the selected `Bucket` and add the index to the actual bucket.
                 buckets[bucket_num].add_aabb(&shape_aabb);
@@ -316,7 +340,7 @@ impl BVHNode {
 
             // Compute the costs for each configuration and select the best configuration.
             let mut min_bucket = 0;
-            let mut min_cost = f32::INFINITY;
+            let mut min_cost = T::infinity();
             let mut child_l_aabb = AABB::empty();
             let mut child_r_aabb = AABB::empty();
             for i in 0..(NUM_BUCKETS - 1) {
@@ -324,8 +348,8 @@ impl BVHNode {
                 let child_l = l_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
                 let child_r = r_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
 
-                let cost = (child_l.size as f32 * child_l.aabb.surface_area()
-                    + child_r.size as f32 * child_r.aabb.surface_area())
+                let cost = (T::from_usize(child_l.size).unwrap() * child_l.aabb.surface_area()
+                    + T::from_usize(child_r.size).unwrap() * child_r.aabb.surface_area())
                     / aabb_bounds.surface_area();
                 if cost < min_cost {
                     min_bucket = i;
@@ -371,11 +395,13 @@ impl BVHNode {
     /// [`Ray`]: ../ray/struct.Ray.html
     ///
     pub fn traverse_recursive(
-        nodes: &[BVHNode],
+        nodes: &[BVHNode<T, D>],
         node_index: usize,
-        ray: &Ray,
+        ray: &Ray<T, D>,
         indices: &mut Vec<usize>,
-    ) {
+    ) where
+        T: PartialOrd + Zero + ClosedSub + ClosedMul + SimdPartialOrd,
+    {
         match nodes[node_index] {
             BVHNode::Node {
                 ref child_l_aabb,
@@ -405,20 +431,23 @@ impl BVHNode {
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct BVH {
+pub struct BVH<T: Scalar + Copy, const D: usize> {
     /// The list of nodes of the [`BVH`].
     ///
     /// [`BVH`]: struct.BVH.html
     ///
-    pub nodes: Vec<BVHNode>,
+    pub nodes: Vec<BVHNode<T, D>>,
 }
 
-impl BVH {
+impl<T: Scalar + Copy, const D: usize> BVH<T, D> {
     /// Creates a new [`BVH`] from the `shapes` slice.
     ///
     /// [`BVH`]: struct.BVH.html
     ///
-    pub fn build<Shape: BHShape>(shapes: &mut [Shape]) -> BVH {
+    pub fn build<Shape: BHShape<T, D>>(shapes: &mut [Shape]) -> BVH<T, D>
+    where
+        T: FromPrimitive + ToPrimitive + Float + ClosedSub + ClosedAdd + ClosedMul + SimdPartialOrd,
+    {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
         let expected_node_count = shapes.len() * 2;
         let mut nodes = Vec::with_capacity(expected_node_count);
@@ -432,7 +461,14 @@ impl BVH {
     /// [`BVH`]: struct.BVH.html
     /// [`AABB`]: ../aabb/struct.AABB.html
     ///
-    pub fn traverse<'a, Shape: Bounded>(&'a self, ray: &Ray, shapes: &'a [Shape]) -> Vec<&Shape> {
+    pub fn traverse<'a, Shape: Bounded<T, D>>(
+        &'a self,
+        ray: &Ray<T, D>,
+        shapes: &'a [Shape],
+    ) -> Vec<&Shape>
+    where
+        T: PartialOrd + Zero + ClosedSub + ClosedMul + SimdPartialOrd,
+    {
         let mut indices = Vec::new();
         BVHNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
         indices
@@ -447,11 +483,14 @@ impl BVH {
     /// [`BVH`]: struct.BVH.html
     /// [`AABB`]: ../aabb/struct.AABB.html
     ///
-    pub fn traverse_iterator<'bvh, 'shape, Shape: Bounded>(
+    pub fn traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
         &'bvh self,
-        ray: &'bvh Ray,
+        ray: &'bvh Ray<T, D>,
         shapes: &'shape [Shape],
-    ) -> BVHTraverseIterator<'bvh, 'shape, Shape> {
+    ) -> BVHTraverseIterator<'bvh, 'shape, T, D, Shape>
+    where
+        T: SimdPartialOrd + ClosedSub + PartialOrd + ClosedMul + Zero,
+    {
         BVHTraverseIterator::new(self, ray, shapes)
     }
 
@@ -459,9 +498,15 @@ impl BVH {
     ///
     /// [`BVH`]: struct.BVH.html
     ///
-    pub fn pretty_print(&self) {
+    pub fn pretty_print(&self)
+    where
+        T: std::fmt::Display,
+    {
         let nodes = &self.nodes;
-        fn print_node(nodes: &[BVHNode], node_index: usize) {
+        fn print_node<T: Scalar + Copy, const D: usize>(nodes: &[BVHNode<T, D>], node_index: usize)
+        where
+            T: std::fmt::Display,
+        {
             match nodes[node_index] {
                 BVHNode::Node {
                     child_l_index,
@@ -491,15 +536,18 @@ impl BVH {
     /// Verifies that the node at index `node_index` lies inside `expected_outer_aabb`,
     /// its parent index is equal to `expected_parent_index`, its depth is equal to
     /// `expected_depth`. Increares `node_count` by the number of visited nodes.
-    fn is_consistent_subtree<Shape: BHShape>(
+    fn is_consistent_subtree<Shape: BHShape<T, D>>(
         &self,
         node_index: usize,
         expected_parent_index: usize,
-        expected_outer_aabb: &AABB,
+        expected_outer_aabb: &AABB<T, D>,
         expected_depth: u32,
         node_count: &mut usize,
         shapes: &[Shape],
-    ) -> bool {
+    ) -> bool
+    where
+        T: Float + ClosedSub,
+    {
         *node_count += 1;
         match self.nodes[node_index] {
             BVHNode::Node {
@@ -513,9 +561,9 @@ impl BVH {
                 let correct_parent_index = expected_parent_index == parent_index;
                 let correct_depth = expected_depth == depth;
                 let left_aabb_in_parent =
-                    expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, EPSILON);
+                    expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, T::epsilon());
                 let right_aabb_in_parent =
-                    expected_outer_aabb.approx_contains_aabb_eps(&child_r_aabb, EPSILON);
+                    expected_outer_aabb.approx_contains_aabb_eps(&child_r_aabb, T::epsilon());
                 let left_subtree_consistent = self.is_consistent_subtree(
                     child_l_index,
                     node_index,
@@ -549,7 +597,7 @@ impl BVH {
                 let correct_depth = expected_depth == depth;
                 let shape_aabb = shapes[shape_index].aabb();
                 let shape_aabb_in_parent =
-                    expected_outer_aabb.approx_contains_aabb_eps(&shape_aabb, EPSILON);
+                    expected_outer_aabb.approx_contains_aabb_eps(&shape_aabb, T::epsilon());
 
                 correct_parent_index && correct_depth && shape_aabb_in_parent
             }
@@ -558,12 +606,12 @@ impl BVH {
 
     /// Checks if all children of a node have the correct parent index, and that there is no
     /// detached subtree. Also checks if the `AABB` hierarchy is consistent.
-    pub fn is_consistent<Shape: BHShape>(&self, shapes: &[Shape]) -> bool {
+    pub fn is_consistent<Shape: BHShape<T, D>>(&self, shapes: &[Shape]) -> bool
+    where
+        T: Float + ClosedSub,
+    {
         // The root node of the bvh is not bounded by anything.
-        let space = AABB {
-            min: Point3::new(f32::NEG_INFINITY, f32::NEG_INFINITY, f32::NEG_INFINITY),
-            max: Point3::new(f32::INFINITY, f32::INFINITY, f32::INFINITY),
-        };
+        let space = AABB::infinite();
 
         // The counter for all nodes.
         let mut node_count = 0;
@@ -577,15 +625,17 @@ impl BVH {
     }
 
     /// Assert version of `is_consistent_subtree`.
-    fn assert_consistent_subtree<Shape: BHShape>(
+    fn assert_consistent_subtree<Shape: BHShape<T, D>>(
         &self,
         node_index: usize,
         expected_parent_index: usize,
-        expected_outer_aabb: &AABB,
+        expected_outer_aabb: &AABB<T, D>,
         expected_depth: u32,
         node_count: &mut usize,
         shapes: &[Shape],
-    ) {
+    ) where
+        T: Float + ClosedSub + std::fmt::Display,
+    {
         *node_count += 1;
         let node = &self.nodes[node_index];
 
@@ -611,7 +661,7 @@ impl BVH {
                 ..
             } => {
                 assert!(
-                    expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, EPSILON),
+                    expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, T::epsilon()),
                     "Left child lies outside the expected bounds.
                          \tBounds: {}
                          \tLeft child: {}",
@@ -619,7 +669,7 @@ impl BVH {
                     child_l_aabb
                 );
                 assert!(
-                    expected_outer_aabb.approx_contains_aabb_eps(&child_r_aabb, EPSILON),
+                    expected_outer_aabb.approx_contains_aabb_eps(&child_r_aabb, T::epsilon()),
                     "Right child lies outside the expected bounds.
                          \tBounds: {}
                          \tRight child: {}",
@@ -646,7 +696,7 @@ impl BVH {
             BVHNode::Leaf { shape_index, .. } => {
                 let shape_aabb = shapes[shape_index].aabb();
                 assert!(
-                    expected_outer_aabb.approx_contains_aabb_eps(&shape_aabb, EPSILON),
+                    expected_outer_aabb.approx_contains_aabb_eps(&shape_aabb, T::epsilon()),
                     "Shape's AABB lies outside the expected bounds.\n\tBounds: {}\n\tShape: {}",
                     expected_outer_aabb,
                     shape_aabb
@@ -656,12 +706,12 @@ impl BVH {
     }
 
     /// Assert version of `is_consistent`.
-    pub fn assert_consistent<Shape: BHShape>(&self, shapes: &[Shape]) {
+    pub fn assert_consistent<Shape: BHShape<T, D>>(&self, shapes: &[Shape])
+    where
+        T: Float + ClosedSub + std::fmt::Display,
+    {
         // The root node of the bvh is not bounded by anything.
-        let space = AABB {
-            min: Point3::new(f32::NEG_INFINITY, f32::NEG_INFINITY, f32::NEG_INFINITY),
-            max: Point3::new(f32::INFINITY, f32::INFINITY, f32::INFINITY),
-        };
+        let space = AABB::infinite();
 
         // The counter for all nodes.
         let mut node_count = 0;
@@ -675,7 +725,10 @@ impl BVH {
     /// Check that the `AABB`s in the `BVH` are tight, which means, that parent `AABB`s are not
     /// larger than they should be. This function checks, whether the children of node `node_index`
     /// lie inside `outer_aabb`.
-    pub fn assert_tight_subtree(&self, node_index: usize, outer_aabb: &AABB) {
+    pub fn assert_tight_subtree(&self, node_index: usize, outer_aabb: &AABB<T, D>)
+    where
+        T: Float + SimdPartialOrd + ClosedSub + Signed,
+    {
         if let BVHNode::Node {
             child_l_index,
             child_l_aabb,
@@ -685,7 +738,7 @@ impl BVH {
         } = self.nodes[node_index]
         {
             let joint_aabb = child_l_aabb.join(&child_r_aabb);
-            assert!(joint_aabb.relative_eq(outer_aabb, EPSILON));
+            assert!(joint_aabb.relative_eq(outer_aabb, T::epsilon()));
             self.assert_tight_subtree(child_l_index, &child_l_aabb);
             self.assert_tight_subtree(child_r_index, &child_r_aabb);
         }
@@ -693,7 +746,10 @@ impl BVH {
 
     /// Check that the `AABB`s in the `BVH` are tight, which means, that parent `AABB`s are not
     /// larger than they should be.
-    pub fn assert_tight(&self) {
+    pub fn assert_tight(&self)
+    where
+        T: SimdPartialOrd + Float + ClosedSub + Signed,
+    {
         // When starting to check whether the `BVH` is tight, we cannot provide a minimum
         // outer `AABB`, therefore we compute the correct one in this instance.
         if let BVHNode::Node {
@@ -708,12 +764,28 @@ impl BVH {
     }
 }
 
-impl BoundingHierarchy for BVH {
-    fn build<Shape: BHShape>(shapes: &mut [Shape]) -> BVH {
+impl<T, const D: usize> BoundingHierarchy<T, D> for BVH<T, D>
+where
+    T: Scalar
+        + Copy
+        + FromPrimitive
+        + ToPrimitive
+        + Float
+        + ClosedSub
+        + ClosedAdd
+        + ClosedMul
+        + SimdPartialOrd
+        + std::fmt::Display,
+{
+    fn build<Shape: BHShape<T, D>>(shapes: &mut [Shape]) -> BVH<T, D> {
         BVH::build(shapes)
     }
 
-    fn traverse<'a, Shape: Bounded>(&'a self, ray: &Ray, shapes: &'a [Shape]) -> Vec<&Shape> {
+    fn traverse<'a, Shape: Bounded<T, D>>(
+        &'a self,
+        ray: &Ray<T, D>,
+        shapes: &'a [Shape],
+    ) -> Vec<&Shape> {
         self.traverse(ray, shapes)
     }
 
@@ -724,8 +796,7 @@ impl BoundingHierarchy for BVH {
 
 #[cfg(test)]
 mod tests {
-    use crate::bvh::{BVHNode, BVH};
-    use crate::testbase::{build_some_bh, traverse_some_bh};
+    use crate::testbase::{build_some_bh, traverse_some_bh, BVHNode, BVH};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -770,11 +841,10 @@ mod tests {
 
 #[cfg(all(feature = "bench", test))]
 mod bench {
-    use crate::bvh::BVH;
     use crate::testbase::{
         build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh,
         intersect_1200_triangles_bh, intersect_120k_triangles_bh, intersect_12k_triangles_bh,
-        intersect_bh, load_sponza_scene,
+        intersect_bh, load_sponza_scene, BVH,
     };
 
     #[bench]

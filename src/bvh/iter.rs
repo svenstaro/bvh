@@ -1,14 +1,18 @@
+use nalgebra::{ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
+use num::Zero;
+
 use crate::aabb::Bounded;
 use crate::bvh::{BVHNode, BVH};
 use crate::ray::Ray;
 
 /// Iterator to traverse a [`BVH`] without memory allocations
 #[allow(clippy::upper_case_acronyms)]
-pub struct BVHTraverseIterator<'bvh, 'shape, Shape: Bounded> {
+pub struct BVHTraverseIterator<'bvh, 'shape, T: Scalar + Copy, const D: usize, Shape: Bounded<T, D>>
+{
     /// Reference to the BVH to traverse
-    bvh: &'bvh BVH,
+    bvh: &'bvh BVH<T, D>,
     /// Reference to the input ray
-    ray: &'bvh Ray,
+    ray: &'bvh Ray<T, D>,
     /// Reference to the input shapes array
     shapes: &'shape [Shape],
     /// Traversal stack. 4 billion items seems enough?
@@ -21,9 +25,13 @@ pub struct BVHTraverseIterator<'bvh, 'shape, Shape: Bounded> {
     has_node: bool,
 }
 
-impl<'bvh, 'shape, Shape: Bounded> BVHTraverseIterator<'bvh, 'shape, Shape> {
+impl<'bvh, 'shape, T, const D: usize, Shape: Bounded<T, D>>
+    BVHTraverseIterator<'bvh, 'shape, T, D, Shape>
+where
+    T: Scalar + Copy + SimdPartialOrd + ClosedSub + PartialOrd + ClosedMul + Zero,
+{
     /// Creates a new `BVHTraverseIterator`
-    pub fn new(bvh: &'bvh BVH, ray: &'bvh Ray, shapes: &'shape [Shape]) -> Self {
+    pub fn new(bvh: &'bvh BVH<T, D>, ray: &'bvh Ray<T, D>, shapes: &'shape [Shape]) -> Self {
         BVHTraverseIterator {
             bvh,
             ray,
@@ -105,7 +113,11 @@ impl<'bvh, 'shape, Shape: Bounded> BVHTraverseIterator<'bvh, 'shape, Shape> {
     }
 }
 
-impl<'bvh, 'shape, Shape: Bounded> Iterator for BVHTraverseIterator<'bvh, 'shape, Shape> {
+impl<'bvh, 'shape, T, const D: usize, Shape: Bounded<T, D>> Iterator
+    for BVHTraverseIterator<'bvh, 'shape, T, D, Shape>
+where
+    T: Scalar + Copy + SimdPartialOrd + ClosedSub + PartialOrd + ClosedMul + Zero,
+{
     type Item = &'shape Shape;
 
     fn next(&mut self) -> Option<&'shape Shape> {
@@ -143,10 +155,8 @@ impl<'bvh, 'shape, Shape: Bounded> Iterator for BVHTraverseIterator<'bvh, 'shape
 // TODO: Once iterators are part of the BoundingHierarchy trait we can move all this to testbase.
 #[cfg(test)]
 mod tests {
-    use crate::bvh::BVH;
     use crate::ray::Ray;
-    use crate::testbase::{generate_aligned_boxes, UnitBox};
-    use crate::{Point3, Vector3};
+    use crate::testbase::{generate_aligned_boxes, Point3, UnitBox, Vector3, BVH};
     use std::collections::HashSet;
 
     /// Creates a `BVH` for a fixed scene structure.
@@ -254,8 +264,7 @@ mod tests {
 
 #[cfg(all(feature = "bench", test))]
 mod bench {
-    use crate::bvh::BVH;
-    use crate::testbase::{create_ray, load_sponza_scene};
+    use crate::testbase::{create_ray, load_sponza_scene, BVH};
 
     #[bench]
     /// Benchmark the traversal of a `BVH` with the Sponza scene with Vec return.

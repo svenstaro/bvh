@@ -11,6 +11,8 @@ use crate::bounding_hierarchy::BHShape;
 use crate::bvh::*;
 
 use log::info;
+use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
+use num::{FromPrimitive, Zero};
 use rand::{thread_rng, Rng};
 use std::collections::HashSet;
 
@@ -35,14 +37,14 @@ impl OptimizationIndex {
 }
 
 #[derive(Debug, Copy, Clone)]
-struct NodeData {
+struct NodeData<T: Scalar + Copy, const D: usize> {
     index: usize,
-    aabb: AABB,
+    aabb: AABB<T, D>,
 }
 
-impl BVHNode {
+impl<T: Scalar + Copy, const D: usize> BVHNode<T, D> {
     // Get the grandchildren's NodeData.
-    fn get_children_node_data(&self) -> Option<(NodeData, NodeData)> {
+    fn get_children_node_data(&self) -> Option<(NodeData<T, D>, NodeData<T, D>)> {
         match *self {
             BVHNode::Node {
                 child_l_index,
@@ -65,14 +67,26 @@ impl BVHNode {
     }
 }
 
-impl BVH {
+impl<T, const D: usize> BVH<T, D>
+where
+    T: Scalar
+        + Copy
+        + FromPrimitive
+        + ClosedSub
+        + ClosedMul
+        + ClosedAdd
+        + Zero
+        + SimdPartialOrd
+        + PartialOrd
+        + std::fmt::Display,
+{
     /// Optimizes the `BVH` by batch-reorganizing updated nodes.
     /// Based on
     /// [`https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs`]
     ///
     /// Needs all the scene's shapes, plus the indices of the shapes that were updated.
     ///
-    pub fn optimize<Shape: BHShape>(
+    pub fn optimize<Shape: BHShape<T, D>>(
         &mut self,
         refit_shape_indices: &HashSet<usize>,
         shapes: &[Shape],
@@ -154,7 +168,7 @@ impl BVH {
     /// This method is called for each node which has been modified and needs to be updated.
     /// If the specified node is a grandparent, then try to optimize the `BVH` by rotating its
     /// children.
-    fn update<Shape: BHShape>(
+    fn update<Shape: BHShape<T, D>>(
         &mut self,
         node_index: usize,
         shapes: &[Shape],
@@ -219,9 +233,9 @@ impl BVH {
     fn find_better_rotation(
         &self,
         child_l_index: usize,
-        child_l_aabb: &AABB,
+        child_l_aabb: &AABB<T, D>,
         child_r_index: usize,
-        child_r_aabb: &AABB,
+        child_r_aabb: &AABB<T, D>,
     ) -> Option<(usize, usize)> {
         // Get indices and `AABB`s of all grandchildren.
         let left_children_nodes = self.nodes[child_l_index].get_children_node_data();
@@ -236,7 +250,7 @@ impl BVH {
         // thus being the favored rotation that will be executed after considering all rotations.
         let mut best_rotation: Option<(usize, usize)> = None;
         {
-            let mut consider_rotation = |new_rotation: (usize, usize), surface_area: f32| {
+            let mut consider_rotation = |new_rotation: (usize, usize), surface_area: T| {
                 if surface_area < best_surface_area {
                     best_surface_area = surface_area;
                     best_rotation = Some(new_rotation);
@@ -286,7 +300,7 @@ impl BVH {
     ///
     /// `Some(index_of_node)` if a new node was found that should be used for optimization.
     ///
-    fn try_rotate<Shape: BHShape>(
+    fn try_rotate<Shape: BHShape<T, D>>(
         &mut self,
         node_index: usize,
         shapes: &[Shape],
@@ -352,7 +366,11 @@ impl BVH {
 
     /// Sets child_l_aabb and child_r_aabb of a BVHNode::Node to match its children,
     /// right after updating the children themselves. Not recursive.
-    fn fix_children_and_own_aabbs<Shape: BHShape>(&mut self, node_index: usize, shapes: &[Shape]) {
+    fn fix_children_and_own_aabbs<Shape: BHShape<T, D>>(
+        &mut self,
+        node_index: usize,
+        shapes: &[Shape],
+    ) {
         let (child_l_index, child_r_index) = if let BVHNode::Node {
             child_l_index,
             child_r_index,
@@ -375,7 +393,7 @@ impl BVH {
 
     /// Updates `child_l_aabb` and `child_r_aabb` of the `BVHNode::Node`
     /// with the index `node_index` from its children.
-    fn fix_aabbs<Shape: BHShape>(
+    fn fix_aabbs<Shape: BHShape<T, D>>(
         &mut self,
         node_index: usize,
         shapes: &[Shape],
@@ -405,7 +423,7 @@ impl BVH {
 
     /// Switch two nodes by rewiring the involved indices (not by moving them in the nodes slice).
     /// Also updates the AABBs of the parents.
-    fn rotate<Shape: BHShape>(
+    fn rotate<Shape: BHShape<T, D>>(
         &mut self,
         node_a_index: usize,
         node_b_index: usize,
@@ -470,7 +488,7 @@ impl BVH {
         child_l_index == node_index
     }
 
-    fn connect_nodes<Shape: BHShape>(
+    fn connect_nodes<Shape: BHShape<T, D>>(
         &mut self,
         child_index: usize,
         parent_index: usize,
@@ -517,12 +535,10 @@ impl BVH {
 mod tests {
     use crate::aabb::Bounded;
     use crate::bounding_hierarchy::BHShape;
-    use crate::bvh::{BVHNode, BVH};
     use crate::testbase::{
-        build_some_bh, create_n_cubes, default_bounds, randomly_transform_scene, UnitBox,
+        build_some_bh, create_n_cubes, default_bounds, randomly_transform_scene, BVHNode, Point3,
+        UnitBox, BVH,
     };
-    use crate::Point3;
-    use crate::EPSILON;
     use std::collections::HashSet;
 
     #[test]
@@ -719,16 +735,16 @@ mod tests {
 
         assert!(nodes[1]
             .child_l_aabb()
-            .relative_eq(&shapes[2].aabb(), EPSILON));
+            .relative_eq(&shapes[2].aabb(), f32::EPSILON));
         assert!(nodes[1]
             .child_r_aabb()
-            .relative_eq(&shapes[1].aabb(), EPSILON));
+            .relative_eq(&shapes[1].aabb(), f32::EPSILON));
         assert!(nodes[2]
             .child_l_aabb()
-            .relative_eq(&shapes[0].aabb(), EPSILON));
+            .relative_eq(&shapes[0].aabb(), f32::EPSILON));
         assert!(nodes[2]
             .child_r_aabb()
-            .relative_eq(&shapes[3].aabb(), EPSILON));
+            .relative_eq(&shapes[3].aabb(), f32::EPSILON));
     }
 
     #[test]
@@ -761,16 +777,16 @@ mod tests {
 
         assert!(nodes[0]
             .child_l_aabb()
-            .relative_eq(&shapes[2].aabb(), EPSILON));
+            .relative_eq(&shapes[2].aabb(), f32::EPSILON));
         assert!(nodes[2]
             .child_r_aabb()
-            .relative_eq(&shapes[3].aabb(), EPSILON));
+            .relative_eq(&shapes[3].aabb(), f32::EPSILON));
         assert!(nodes[1]
             .child_l_aabb()
-            .relative_eq(&shapes[0].aabb(), EPSILON));
+            .relative_eq(&shapes[0].aabb(), f32::EPSILON));
         assert!(nodes[1]
             .child_r_aabb()
-            .relative_eq(&shapes[1].aabb(), EPSILON));
+            .relative_eq(&shapes[1].aabb(), f32::EPSILON));
     }
 
     #[test]
@@ -802,16 +818,16 @@ mod tests {
 
         assert!(nodes[1]
             .child_l_aabb()
-            .relative_eq(&shapes[2].aabb(), EPSILON));
+            .relative_eq(&shapes[2].aabb(), f32::EPSILON));
         assert!(nodes[1]
             .child_r_aabb()
-            .relative_eq(&shapes[1].aabb(), EPSILON));
+            .relative_eq(&shapes[1].aabb(), f32::EPSILON));
         assert!(nodes[2]
             .child_l_aabb()
-            .relative_eq(&shapes[0].aabb(), EPSILON));
+            .relative_eq(&shapes[0].aabb(), f32::EPSILON));
         assert!(nodes[2]
             .child_r_aabb()
-            .relative_eq(&shapes[3].aabb(), EPSILON));
+            .relative_eq(&shapes[3].aabb(), f32::EPSILON));
     }
 
     #[test]
@@ -843,16 +859,16 @@ mod tests {
 
         assert!(nodes[0]
             .child_l_aabb()
-            .relative_eq(&shapes[2].aabb(), EPSILON));
+            .relative_eq(&shapes[2].aabb(), f32::EPSILON));
         assert!(nodes[2]
             .child_r_aabb()
-            .relative_eq(&shapes[3].aabb(), EPSILON));
+            .relative_eq(&shapes[3].aabb(), f32::EPSILON));
         assert!(nodes[1]
             .child_l_aabb()
-            .relative_eq(&shapes[0].aabb(), EPSILON));
+            .relative_eq(&shapes[0].aabb(), f32::EPSILON));
         assert!(nodes[1]
             .child_r_aabb()
-            .relative_eq(&shapes[1].aabb(), EPSILON));
+            .relative_eq(&shapes[1].aabb(), f32::EPSILON));
     }
 
     #[test]
@@ -890,24 +906,24 @@ mod tests {
 
         assert!(nodes[0]
             .child_l_aabb()
-            .relative_eq(&shapes[2].aabb(), EPSILON));
+            .relative_eq(&shapes[2].aabb(), f32::EPSILON));
         let right_subtree_aabb = &shapes[0]
             .aabb()
             .join(&shapes[1].aabb())
             .join(&shapes[3].aabb());
         assert!(nodes[0]
             .child_r_aabb()
-            .relative_eq(right_subtree_aabb, EPSILON));
+            .relative_eq(right_subtree_aabb, f32::EPSILON));
 
         assert!(nodes[2]
             .child_r_aabb()
-            .relative_eq(&shapes[3].aabb(), EPSILON));
+            .relative_eq(&shapes[3].aabb(), f32::EPSILON));
         assert!(nodes[1]
             .child_l_aabb()
-            .relative_eq(&shapes[0].aabb(), EPSILON));
+            .relative_eq(&shapes[0].aabb(), f32::EPSILON));
         assert!(nodes[1]
             .child_r_aabb()
-            .relative_eq(&shapes[1].aabb(), EPSILON));
+            .relative_eq(&shapes[1].aabb(), f32::EPSILON));
     }
 
     #[test]
@@ -938,11 +954,9 @@ mod tests {
 
 #[cfg(all(feature = "bench", test))]
 mod bench {
-    use crate::aabb::AABB;
-    use crate::bvh::BVH;
     use crate::testbase::{
         create_n_cubes, default_bounds, intersect_bh, load_sponza_scene, randomly_transform_scene,
-        Triangle,
+        Triangle, AABB, BVH,
     };
 
     #[bench]
