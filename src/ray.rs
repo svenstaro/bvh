@@ -1,6 +1,9 @@
 //! This module defines a Ray structure and intersection algorithms
 //! for axis aligned bounding boxes and triangles.
 
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
+
 use crate::aabb::AABB;
 use nalgebra::{
     ClosedAdd, ClosedMul, ClosedSub, ComplexField, Point, SVector, Scalar, SimdPartialOrd,
@@ -93,6 +96,101 @@ fn max<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
     }
 }
 
+trait IntersectsAABB<X, T, const D: usize>
+where
+    T: Scalar + Copy + ClosedSub + ClosedMul + Zero + PartialOrd + SimdPartialOrd,
+{
+    fn ray_intersects_aabb(&self, aabb: &AABB<T, D>) -> bool;
+}
+
+impl<T, const D: usize> IntersectsAABB<Ray<T, D>, T, D> for Ray<T, D>
+where
+    T: Scalar + Copy + ClosedSub + ClosedMul + Zero + PartialOrd + SimdPartialOrd,
+{
+    #[inline(always)]
+    default fn ray_intersects_aabb(&self, aabb: &AABB<T, D>) -> bool {
+        let lbr = (aabb[0].coords - self.origin.coords).component_mul(&self.inv_direction);
+        let rtr = (aabb[1].coords - self.origin.coords).component_mul(&self.inv_direction);
+
+        let (inf, sup) = lbr.inf_sup(&rtr);
+
+        let tmin = inf.max();
+        let tmax = sup.min();
+
+        tmax > max(tmin, T::zero())
+    }
+}
+
+#[inline(always)]
+#[cfg(target_arch = "x86_64")]
+fn vec_to_mm(vec: &SVector<f32, 3>) -> __m128 {
+    unsafe { _mm_set_ps(vec.z, vec.z, vec.y, vec.x) }
+}
+
+#[inline(always)]
+#[cfg(target_arch = "x86_64")]
+fn max_elem(mm: __m128) -> f32 {
+    unsafe {
+        let a = _mm_unpacklo_ps(mm, mm); // x x y y
+        let b = _mm_unpackhi_ps(mm, mm); // z z w w
+        let c = _mm_max_ps(a, b); // ..., max(x, z), ..., ...
+        let res = _mm_max_ps(mm, c); // ..., max(y, max(x, z)), ..., ...
+        #[allow(invalid_value)]
+        let mut data: [f32; 4] = std::mem::MaybeUninit::uninit().assume_init();
+        _mm_store_ps(data.as_mut_ptr(), res);
+        return data[1];
+    }
+}
+
+#[inline(always)]
+#[cfg(target_arch = "x86_64")]
+fn min_elem(mm: __m128) -> f32 {
+    unsafe {
+        let a = _mm_unpacklo_ps(mm, mm); // x x y y
+        let b = _mm_unpackhi_ps(mm, mm); // z z w w
+        let c = _mm_min_ps(a, b); // ..., min(x, z), ..., ...
+        let res = _mm_min_ps(mm, c); // ..., min(y, min(x, z)), ..., ...
+        #[allow(invalid_value)]
+        let mut data: [f32; 4] = std::mem::MaybeUninit::uninit().assume_init();
+        _mm_store_ps(data.as_mut_ptr(), res);
+        return data[1];
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+impl IntersectsAABB<Ray<f32, 3>, f32, 3> for Ray<f32, 3> {
+    #[inline(always)]
+    fn ray_intersects_aabb(&self, aabb: &AABB<f32, 3>) -> bool {
+        use std::arch::x86_64::*;
+
+        unsafe {
+            let v1 = vec_to_mm(&aabb[0].coords);
+            let v2 = vec_to_mm(&aabb[1].coords);
+
+            let oc = vec_to_mm(&self.origin.coords);
+            let v1 = _mm_sub_ps(v1, oc);
+            let v2 = _mm_sub_ps(v2, oc);
+            drop(oc);
+
+            let id = vec_to_mm(&self.inv_direction);
+            let v1 = _mm_mul_ps(v1, id);
+            let v2 = _mm_mul_ps(v2, id);
+            drop(id);
+
+            let inf = _mm_min_ps(v1, v2);
+            let sup = _mm_max_ps(v1, v2);
+
+            drop(v1);
+            drop(v2);
+
+            let tmin = max_elem(inf);
+            let tmax = min_elem(sup);
+
+            tmax > max(tmin, 0.0)
+        }
+    }
+}
+
 impl<T: Scalar + Copy, const D: usize> Ray<T, D> {
     /// Creates a new [`Ray`] from an `origin` and a `direction`.
     /// `direction` will be normalized.
@@ -159,15 +257,7 @@ impl<T: Scalar + Copy, const D: usize> Ray<T, D> {
     where
         T: ClosedSub + ClosedMul + Zero + PartialOrd + SimdPartialOrd,
     {
-        let lbr = (aabb[0].coords - self.origin.coords).component_mul(&self.inv_direction);
-        let rtr = (aabb[1].coords - self.origin.coords).component_mul(&self.inv_direction);
-
-        let (inf, sup) = lbr.inf_sup(&rtr);
-
-        let tmin = inf.max();
-        let tmax = sup.min();
-
-        tmax > max(tmin, T::zero())
+        self.ray_intersects_aabb(aabb)
     }
 
     /// Implementation of the
