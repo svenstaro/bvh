@@ -3,12 +3,14 @@
 
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64::*;
+use std::simd::f32x4;
 
 use crate::aabb::AABB;
 use nalgebra::{
     ClosedAdd, ClosedMul, ClosedSub, ComplexField, Point, SVector, Scalar, SimdPartialOrd,
 };
 use num::{Float, One, Zero};
+use simba::simd::WideF32x4;
 
 /// A struct which defines a ray and some of its cached values.
 #[derive(Debug, Clone, Copy)]
@@ -157,34 +159,70 @@ fn min_elem(mm: __m128) -> f32 {
     }
 }
 
-#[cfg(target_arch = "x86_64")]
+// #[cfg(target_arch = "x86_64")]
+// impl IntersectsAABB<Ray<f32, 3>, f32, 3> for Ray<f32, 3> {
+//     #[inline(always)]
+//     fn ray_intersects_aabb(&self, aabb: &AABB<f32, 3>) -> bool {
+//         use std::arch::x86_64::*;
+
+//         unsafe {
+//             let v1 = vec_to_mm(&aabb[0].coords);
+//             let v2 = vec_to_mm(&aabb[1].coords);
+
+//             let oc = vec_to_mm(&self.origin.coords);
+//             let v1 = _mm_sub_ps(v1, oc);
+//             let v2 = _mm_sub_ps(v2, oc);
+//             drop(oc);
+
+//             let id = vec_to_mm(&self.inv_direction);
+//             let v1 = _mm_mul_ps(v1, id);
+//             let v2 = _mm_mul_ps(v2, id);
+//             drop(id);
+
+//             let inf = _mm_min_ps(v1, v2);
+//             let sup = _mm_max_ps(v1, v2);
+
+//             drop(v1);
+//             drop(v2);
+
+//             let tmin = max_elem(inf);
+//             let tmax = min_elem(sup);
+
+//             tmax > max(tmin, 0.0)
+//         }
+//     }
+// }
+
+fn vec_to_wide(vec: &SVector<f32,3>) -> WideF32x4 {
+    WideF32x4::from([vec.x, vec.y, vec.z, vec.z])
+}
+
 impl IntersectsAABB<Ray<f32, 3>, f32, 3> for Ray<f32, 3> {
     #[inline(always)]
     fn ray_intersects_aabb(&self, aabb: &AABB<f32, 3>) -> bool {
-        use std::arch::x86_64::*;
 
         unsafe {
-            let v1 = vec_to_mm(&aabb[0].coords);
-            let v2 = vec_to_mm(&aabb[1].coords);
+            let v1 = vec_to_wide(&aabb[0].coords);
+            let v2 = vec_to_wide(&aabb[1].coords);
 
-            let oc = vec_to_mm(&self.origin.coords);
-            let v1 = _mm_sub_ps(v1, oc);
-            let v2 = _mm_sub_ps(v2, oc);
+            let oc = vec_to_wide(&self.origin.coords);
+            let v1 = v1 - oc;
+            let v2 = v2 - oc;
             drop(oc);
 
-            let id = vec_to_mm(&self.inv_direction);
-            let v1 = _mm_mul_ps(v1, id);
-            let v2 = _mm_mul_ps(v2, id);
+            let id = vec_to_wide(&self.inv_direction);
+            let v1 = v1 * id;
+            let v2 = v2 * id;
             drop(id);
 
-            let inf = _mm_min_ps(v1, v2);
-            let sup = _mm_max_ps(v1, v2);
-
+            let inf = v1.simd_min(v2);
+            let sup = v1.simd_max(v2);
+            
             drop(v1);
             drop(v2);
 
-            let tmin = max_elem(inf);
-            let tmax = min_elem(sup);
+            let tmin = inf.simd_horizontal_max();
+            let tmax = sup.simd_horizontal_min();
 
             tmax > max(tmin, 0.0)
         }
