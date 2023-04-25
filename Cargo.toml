@@ -21,7 +21,6 @@ log = "0.4"
 serde = { optional = true, version = "1", features = ["derive"] }
 num = "0.4.0"
 nalgebra = { version = "0.32.2", features = ["default", "serde"] }
-simba = "0.8.1"
 
 [dev-dependencies]
 proptest = "1.0"
@@ -31,6 +30,7 @@ doc-comment = "0.3"
 
 [features]
 bench = []
+full_simd = []
 
 [profile.release]
 lto = true

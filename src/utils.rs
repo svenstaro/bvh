@@ -6,6 +6,56 @@ use num::Float;
 use crate::aabb::AABB;
 use crate::bounding_hierarchy::BHShape;
 
+/// Fast floating point minimum.  This function matches the semantics of
+///
+/// ```no_compile
+/// if x < y { x } else { y }
+/// ```
+///
+/// which has efficient instruction sequences on many platforms (1 instruction on x86).  For most
+/// values, it matches the semantics of `x.min(y)`; the special cases are:
+///
+/// ```text
+/// min(-0.0, +0.0); +0.0
+/// min(+0.0, -0.0): -0.0
+/// min( NaN,  1.0):  1.0
+/// min( 1.0,  NaN):  NaN
+/// ```
+#[inline(always)]
+#[allow(dead_code)]
+pub fn fast_min<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
+    if x < y {
+        x
+    } else {
+        y
+    }
+}
+
+/// Fast floating point maximum.  This function matches the semantics of
+///
+/// ```no_compile
+/// if x > y { x } else { y }
+/// ```
+///
+/// which has efficient instruction sequences on many platforms (1 instruction on x86).  For most
+/// values, it matches the semantics of `x.max(y)`; the special cases are:
+///
+/// ```text
+/// max(-0.0, +0.0); +0.0
+/// max(+0.0, -0.0): -0.0
+/// max( NaN,  1.0):  1.0
+/// max( 1.0,  NaN):  NaN
+/// ```
+#[inline(always)]
+#[allow(dead_code)]
+pub fn fast_max<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
+    if x > y {
+        x
+    } else {
+        y
+    }
+}
+
 /// Concatenates the list of vectors into a single vector.
 /// Drains the elements from the source `vectors`.
 pub fn concatenate_vectors<T: Sized>(vectors: &mut [Vec<T>]) -> Vec<T> {

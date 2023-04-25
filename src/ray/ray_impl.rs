@@ -1,16 +1,13 @@
 //! This module defines a Ray structure and intersection algorithms
 //! for axis aligned bounding boxes and triangles.
 
-#[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
-use std::simd::f32x4;
-
 use crate::aabb::AABB;
 use nalgebra::{
     ClosedAdd, ClosedMul, ClosedSub, ComplexField, Point, SVector, Scalar, SimdPartialOrd,
 };
 use num::{Float, One, Zero};
-use simba::simd::WideF32x4;
+
+use super::intersect_default::RayIntersection;
 
 /// A struct which defines a ray and some of its cached values.
 #[derive(Debug, Clone, Copy)]
@@ -25,7 +22,7 @@ pub struct Ray<T: Scalar + Copy, const D: usize> {
     ///
     /// [`AABB`]: struct.AABB.html
     ///
-    inv_direction: SVector<T, D>,
+    pub inv_direction: SVector<T, D>,
 }
 
 /// A struct which is returned by the `intersects_triangle` method.
@@ -45,187 +42,6 @@ impl<T> Intersection<T> {
     /// if the intersection does not occur.
     pub fn new(distance: T, u: T, v: T) -> Intersection<T> {
         Intersection { distance, u, v }
-    }
-}
-
-/// Fast floating point minimum.  This function matches the semantics of
-///
-/// ```no_compile
-/// if x < y { x } else { y }
-/// ```
-///
-/// which has efficient instruction sequences on many platforms (1 instruction on x86).  For most
-/// values, it matches the semantics of `x.min(y)`; the special cases are:
-///
-/// ```text
-/// min(-0.0, +0.0); +0.0
-/// min(+0.0, -0.0): -0.0
-/// min( NaN,  1.0):  1.0
-/// min( 1.0,  NaN):  NaN
-/// ```
-#[inline(always)]
-#[allow(dead_code)]
-fn min<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
-    if x < y {
-        x
-    } else {
-        y
-    }
-}
-
-/// Fast floating point maximum.  This function matches the semantics of
-///
-/// ```no_compile
-/// if x > y { x } else { y }
-/// ```
-///
-/// which has efficient instruction sequences on many platforms (1 instruction on x86).  For most
-/// values, it matches the semantics of `x.max(y)`; the special cases are:
-///
-/// ```text
-/// max(-0.0, +0.0); +0.0
-/// max(+0.0, -0.0): -0.0
-/// max( NaN,  1.0):  1.0
-/// max( 1.0,  NaN):  NaN
-/// ```
-#[inline(always)]
-#[allow(dead_code)]
-fn max<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
-    if x > y {
-        x
-    } else {
-        y
-    }
-}
-
-trait IntersectsAABB<X, T, const D: usize>
-where
-    T: Scalar + Copy + ClosedSub + ClosedMul + Zero + PartialOrd + SimdPartialOrd,
-{
-    fn ray_intersects_aabb(&self, aabb: &AABB<T, D>) -> bool;
-}
-
-impl<T, const D: usize> IntersectsAABB<Ray<T, D>, T, D> for Ray<T, D>
-where
-    T: Scalar + Copy + ClosedSub + ClosedMul + Zero + PartialOrd + SimdPartialOrd,
-{
-    #[inline(always)]
-    default fn ray_intersects_aabb(&self, aabb: &AABB<T, D>) -> bool {
-        let lbr = (aabb[0].coords - self.origin.coords).component_mul(&self.inv_direction);
-        let rtr = (aabb[1].coords - self.origin.coords).component_mul(&self.inv_direction);
-
-        let (inf, sup) = lbr.inf_sup(&rtr);
-
-        let tmin = inf.max();
-        let tmax = sup.min();
-
-        tmax > max(tmin, T::zero())
-    }
-}
-
-#[inline(always)]
-#[cfg(target_arch = "x86_64")]
-fn vec_to_mm(vec: &SVector<f32, 3>) -> __m128 {
-    unsafe { _mm_set_ps(vec.z, vec.z, vec.y, vec.x) }
-}
-
-#[inline(always)]
-#[cfg(target_arch = "x86_64")]
-fn max_elem(mm: __m128) -> f32 {
-    unsafe {
-        let a = _mm_unpacklo_ps(mm, mm); // x x y y
-        let b = _mm_unpackhi_ps(mm, mm); // z z w w
-        let c = _mm_max_ps(a, b); // ..., max(x, z), ..., ...
-        let res = _mm_max_ps(mm, c); // ..., max(y, max(x, z)), ..., ...
-        #[allow(invalid_value)]
-        let mut data: [f32; 4] = std::mem::MaybeUninit::uninit().assume_init();
-        _mm_store_ps(data.as_mut_ptr(), res);
-        return data[1];
-    }
-}
-
-#[inline(always)]
-#[cfg(target_arch = "x86_64")]
-fn min_elem(mm: __m128) -> f32 {
-    unsafe {
-        let a = _mm_unpacklo_ps(mm, mm); // x x y y
-        let b = _mm_unpackhi_ps(mm, mm); // z z w w
-        let c = _mm_min_ps(a, b); // ..., min(x, z), ..., ...
-        let res = _mm_min_ps(mm, c); // ..., min(y, min(x, z)), ..., ...
-        #[allow(invalid_value)]
-        let mut data: [f32; 4] = std::mem::MaybeUninit::uninit().assume_init();
-        _mm_store_ps(data.as_mut_ptr(), res);
-        return data[1];
-    }
-}
-
-// #[cfg(target_arch = "x86_64")]
-// impl IntersectsAABB<Ray<f32, 3>, f32, 3> for Ray<f32, 3> {
-//     #[inline(always)]
-//     fn ray_intersects_aabb(&self, aabb: &AABB<f32, 3>) -> bool {
-//         use std::arch::x86_64::*;
-
-//         unsafe {
-//             let v1 = vec_to_mm(&aabb[0].coords);
-//             let v2 = vec_to_mm(&aabb[1].coords);
-
-//             let oc = vec_to_mm(&self.origin.coords);
-//             let v1 = _mm_sub_ps(v1, oc);
-//             let v2 = _mm_sub_ps(v2, oc);
-//             drop(oc);
-
-//             let id = vec_to_mm(&self.inv_direction);
-//             let v1 = _mm_mul_ps(v1, id);
-//             let v2 = _mm_mul_ps(v2, id);
-//             drop(id);
-
-//             let inf = _mm_min_ps(v1, v2);
-//             let sup = _mm_max_ps(v1, v2);
-
-//             drop(v1);
-//             drop(v2);
-
-//             let tmin = max_elem(inf);
-//             let tmax = min_elem(sup);
-
-//             tmax > max(tmin, 0.0)
-//         }
-//     }
-// }
-
-fn vec_to_wide(vec: &SVector<f32,3>) -> WideF32x4 {
-    WideF32x4::from([vec.x, vec.y, vec.z, vec.z])
-}
-
-impl IntersectsAABB<Ray<f32, 3>, f32, 3> for Ray<f32, 3> {
-    #[inline(always)]
-    fn ray_intersects_aabb(&self, aabb: &AABB<f32, 3>) -> bool {
-
-        unsafe {
-            let v1 = vec_to_wide(&aabb[0].coords);
-            let v2 = vec_to_wide(&aabb[1].coords);
-
-            let oc = vec_to_wide(&self.origin.coords);
-            let v1 = v1 - oc;
-            let v2 = v2 - oc;
-            drop(oc);
-
-            let id = vec_to_wide(&self.inv_direction);
-            let v1 = v1 * id;
-            let v2 = v2 * id;
-            drop(id);
-
-            let inf = v1.simd_min(v2);
-            let sup = v1.simd_max(v2);
-            
-            drop(v1);
-            drop(v2);
-
-            let tmin = inf.simd_horizontal_max();
-            let tmax = sup.simd_horizontal_min();
-
-            tmax > max(tmin, 0.0)
-        }
     }
 }
 
@@ -258,14 +74,6 @@ impl<T: Scalar + Copy, const D: usize> Ray<T, D> {
             direction,
             inv_direction: direction.map(|x| T::one() / x),
         }
-
-        // println!("dir: {}, inv_dir: {}", r.direction, r.inv_direction);
-        // assert_eq!(
-        //     r.direction.component_mul(&r.inv_direction),
-        //     SVector::<T, D>::from_element(T::one())
-        // );
-
-        // r
     }
 
     /// Tests the intersection of a [`Ray`] with an [`AABB`] using the optimized algorithm
@@ -394,7 +202,6 @@ mod tests {
 
     proptest! {
         // Test whether a `Ray` which points at the center of an `AABB` intersects it.
-        // Uses the optimized algorithm.
         #[test]
         fn test_ray_points_at_aabb_center(data in (tuplevec_small_strategy(),
                                                    tuplevec_small_strategy(),
@@ -403,29 +210,8 @@ mod tests {
             assert!(ray.intersects_aabb(&aabb));
         }
 
-        // Test whether a `Ray` which points at the center of an `AABB` intersects it.
-        // Uses the naive algorithm.
-        // #[test]
-        // fn test_ray_points_at_aabb_center_naive(data in (tuplevec_small_strategy(),
-        //                                                  tuplevec_small_strategy(),
-        //                                                  tuplevec_small_strategy())) {
-        //     let (ray, aabb) = gen_ray_to_aabb(data);
-        //     assert!(ray.intersects_aabb_naive(&aabb));
-        // }
-
-        // // Test whether a `Ray` which points at the center of an `AABB` intersects it.
-        // // Uses the branchless algorithm.
-        // #[test]
-        // fn test_ray_points_at_aabb_center_branchless(data in (tuplevec_small_strategy(),
-        //                                                       tuplevec_small_strategy(),
-        //                                                       tuplevec_small_strategy())) {
-        //     let (ray, aabb) = gen_ray_to_aabb(data);
-        //     assert!(ray.intersects_aabb_branchless(&aabb));
-        // }
-
         // Test whether a `Ray` which points away from the center of an `AABB`
         // does not intersect it, unless its origin is inside the `AABB`.
-        // Uses the optimized algorithm.
         #[test]
         fn test_ray_points_from_aabb_center(data in (tuplevec_small_strategy(),
                                                      tuplevec_small_strategy(),
@@ -437,35 +223,6 @@ mod tests {
             ray.inv_direction = -ray.inv_direction;
             assert!(!ray.intersects_aabb(&aabb) || aabb.contains(&ray.origin));
         }
-
-        // Test whether a `Ray` which points away from the center of an `AABB`
-        // does not intersect it, unless its origin is inside the `AABB`.
-        // Uses the naive algorithm.
-        // #[test]
-        // fn test_ray_points_from_aabb_center_naive(data in (tuplevec_small_strategy(),
-        //                                                    tuplevec_small_strategy(),
-        //                                                    tuplevec_small_strategy())) {
-        //     let (mut ray, aabb) = gen_ray_to_aabb(data);
-
-        //     // Invert the ray direction
-        //     ray.direction = -ray.direction;
-        //     ray.inv_direction = -ray.inv_direction;
-        //     assert!(!ray.intersects_aabb_naive(&aabb) || aabb.contains(&ray.origin));
-        // }
-
-        // // Test whether a `Ray` which points away from the center of an `AABB`
-        // // does not intersect it, unless its origin is inside the `AABB`.
-        // // Uses the branchless algorithm.
-        // #[test]
-        // fn test_ray_points_from_aabb_center_branchless(data in (tuplevec_small_strategy(),
-        //                                                         tuplevec_small_strategy(),
-        //                                                         tuplevec_small_strategy())) {
-        //     let (mut ray, aabb) = gen_ray_to_aabb(data);
-        //     // Invert the ray direction
-        //     ray.direction = -ray.direction;
-        //     ray.inv_direction = -ray.inv_direction;
-        //     assert!(!ray.intersects_aabb_branchless(&aabb) || aabb.contains(&ray.origin));
-        // }
 
         // Test whether a `Ray` which points at the center of a triangle
         // intersects it, unless it sees the back face, which is culled.
@@ -575,28 +332,4 @@ mod bench {
             }
         });
     }
-
-    // /// Benchmark for the naive intersection algorithm.
-    // #[bench]
-    // fn bench_intersects_aabb_naive(b: &mut Bencher) {
-    //     let (ray, boxes) = random_ray_and_boxes();
-
-    //     b.iter(|| {
-    //         for aabb in &boxes {
-    //             black_box(ray.intersects_aabb_naive(aabb));
-    //         }
-    //     });
-    // }
-
-    // /// Benchmark for the branchless intersection algorithm.
-    // #[bench]
-    // fn bench_intersects_aabb_branchless(b: &mut Bencher) {
-    //     let (ray, boxes) = random_ray_and_boxes();
-
-    //     b.iter(|| {
-    //         for aabb in &boxes {
-    //             black_box(ray.intersects_aabb_branchless(aabb));
-    //         }
-    //     });
-    // }
 }
