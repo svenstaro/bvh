@@ -71,8 +71,7 @@
 
 #![deny(missing_docs)]
 #![cfg_attr(feature = "bench", feature(test))]
-
-#![cfg_attr(feature = "full_simd", feature(min_specialization))]
+#![cfg_attr(feature = "simd", feature(min_specialization))]
 
 #[cfg(all(feature = "bench", test))]
 extern crate test;

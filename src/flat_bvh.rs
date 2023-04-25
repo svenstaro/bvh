@@ -462,7 +462,7 @@ mod bench {
     use crate::testbase::{
         build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh, create_n_cubes,
         default_bounds, intersect_1200_triangles_bh, intersect_120k_triangles_bh,
-        intersect_12k_triangles_bh, BVH, FlatBVH
+        intersect_12k_triangles_bh, FlatBVH, BVH,
     };
 
     #[bench]

@@ -3,8 +3,37 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  ci:
-    name: CI with ${{ matrix.rust }} on ${{ matrix.os }}
+  check-fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          components: rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          components: clippy
+      - name: Run clippy
+        with:
+          command: clippy
+          args: --workspace --all-targets --all-features -- -D warnings
+
+  build-and-test-no-features:
+    name: CI with ${{ matrix.rust }} on ${{ matrix.os }} [no-features]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -21,7 +50,6 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
-          components: rustfmt, clippy
 
       - name: cargo build
         uses: actions-rs/cargo@v1
@@ -34,23 +62,36 @@ jobs:
         with:
           command: test
 
-      - name: cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-
-      - name: cargo clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --workspace --all-targets --all-features -- -D warnings
-        if: matrix.rust == 'nightly'
-
-      # - name: Run cargo-tarpaulin
-      #   uses: actions-rs/tarpaulin@v0.1
-      #   if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
-
       - name: Upload coverage report to codecov.io
         uses: codecov/codecov-action@v1
         if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
+
+  build-and-test-simd:
+    name: CI with nightly on ${{ matrix.os }} [simd]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+
+      - name: cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --workspace --features simd
+
+      - name: cargo test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --features simd

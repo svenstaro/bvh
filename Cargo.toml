@@ -30,7 +30,7 @@ doc-comment = "0.3"
 
 [features]
 bench = []
-full_simd = []
+simd = []
 
 [profile.release]
 lto = true

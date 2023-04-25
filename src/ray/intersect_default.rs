@@ -10,7 +10,7 @@ where
     fn ray_intersects_aabb(&self, aabb: &AABB<T, D>) -> bool;
 }
 
-#[cfg(not(feature = "full_simd"))]
+#[cfg(not(feature = "simd"))]
 impl<T, const D: usize> RayIntersection<T, D> for Ray<T, D>
 where
     T: Scalar + Copy + ClosedSub + ClosedMul + Zero + PartialOrd + SimdPartialOrd,
@@ -28,7 +28,7 @@ where
     }
 }
 
-#[cfg(all(feature = "full_simd", target_arch = "x86_64"))]
+#[cfg(all(feature = "simd", target_arch = "x86_64"))]
 impl<T, const D: usize> RayIntersection<T, D> for Ray<T, D>
 where
     T: Scalar + Copy + ClosedSub + ClosedMul + Zero + PartialOrd + SimdPartialOrd,
