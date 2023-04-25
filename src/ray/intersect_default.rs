@@ -42,6 +42,6 @@ where
         let tmin = inf.max();
         let tmax = sup.min();
 
-        tmax > max(tmin, T::zero())
+        tmax > fast_max(tmin, T::zero())
     }
 }

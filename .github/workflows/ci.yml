@@ -7,30 +7,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: nightly
-          override: true
           components: rustfmt
       - name: Check formatting
         run: cargo fmt --all -- --check
+
   clippy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: nightly
-          override: true
           components: clippy
       - name: Run clippy
-        with:
-          command: clippy
-          args: --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
   build-and-test-no-features:
     name: CI with ${{ matrix.rust }} on ${{ matrix.os }} [no-features]
@@ -41,26 +34,16 @@ jobs:
         rust: [stable, nightly]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
 
       - name: cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --workspace
+        run: cargo build --workspace
 
       - name: cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+        run: cargo test
 
       - name: Upload coverage report to codecov.io
         uses: codecov/codecov-action@v1
@@ -74,24 +57,11 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@nightly
 
       - name: cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --workspace --features simd
+        run: cargo build --workspace --features simd
 
       - name: cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --features simd
+        run: cargo test --features simd

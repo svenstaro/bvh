@@ -137,7 +137,7 @@ impl ToRegisterType for SVector<f64, 2> {
 fn max_elem_m128d(mm: __m128d) -> f64 {
     unsafe {
         let a = _mm_unpacklo_pd(mm, mm); // x x
-        let b = _mm_max_pd(mm, b); // max(x, x), max(x, y)
+        let b = _mm_max_pd(mm, a); // max(x, x), max(x, y)
         #[allow(invalid_value)]
         let mut data: [f64; 2] = std::mem::MaybeUninit::uninit().assume_init();
         _mm_store_pd(data.as_mut_ptr(), b);
