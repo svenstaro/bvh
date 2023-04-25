@@ -71,6 +71,18 @@ let bvh = BVH::build(&mut spheres);
 let hit_sphere_aabbs = bvh.traverse(&ray, &spheres);
 ```
 
+## Explicit SIMD
+
+This crate features some manually written SIMD instructions, currently only for the `x86_64` architecture.
+While nalgebra provides us with generic SIMD optimization (and it does a great job for the most part) - 
+some important functions, such as ray-aabb-intersection have been optimized by hand.
+
+The currently optimized intersections for ray-aabb are:
+Type: f32, Dimension: 2,3,4
+Type: f64, Dimension: 2,3,4
+
+To enable these optimziations, you must build with the `nightly` toolchain and enable the `simd` flag.
+
 ## Optimization
 
 This crate provides BVH updating, which is also called optimization. With BVH optimization
