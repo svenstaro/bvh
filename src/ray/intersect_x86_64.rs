@@ -2,7 +2,7 @@ use std::arch::x86_64::*;
 
 use nalgebra::SVector;
 
-use crate::{aabb::AABB, utils::fast_max};
+use crate::{aabb::Aabb, utils::fast_max};
 
 use super::{intersect_default::RayIntersection, Ray};
 
@@ -46,10 +46,10 @@ fn max_elem_m128(mm: __m128) -> f32 {
         let b = _mm_unpackhi_ps(mm, mm); // z z w w
         let c = _mm_max_ps(a, b); // ..., max(x, z), ..., ...
         let res = _mm_max_ps(mm, c); // ..., max(y, max(x, z)), ..., ...
-        #[allow(invalid_value)]
-        let mut data: [f32; 4] = std::mem::MaybeUninit::uninit().assume_init();
-        _mm_store_ps(data.as_mut_ptr(), res);
-        return data[1];
+        let mut data = std::mem::MaybeUninit::<[f32; 4]>::uninit();
+        _mm_store_ps(data.as_mut_ptr() as *mut f32, res);
+        let data = data.assume_init();
+        data[1]
     }
 }
 
@@ -60,10 +60,10 @@ fn min_elem_m128(mm: __m128) -> f32 {
         let b = _mm_unpackhi_ps(mm, mm); // z z w w
         let c = _mm_min_ps(a, b); // ..., min(x, z), ..., ...
         let res = _mm_min_ps(mm, c); // ..., min(y, min(x, z)), ..., ...
-        #[allow(invalid_value)]
-        let mut data: [f32; 4] = std::mem::MaybeUninit::uninit().assume_init();
-        _mm_store_ps(data.as_mut_ptr(), res);
-        return data[1];
+        let mut data = std::mem::MaybeUninit::<[f32; 4]>::uninit();
+        _mm_store_ps(data.as_mut_ptr() as *mut f32, res);
+        let data = data.assume_init();
+        data[1]
     }
 }
 
@@ -90,7 +90,7 @@ fn ray_intersects_aabb_m128(
 
 impl RayIntersection<f32, 2> for Ray<f32, 2> {
     #[inline(always)]
-    fn ray_intersects_aabb(&self, aabb: &AABB<f32, 2>) -> bool {
+    fn ray_intersects_aabb(&self, aabb: &Aabb<f32, 2>) -> bool {
         let ro = self.origin.coords.to_register();
         let ri = self.inv_direction.to_register();
         let aabb_0 = aabb[0].coords.to_register();
@@ -102,7 +102,7 @@ impl RayIntersection<f32, 2> for Ray<f32, 2> {
 
 impl RayIntersection<f32, 3> for Ray<f32, 3> {
     #[inline(always)]
-    fn ray_intersects_aabb(&self, aabb: &AABB<f32, 3>) -> bool {
+    fn ray_intersects_aabb(&self, aabb: &Aabb<f32, 3>) -> bool {
         let ro = self.origin.coords.to_register();
         let ri = self.inv_direction.to_register();
         let aabb_0 = aabb[0].coords.to_register();
@@ -114,7 +114,7 @@ impl RayIntersection<f32, 3> for Ray<f32, 3> {
 
 impl RayIntersection<f32, 4> for Ray<f32, 4> {
     #[inline(always)]
-    fn ray_intersects_aabb(&self, aabb: &AABB<f32, 4>) -> bool {
+    fn ray_intersects_aabb(&self, aabb: &Aabb<f32, 4>) -> bool {
         let ro = self.origin.coords.to_register();
         let ri = self.inv_direction.to_register();
         let aabb_0 = aabb[0].coords.to_register();
@@ -138,10 +138,10 @@ fn max_elem_m128d(mm: __m128d) -> f64 {
     unsafe {
         let a = _mm_unpacklo_pd(mm, mm); // x x
         let b = _mm_max_pd(mm, a); // max(x, x), max(x, y)
-        #[allow(invalid_value)]
-        let mut data: [f64; 2] = std::mem::MaybeUninit::uninit().assume_init();
-        _mm_store_pd(data.as_mut_ptr(), b);
-        return data[1];
+        let mut data = std::mem::MaybeUninit::<[f64; 2]>::uninit();
+        _mm_store_pd(data.as_mut_ptr() as *mut f64, b);
+        let data = data.assume_init();
+        data[1]
     }
 }
 
@@ -151,10 +151,10 @@ fn min_elem_m128d(mm: __m128d) -> f64 {
         let a = _mm_unpacklo_pd(mm, mm); // x x
         let b = _mm_unpackhi_pd(mm, mm); // y y
         let c = _mm_min_pd(a, b); // min(x, y), min(x, y)
-        #[allow(invalid_value)]
-        let mut data: [f64; 2] = std::mem::MaybeUninit::uninit().assume_init();
-        _mm_store_pd(data.as_mut_ptr(), c);
-        return data[0];
+        let mut data = std::mem::MaybeUninit::<[f64; 2]>::uninit();
+        _mm_store_pd(data.as_mut_ptr() as *mut f64, c);
+        let data = data.assume_init();
+        data[0]
     }
 }
 
@@ -181,7 +181,7 @@ fn ray_intersects_aabb_m128d(
 
 impl RayIntersection<f64, 2> for Ray<f64, 2> {
     #[inline(always)]
-    fn ray_intersects_aabb(&self, aabb: &AABB<f64, 2>) -> bool {
+    fn ray_intersects_aabb(&self, aabb: &Aabb<f64, 2>) -> bool {
         let ro = self.origin.coords.to_register();
         let ri = self.inv_direction.to_register();
         let aabb_0 = aabb[0].coords.to_register();
@@ -216,10 +216,10 @@ fn max_elem_m256d(mm: __m256d) -> f64 {
         let b = _mm256_unpackhi_pd(mm, mm); // z z w w
         let c = _mm256_max_pd(a, b); // ..., max(x, z), ..., ...
         let res = _mm256_max_pd(mm, c); // ..., max(y, max(x, z)), ..., ...
-        #[allow(invalid_value)]
-        let mut data: [f64; 4] = std::mem::MaybeUninit::uninit().assume_init();
-        _mm256_store_pd(data.as_mut_ptr(), res);
-        return data[1];
+        let mut data = std::mem::MaybeUninit::<[f64; 4]>::uninit();
+        _mm256_store_pd(data.as_mut_ptr() as *mut f64, res);
+        let data = data.assume_init();
+        data[1]
     }
 }
 
@@ -230,10 +230,10 @@ fn min_elem_m256d(mm: __m256d) -> f64 {
         let b = _mm256_unpackhi_pd(mm, mm); // z z w w
         let c = _mm256_min_pd(a, b); // ..., min(x, z), ..., ...
         let res = _mm256_min_pd(mm, c); // ..., min(y, min(x, z)), ..., ...
-        #[allow(invalid_value)]
-        let mut data: [f64; 4] = std::mem::MaybeUninit::uninit().assume_init();
-        _mm256_store_pd(data.as_mut_ptr(), res);
-        return data[1];
+        let mut data = std::mem::MaybeUninit::<[f64; 4]>::uninit();
+        _mm256_store_pd(data.as_mut_ptr() as *mut f64, res);
+        let data = data.assume_init();
+        data[1]
     }
 }
 
@@ -260,7 +260,7 @@ fn ray_intersects_aabb_m256d(
 
 impl RayIntersection<f64, 3> for Ray<f64, 3> {
     #[inline(always)]
-    fn ray_intersects_aabb(&self, aabb: &AABB<f64, 3>) -> bool {
+    fn ray_intersects_aabb(&self, aabb: &Aabb<f64, 3>) -> bool {
         let ro = self.origin.coords.to_register();
         let ri = self.inv_direction.to_register();
         let aabb_0 = aabb[0].coords.to_register();
@@ -272,7 +272,7 @@ impl RayIntersection<f64, 3> for Ray<f64, 3> {
 
 impl RayIntersection<f64, 4> for Ray<f64, 4> {
     #[inline(always)]
-    fn ray_intersects_aabb(&self, aabb: &AABB<f64, 4>) -> bool {
+    fn ray_intersects_aabb(&self, aabb: &Aabb<f64, 4>) -> bool {
         let ro = self.origin.coords.to_register();
         let ri = self.inv_direction.to_register();
         let aabb_0 = aabb[0].coords.to_register();

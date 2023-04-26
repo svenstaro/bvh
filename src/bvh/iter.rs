@@ -2,15 +2,15 @@ use nalgebra::{ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
 use num::Zero;
 
 use crate::aabb::Bounded;
-use crate::bvh::{BVHNode, BVH};
+use crate::bvh::{BvhNode, Bvh};
 use crate::ray::Ray;
 
-/// Iterator to traverse a [`BVH`] without memory allocations
+/// Iterator to traverse a [`Bvh`] without memory allocations
 #[allow(clippy::upper_case_acronyms)]
-pub struct BVHTraverseIterator<'bvh, 'shape, T: Scalar + Copy, const D: usize, Shape: Bounded<T, D>>
+pub struct BvhTraverseIterator<'bvh, 'shape, T: Scalar + Copy, const D: usize, Shape: Bounded<T, D>>
 {
-    /// Reference to the BVH to traverse
-    bvh: &'bvh BVH<T, D>,
+    /// Reference to the Bvh to traverse
+    bvh: &'bvh Bvh<T, D>,
     /// Reference to the input ray
     ray: &'bvh Ray<T, D>,
     /// Reference to the input shapes array
@@ -26,13 +26,13 @@ pub struct BVHTraverseIterator<'bvh, 'shape, T: Scalar + Copy, const D: usize, S
 }
 
 impl<'bvh, 'shape, T, const D: usize, Shape: Bounded<T, D>>
-    BVHTraverseIterator<'bvh, 'shape, T, D, Shape>
+    BvhTraverseIterator<'bvh, 'shape, T, D, Shape>
 where
     T: Scalar + Copy + SimdPartialOrd + ClosedSub + PartialOrd + ClosedMul + Zero,
 {
-    /// Creates a new `BVHTraverseIterator`
-    pub fn new(bvh: &'bvh BVH<T, D>, ray: &'bvh Ray<T, D>, shapes: &'shape [Shape]) -> Self {
-        BVHTraverseIterator {
+    /// Creates a new `BvhTraverseIterator`
+    pub fn new(bvh: &'bvh Bvh<T, D>, ray: &'bvh Ray<T, D>, shapes: &'shape [Shape]) -> Self {
+        BvhTraverseIterator {
             bvh,
             ray,
             shapes,
@@ -69,10 +69,10 @@ where
     }
 
     /// Attempt to move to the left node child of the current node.
-    /// If it is a leaf, or the ray does not intersect the node `AABB`, `has_node` will become false.
+    /// If it is a leaf, or the ray does not intersect the node `Aabb`, `has_node` will become false.
     fn move_left(&mut self) {
         match self.bvh.nodes[self.node_index] {
-            BVHNode::Node {
+            BvhNode::Node {
                 child_l_index,
                 ref child_l_aabb,
                 ..
@@ -84,17 +84,17 @@ where
                     self.has_node = false;
                 }
             }
-            BVHNode::Leaf { .. } => {
+            BvhNode::Leaf { .. } => {
                 self.has_node = false;
             }
         }
     }
 
     /// Attempt to move to the right node child of the current node.
-    /// If it is a leaf, or the ray does not intersect the node `AABB`, `has_node` will become false.
+    /// If it is a leaf, or the ray does not intersect the node `Aabb`, `has_node` will become false.
     fn move_right(&mut self) {
         match self.bvh.nodes[self.node_index] {
-            BVHNode::Node {
+            BvhNode::Node {
                 child_r_index,
                 ref child_r_aabb,
                 ..
@@ -106,7 +106,7 @@ where
                     self.has_node = false;
                 }
             }
-            BVHNode::Leaf { .. } => {
+            BvhNode::Leaf { .. } => {
                 self.has_node = false;
             }
         }
@@ -114,7 +114,7 @@ where
 }
 
 impl<'bvh, 'shape, T, const D: usize, Shape: Bounded<T, D>> Iterator
-    for BVHTraverseIterator<'bvh, 'shape, T, D, Shape>
+    for BvhTraverseIterator<'bvh, 'shape, T, D, Shape>
 where
     T: Scalar + Copy + SimdPartialOrd + ClosedSub + PartialOrd + ClosedMul + Zero,
 {
@@ -134,11 +134,11 @@ where
                 // Go back up the stack and see if a node or leaf was pushed.
                 self.node_index = self.stack_pop();
                 match self.bvh.nodes[self.node_index] {
-                    BVHNode::Node { .. } => {
+                    BvhNode::Node { .. } => {
                         // If a node was pushed, now attempt to move to its right child.
                         self.move_right();
                     }
-                    BVHNode::Leaf { shape_index, .. } => {
+                    BvhNode::Leaf { shape_index, .. } => {
                         // We previously pushed a leaf node. This is the "visit" of the in-order traverse.
                         // Next time we call `next()` we try to pop the stack again.
                         self.has_node = false;
@@ -156,23 +156,23 @@ where
 #[cfg(test)]
 mod tests {
     use crate::ray::Ray;
-    use crate::testbase::{generate_aligned_boxes, Point3, UnitBox, Vector3, BVH};
+    use crate::testbase::{generate_aligned_boxes, TPoint3, UnitBox, TVector3, TBvh3};
     use std::collections::HashSet;
 
-    /// Creates a `BVH` for a fixed scene structure.
-    pub fn build_some_bvh() -> (Vec<UnitBox>, BVH) {
+    /// Creates a `Bvh` for a fixed scene structure.
+    pub fn build_some_bvh() -> (Vec<UnitBox>, TBvh3) {
         let mut boxes = generate_aligned_boxes();
-        let bvh = BVH::build(&mut boxes);
+        let bvh = TBvh3::build(&mut boxes);
         (boxes, bvh)
     }
 
     /// Given a ray, a bounding hierarchy, the complete list of shapes in the scene and a list of
     /// expected hits, verifies, whether the ray hits only the expected shapes.
     fn traverse_and_verify_vec(
-        ray_origin: Point3,
-        ray_direction: Vector3,
+        ray_origin: TPoint3,
+        ray_direction: TVector3,
         all_shapes: &[UnitBox],
-        bvh: &BVH,
+        bvh: &TBvh3,
         expected_shapes: &HashSet<i32>,
     ) {
         let ray = Ray::new(ray_origin, ray_direction);
@@ -185,10 +185,10 @@ mod tests {
     }
 
     fn traverse_and_verify_iterator(
-        ray_origin: Point3,
-        ray_direction: Vector3,
+        ray_origin: TPoint3,
+        ray_direction: TVector3,
         all_shapes: &[UnitBox],
-        bvh: &BVH,
+        bvh: &TBvh3,
         expected_shapes: &HashSet<i32>,
     ) {
         let ray = Ray::new(ray_origin, ray_direction);
@@ -203,10 +203,10 @@ mod tests {
     }
 
     fn traverse_and_verify_base(
-        ray_origin: Point3,
-        ray_direction: Vector3,
+        ray_origin: TPoint3,
+        ray_direction: TVector3,
         all_shapes: &[UnitBox],
-        bvh: &BVH,
+        bvh: &TBvh3,
         expected_shapes: &HashSet<i32>,
     ) {
         traverse_and_verify_vec(ray_origin, ray_direction, all_shapes, bvh, expected_shapes);
@@ -219,8 +219,8 @@ mod tests {
 
         {
             // Define a ray which traverses the x-axis from afar.
-            let origin = Point3::new(-1000.0, 0.0, 0.0);
-            let direction = Vector3::new(1.0, 0.0, 0.0);
+            let origin = TPoint3::new(-1000.0, 0.0, 0.0);
+            let direction = TVector3::new(1.0, 0.0, 0.0);
             let mut expected_shapes = HashSet::new();
 
             // It should hit everything.
@@ -232,8 +232,8 @@ mod tests {
 
         {
             // Define a ray which traverses the y-axis from afar.
-            let origin = Point3::new(0.0, -1000.0, 0.0);
-            let direction = Vector3::new(0.0, 1.0, 0.0);
+            let origin = TPoint3::new(0.0, -1000.0, 0.0);
+            let direction = TVector3::new(0.0, 1.0, 0.0);
 
             // It should hit only one box.
             let mut expected_shapes = HashSet::new();
@@ -243,8 +243,8 @@ mod tests {
 
         {
             // Define a ray which intersects the x-axis diagonally.
-            let origin = Point3::new(6.0, 0.5, 0.0);
-            let direction = Vector3::new(-2.0, -1.0, 0.0);
+            let origin = TPoint3::new(6.0, 0.5, 0.0);
+            let direction = TVector3::new(-2.0, -1.0, 0.0);
 
             // It should hit exactly three boxes.
             let mut expected_shapes = HashSet::new();
@@ -256,7 +256,7 @@ mod tests {
     }
 
     #[test]
-    /// Runs some primitive tests for intersections of a ray with a fixed scene given as a BVH.
+    /// Runs some primitive tests for intersections of a ray with a fixed scene given as a Bvh.
     fn test_traverse_bvh() {
         traverse_some_bvh();
     }
@@ -264,23 +264,23 @@ mod tests {
 
 #[cfg(all(feature = "bench", test))]
 mod bench {
-    use crate::testbase::{create_ray, load_sponza_scene, BVH};
+    use crate::testbase::{create_ray, load_sponza_scene, TBvh3};
 
     #[bench]
-    /// Benchmark the traversal of a `BVH` with the Sponza scene with Vec return.
+    /// Benchmark the traversal of a `Bvh` with the Sponza scene with Vec return.
     fn bench_intersect_128rays_sponza_vec(b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();
-        let bvh = BVH::build(&mut triangles);
+        let bvh = TBvh3::build(&mut triangles);
 
         let mut seed = 0;
         b.iter(|| {
             for _ in 0..128 {
                 let ray = create_ray(&mut seed, &bounds);
 
-                // Traverse the `BVH` recursively.
+                // Traverse the `Bvh` recursively.
                 let hits = bvh.traverse(&ray, &triangles);
 
-                // Traverse the resulting list of positive `AABB` tests
+                // Traverse the resulting list of positive `Aabb` tests
                 for triangle in &hits {
                     ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
                 }
@@ -289,20 +289,20 @@ mod bench {
     }
 
     #[bench]
-    /// Benchmark the traversal of a `BVH` with the Sponza scene with `BVHTraverseIterator`.
+    /// Benchmark the traversal of a `Bvh` with the Sponza scene with `BvhTraverseIterator`.
     fn bench_intersect_128rays_sponza_iter(b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();
-        let bvh = BVH::build(&mut triangles);
+        let bvh = TBvh3::build(&mut triangles);
 
         let mut seed = 0;
         b.iter(|| {
             for _ in 0..128 {
                 let ray = create_ray(&mut seed, &bounds);
 
-                // Traverse the `BVH` recursively.
+                // Traverse the `Bvh` recursively.
                 let hits = bvh.traverse_iterator(&ray, &triangles);
 
-                // Traverse the resulting list of positive `AABB` tests
+                // Traverse the resulting list of positive `Aabb` tests
                 for triangle in hits {
                     ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
                 }

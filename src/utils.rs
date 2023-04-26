@@ -3,7 +3,7 @@
 use nalgebra::{Scalar, SimdPartialOrd};
 use num::Float;
 
-use crate::aabb::AABB;
+use crate::aabb::Aabb;
 use crate::bounding_hierarchy::BHShape;
 
 /// Fast floating point minimum.  This function matches the semantics of
@@ -67,14 +67,14 @@ pub fn concatenate_vectors<T: Sized>(vectors: &mut [Vec<T>]) -> Vec<T> {
 }
 
 /// Defines a Bucket utility object. Used to store the properties of shape-partitions
-/// in the BVH build procedure using SAH.
+/// in the Bvh build procedure using SAH.
 #[derive(Clone, Copy)]
 pub struct Bucket<T: Scalar + Copy, const D: usize> {
     /// The number of shapes in this `Bucket`.
     pub size: usize,
 
-    /// The joint `AABB` of the shapes in this `Bucket`.
-    pub aabb: AABB<T, D>,
+    /// The joint `Aabb` of the shapes in this `Bucket`.
+    pub aabb: Aabb<T, D>,
 }
 
 impl<T: Scalar + Copy + Float + SimdPartialOrd, const D: usize> Bucket<T, D> {
@@ -82,12 +82,12 @@ impl<T: Scalar + Copy + Float + SimdPartialOrd, const D: usize> Bucket<T, D> {
     pub fn empty() -> Bucket<T, D> {
         Bucket {
             size: 0,
-            aabb: AABB::empty(),
+            aabb: Aabb::empty(),
         }
     }
 
-    /// Extend this `Bucket` by a shape with the given `AABB`.
-    pub fn add_aabb(&mut self, aabb: &AABB<T, D>) {
+    /// Extend this `Bucket` by a shape with the given `Aabb`.
+    pub fn add_aabb(&mut self, aabb: &Aabb<T, D>) {
         self.size += 1;
         self.aabb = self.aabb.join(aabb);
     }
@@ -108,8 +108,8 @@ pub fn joint_aabb_of_shapes<
 >(
     indices: &[usize],
     shapes: &[Shape],
-) -> AABB<T, D> {
-    let mut aabb = AABB::empty();
+) -> Aabb<T, D> {
+    let mut aabb = Aabb::empty();
     for index in indices {
         let shape = &shapes[*index];
         aabb.join_mut(&shape.aabb());

@@ -4,19 +4,19 @@
 //! ## About
 //!
 //! This crate can be used for applications which contain intersection computations of rays
-//! with primitives. For this purpose a binary tree BVH (Bounding Volume Hierarchy) is of great
-//! use if the scene which the ray traverses contains a huge number of primitives. With a BVH the
+//! with primitives. For this purpose a binary tree Bvh (Bounding Volume Hierarchy) is of great
+//! use if the scene which the ray traverses contains a huge number of primitives. With a Bvh the
 //! intersection test complexity is reduced from O(n) to O(log2(n)) at the cost of building
-//! the BVH once in advance. This technique is especially useful in ray/path tracers. For
+//! the Bvh once in advance. This technique is especially useful in ray/path tracers. For
 //! use in a shader this module also exports a flattening procedure, which allows for
-//! iterative traversal of the BVH.
+//! iterative traversal of the Bvh.
 //!
 //! ## Example
 //!
 //! ```
-//! use bvh::aabb::{AABB, Bounded};
+//! use bvh::aabb::{Aabb, Bounded};
 //! use bvh::bounding_hierarchy::BHShape;
-//! use bvh::bvh::BVH;
+//! use bvh::bvh::Bvh;
 //! use nalgebra::{Point3, Vector3};
 //! use bvh::ray::Ray;
 //!
@@ -31,11 +31,11 @@
 //! }
 //!
 //! impl Bounded<f32,3> for Sphere {
-//!     fn aabb(&self) -> AABB<f32,3> {
+//!     fn aabb(&self) -> Aabb<f32,3> {
 //!         let half_size = Vector3::new(self.radius, self.radius, self.radius);
 //!         let min = self.position - half_size;
 //!         let max = self.position + half_size;
-//!         AABB::with_bounds(min, max)
+//!         Aabb::with_bounds(min, max)
 //!     }
 //! }
 //!
@@ -60,7 +60,7 @@
 //!     });
 //! }
 //!
-//! let bvh = BVH::build(&mut spheres);
+//! let bvh = Bvh::build(&mut spheres);
 //! let hit_sphere_aabbs = bvh.traverse(&ray, &spheres);
 //! ```
 //!

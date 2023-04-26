@@ -1,6 +1,6 @@
-use bvh::aabb::{Bounded, AABB};
+use bvh::aabb::{Bounded, Aabb};
 use bvh::bounding_hierarchy::BHShape;
-use bvh::bvh::BVH;
+use bvh::bvh::Bvh;
 use bvh::ray::Ray;
 use nalgebra::{Point, SVector};
 
@@ -12,11 +12,11 @@ struct Sphere {
 }
 
 impl Bounded<f32, 3> for Sphere {
-    fn aabb(&self) -> AABB<f32, 3> {
+    fn aabb(&self) -> Aabb<f32, 3> {
         let half_size = SVector::<f32, 3>::new(self.radius, self.radius, self.radius);
         let min = self.position - half_size;
         let max = self.position + half_size;
-        AABB::with_bounds(min, max)
+        Aabb::with_bounds(min, max)
     }
 }
 
@@ -41,7 +41,7 @@ pub fn main() {
             node_index: 0,
         });
     }
-    let bvh = BVH::build(&mut spheres);
+    let bvh = Bvh::build(&mut spheres);
 
     let origin = Point::<f32, 3>::new(0.0, 0.0, 0.0);
     let direction = SVector::<f32, 3>::new(1.0, 0.0, 0.0);

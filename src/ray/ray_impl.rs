@@ -1,7 +1,7 @@
 //! This module defines a Ray structure and intersection algorithms
 //! for axis aligned bounding boxes and triangles.
 
-use crate::aabb::AABB;
+use crate::aabb::Aabb;
 use nalgebra::{
     ClosedAdd, ClosedMul, ClosedSub, ComplexField, Point, SVector, Scalar, SimdPartialOrd,
 };
@@ -18,9 +18,9 @@ pub struct Ray<T: Scalar + Copy, const D: usize> {
     /// The ray direction.
     pub direction: SVector<T, D>,
 
-    /// Inverse (1/x) ray direction. Cached for use in [`AABB`] intersections.
+    /// Inverse (1/x) ray direction. Cached for use in [`Aabb`] intersections.
     ///
-    /// [`AABB`]: struct.AABB.html
+    /// [`Aabb`]: struct.Aabb.html
     ///
     pub inv_direction: SVector<T, D>,
 }
@@ -76,12 +76,12 @@ impl<T: Scalar + Copy, const D: usize> Ray<T, D> {
         }
     }
 
-    /// Tests the intersection of a [`Ray`] with an [`AABB`] using the optimized algorithm
+    /// Tests the intersection of a [`Ray`] with an [`Aabb`] using the optimized algorithm
     /// from [this paper](http://www.cs.utah.edu/~awilliam/box/box.pdf).
     ///
     /// # Examples
     /// ```
-    /// use bvh::aabb::AABB;
+    /// use bvh::aabb::Aabb;
     /// use bvh::ray::Ray;
     /// use nalgebra::{Point3,Vector3};
     ///
@@ -91,15 +91,15 @@ impl<T: Scalar + Copy, const D: usize> Ray<T, D> {
     ///
     /// let point1 = Point3::new(99.9,-1.0,-1.0);
     /// let point2 = Point3::new(100.1,1.0,1.0);
-    /// let aabb = AABB::with_bounds(point1, point2);
+    /// let aabb = Aabb::with_bounds(point1, point2);
     ///
     /// assert!(ray.intersects_aabb(&aabb));
     /// ```
     ///
     /// [`Ray`]: struct.Ray.html
-    /// [`AABB`]: struct.AABB.html
+    /// [`Aabb`]: struct.Aabb.html
     ///
-    pub fn intersects_aabb(&self, aabb: &AABB<T, D>) -> bool
+    pub fn intersects_aabb(&self, aabb: &Aabb<T, D>) -> bool
     where
         T: ClosedSub + ClosedMul + Zero + PartialOrd + SimdPartialOrd,
     {
@@ -180,14 +180,14 @@ mod tests {
     use std::cmp;
     use std::f32::INFINITY;
 
-    use crate::testbase::{tuple_to_point, tuplevec_small_strategy, Ray, TupleVec, AABB};
+    use crate::testbase::{tuple_to_point, tuplevec_small_strategy, TRay3, TupleVec, TAabb3};
 
     use proptest::prelude::*;
 
-    /// Generates a random `Ray` which points at at a random `AABB`.
-    fn gen_ray_to_aabb(data: (TupleVec, TupleVec, TupleVec)) -> (Ray, AABB) {
-        // Generate a random AABB
-        let aabb = AABB::empty()
+    /// Generates a random `Ray` which points at at a random `Aabb`.
+    fn gen_ray_to_aabb(data: (TupleVec, TupleVec, TupleVec)) -> (TRay3, TAabb3) {
+        // Generate a random Aabb
+        let aabb = TAabb3::empty()
             .grow(&tuple_to_point(&data.0))
             .grow(&tuple_to_point(&data.1));
 
@@ -196,12 +196,12 @@ mod tests {
 
         // Generate random ray pointing at the center
         let pos = tuple_to_point(&data.2);
-        let ray = Ray::new(pos, center - pos);
+        let ray = TRay3::new(pos, center - pos);
         (ray, aabb)
     }
 
     proptest! {
-        // Test whether a `Ray` which points at the center of an `AABB` intersects it.
+        // Test whether a `Ray` which points at the center of an `Aabb` intersects it.
         #[test]
         fn test_ray_points_at_aabb_center(data in (tuplevec_small_strategy(),
                                                    tuplevec_small_strategy(),
@@ -210,8 +210,8 @@ mod tests {
             assert!(ray.intersects_aabb(&aabb));
         }
 
-        // Test whether a `Ray` which points away from the center of an `AABB`
-        // does not intersect it, unless its origin is inside the `AABB`.
+        // Test whether a `Ray` which points away from the center of an `Aabb`
+        // does not intersect it, unless its origin is inside the `Aabb`.
         #[test]
         fn test_ray_points_from_aabb_center(data in (tuplevec_small_strategy(),
                                                      tuplevec_small_strategy(),
@@ -250,7 +250,7 @@ mod tests {
 
             // Define a ray which points at the triangle
             let origin = tuple_to_point(&origin);
-            let ray = Ray::new(origin, point_on_triangle - origin);
+            let ray = TRay3::new(origin, point_on_triangle - origin);
             let on_back_side = normal.dot(&(ray.origin - triangle.0)) <= 0.0;
 
             // Perform the intersection test
@@ -293,25 +293,25 @@ mod bench {
     use rand::{Rng, SeedableRng};
     use test::{black_box, Bencher};
 
-    use crate::testbase::{tuple_to_point, tuple_to_vector, Ray, TupleVec, AABB};
+    use crate::testbase::{tuple_to_point, tuple_to_vector, TRay3, TupleVec, TAabb3};
 
     /// Generate a random deterministic `Ray`.
-    fn random_ray(rng: &mut StdRng) -> Ray {
+    fn random_ray(rng: &mut StdRng) -> TRay3 {
         let a = tuple_to_point(&rng.gen::<TupleVec>());
         let b = tuple_to_vector(&rng.gen::<TupleVec>());
-        Ray::new(a, b)
+        TRay3::new(a, b)
     }
 
-    /// Generate a random deterministic `AABB`.
-    fn random_aabb(rng: &mut StdRng) -> AABB {
+    /// Generate a random deterministic `Aabb`.
+    fn random_aabb(rng: &mut StdRng) -> TAabb3 {
         let a = tuple_to_point(&rng.gen::<TupleVec>());
         let b = tuple_to_point(&rng.gen::<TupleVec>());
 
-        AABB::empty().grow(&a).grow(&b)
+        TAabb3::empty().grow(&a).grow(&b)
     }
 
     /// Generate the ray and boxes used for benchmarks.
-    fn random_ray_and_boxes() -> (Ray, Vec<AABB>) {
+    fn random_ray_and_boxes() -> (TRay3, Vec<TAabb3>) {
         let seed = [0; 32];
         let mut rng = StdRng::from_seed(seed);
 
