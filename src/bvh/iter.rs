@@ -2,7 +2,7 @@ use nalgebra::{ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
 use num::Zero;
 
 use crate::aabb::Bounded;
-use crate::bvh::{BvhNode, Bvh};
+use crate::bvh::{Bvh, BvhNode};
 use crate::ray::Ray;
 
 /// Iterator to traverse a [`Bvh`] without memory allocations
@@ -156,7 +156,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::ray::Ray;
-    use crate::testbase::{generate_aligned_boxes, TPoint3, UnitBox, TVector3, TBvh3};
+    use crate::testbase::{generate_aligned_boxes, TBvh3, TPoint3, TVector3, UnitBox};
     use std::collections::HashSet;
 
     /// Creates a `Bvh` for a fixed scene structure.

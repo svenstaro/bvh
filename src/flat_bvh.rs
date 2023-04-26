@@ -2,9 +2,9 @@
 use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
 use num::{Float, FromPrimitive, ToPrimitive};
 
-use crate::aabb::{Bounded, Aabb};
+use crate::aabb::{Aabb, Bounded};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
-use crate::bvh::{BvhNode, Bvh};
+use crate::bvh::{Bvh, BvhNode};
 use crate::ray::Ray;
 
 /// A structure of a node of a flat [`Bvh`]. The structure of the nodes allows for an
@@ -462,7 +462,7 @@ mod bench {
     use crate::testbase::{
         build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh, create_n_cubes,
         default_bounds, intersect_1200_triangles_bh, intersect_120k_triangles_bh,
-        intersect_12k_triangles_bh, TFlatBvh3, TBvh3,
+        intersect_12k_triangles_bh, TBvh3, TFlatBvh3,
     };
 
     #[bench]

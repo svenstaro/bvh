@@ -704,7 +704,8 @@ impl<T: Scalar + Copy, const D: usize> Bounded<T, D> for Point<T, D> {
 mod tests {
     use crate::aabb::Bounded;
     use crate::testbase::{
-        tuple_to_point, tuple_to_vector, tuplevec_large_strategy, TPoint3, TupleVec, TVector3, TAabb3,
+        tuple_to_point, tuple_to_vector, tuplevec_large_strategy, TAabb3, TPoint3, TVector3,
+        TupleVec,
     };
 
     use float_eq::assert_float_eq;

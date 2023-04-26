@@ -180,7 +180,7 @@ mod tests {
     use std::cmp;
     use std::f32::INFINITY;
 
-    use crate::testbase::{tuple_to_point, tuplevec_small_strategy, TRay3, TupleVec, TAabb3};
+    use crate::testbase::{tuple_to_point, tuplevec_small_strategy, TAabb3, TRay3, TupleVec};
 
     use proptest::prelude::*;
 
@@ -293,7 +293,7 @@ mod bench {
     use rand::{Rng, SeedableRng};
     use test::{black_box, Bencher};
 
-    use crate::testbase::{tuple_to_point, tuple_to_vector, TRay3, TupleVec, TAabb3};
+    use crate::testbase::{tuple_to_point, tuple_to_vector, TAabb3, TRay3, TupleVec};
 
     /// Generate a random deterministic `Ray`.
     fn random_ray(rng: &mut StdRng) -> TRay3 {

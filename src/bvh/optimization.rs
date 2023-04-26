@@ -536,8 +536,8 @@ mod tests {
     use crate::aabb::Bounded;
     use crate::bounding_hierarchy::BHShape;
     use crate::testbase::{
-        build_some_bh, create_n_cubes, default_bounds, randomly_transform_scene, TBvhNode3, TPoint3,
-        UnitBox, TBvh3,
+        build_some_bh, create_n_cubes, default_bounds, randomly_transform_scene, TBvh3, TBvhNode3,
+        TPoint3, UnitBox,
     };
     use std::collections::HashSet;
 
@@ -956,7 +956,7 @@ mod tests {
 mod bench {
     use crate::testbase::{
         create_n_cubes, default_bounds, intersect_bh, load_sponza_scene, randomly_transform_scene,
-        Triangle, TAabb3, TBvh3,
+        TAabb3, TBvh3, Triangle,
     };
 
     #[bench]

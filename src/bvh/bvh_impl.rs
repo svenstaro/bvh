@@ -7,7 +7,7 @@
 use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
 use num::{Float, FromPrimitive, Signed, ToPrimitive, Zero};
 
-use crate::aabb::{Bounded, Aabb};
+use crate::aabb::{Aabb, Bounded};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
 //use crate::bounds::ScalarType;
 use crate::bvh::iter::BvhTraverseIterator;
@@ -796,7 +796,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::testbase::{build_some_bh, traverse_some_bh, TBvhNode3, TBvh3};
+    use crate::testbase::{build_some_bh, traverse_some_bh, TBvh3, TBvhNode3};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.

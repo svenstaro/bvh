@@ -1,4 +1,4 @@
-use bvh::aabb::{Bounded, Aabb};
+use bvh::aabb::{Aabb, Bounded};
 use bvh::bounding_hierarchy::BHShape;
 use bvh::bvh::Bvh;
 use bvh::ray::Ray;
