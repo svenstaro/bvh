@@ -4,12 +4,12 @@
 //! ## About
 //!
 //! This crate can be used for applications which contain intersection computations of rays
-//! with primitives. For this purpose a binary tree Bvh (Bounding Volume Hierarchy) is of great
-//! use if the scene which the ray traverses contains a huge number of primitives. With a Bvh the
+//! with primitives. For this purpose a binary tree BVH (Bounding Volume Hierarchy) is of great
+//! use if the scene which the ray traverses contains a huge number of primitives. With a BVH the
 //! intersection test complexity is reduced from O(n) to O(log2(n)) at the cost of building
-//! the Bvh once in advance. This technique is especially useful in ray/path tracers. For
+//! the BVH once in advance. This technique is especially useful in ray/path tracers. For
 //! use in a shader this module also exports a flattening procedure, which allows for
-//! iterative traversal of the Bvh.
+//! iterative traversal of the BVH.
 //!
 //! ## Example
 //!

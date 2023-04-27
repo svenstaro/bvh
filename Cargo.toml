@@ -1,6 +1,6 @@
 [package]
 name = "bvh"
-description = "A fast Bvh using SAH"
+description = "A fast BVH using SAH"
 version = "0.7.2"
 edition = "2018"
 authors = [

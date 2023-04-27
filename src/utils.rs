@@ -67,7 +67,7 @@ pub fn concatenate_vectors<T: Sized>(vectors: &mut [Vec<T>]) -> Vec<T> {
 }
 
 /// Defines a Bucket utility object. Used to store the properties of shape-partitions
-/// in the Bvh build procedure using SAH.
+/// in the BVH build procedure using SAH.
 #[derive(Clone, Copy)]
 pub struct Bucket<T: Scalar + Copy, const D: usize> {
     /// The number of shapes in this `Bucket`.

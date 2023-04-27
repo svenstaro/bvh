@@ -12,12 +12,12 @@ volume hierarchies.**
 ## About
 
 This crate can be used for applications which contain intersection computations of rays
-with primitives. For this purpose a binary tree Bvh (Bounding Volume Hierarchy) is of great
-use if the scene which the ray traverses contains a huge number of primitives. With a Bvh the
+with primitives. For this purpose a binary tree BVH (Bounding Volume Hierarchy) is of great
+use if the scene which the ray traverses contains a huge number of primitives. With a BVH the
 intersection test complexity is reduced from O(n) to O(log2(n)) at the cost of building
-the Bvh once in advance. This technique is especially useful in ray/path tracers. For
+the BVH once in advance. This technique is especially useful in ray/path tracers. For
 use in a shader this module also exports a flattening procedure, which allows for
-iterative traversal of the Bvh.
+iterative traversal of the BVH.
 
 ## Example
 
@@ -85,8 +85,8 @@ To enable these optimziations, you must build with the `nightly` toolchain and e
 
 ## Optimization
 
-This crate provides Bvh updating, which is also called optimization. With Bvh optimization
-you can mutate the shapes on which the Bvh is built and update the tree accordingly without rebuilding it completely.
+This crate provides BVH updating, which is also called optimization. With BVH optimization
+you can mutate the shapes on which the BVH is built and update the tree accordingly without rebuilding it completely.
 This method is very useful when there are only very few changes to a huge scene. When the major part of the scene is static,
 it is faster to update the tree, instead of rebuilding it from scratch.
 
@@ -96,10 +96,10 @@ First of all, optimizing is not helpful if more than half of the scene is not st
 This is due to how optimizing takes place:
 Given a set of indices of all shapes which have changed, the optimize procedure tries to rotate fixed constellations
 in search for a better surface area heuristic (SAH) value. This is done recursively from bottom to top while fixing the Aabbs
-in the inner nodes of the Bvh. Which is why it is inefficient to update the Bvh in comparison to rebuilding, when a lot
+in the inner nodes of the BVH. Which is why it is inefficient to update the BVH in comparison to rebuilding, when a lot
 of shapes have moved.
 
-Another problem with updated Bvhs is, that the resulting Bvh is not optimal. Assume that the scene is composed of two major
+Another problem with updated BVHs is, that the resulting BVH is not optimal. Assume that the scene is composed of two major
 groups separated by a large gap. When one shape moves from one group to another, the updating procedure will not be able to
 find a sequence of bottom-up rotations which inserts the shape deeply into the other branch.
 
@@ -126,7 +126,7 @@ test testbase::bench_intersect_sponza_list_aabb                          ... ben
 Aabb checks are cheap, compared to triangle-intersection algorithms. Therefore, preceeding Aabb checks
 increase intersection speed by filtering negative results a lot faster.
 
-### Build of a Bvh from scratch
+### Build of a BVH from scratch
 
 ```C
 test flat_bvh::bench::bench_build_1200_triangles_flat_bvh                ... bench:     538,474 ns/iter (+/- 4,001)
@@ -138,17 +138,17 @@ test bvh::bvh::bench::bench_build_120k_triangles_bvh                     ... ben
 test bvh::bvh::bench::bench_build_sponza_bvh                             ... bench:  46,802,305 ns/iter (+/- 184,644)
 ```
 
-### Flatten a Bvh
+### Flatten a BVH
 
 ```C
 test flat_bvh::bench::bench_flatten_120k_triangles_bvh                   ... bench:   3,891,505 ns/iter (+/- 42,360)
 ```
 
-As you can see, building a Bvh takes a long time. Building a Bvh is only useful if the number of intersections performed on the
+As you can see, building a BVH takes a long time. Building a BVH is only useful if the number of intersections performed on the
 scene exceeds the build duration. This is the case in applications such as ray and path tracing, where the minimum
 number of intersections is `1280 * 720` for an HD image.
 
-### Intersection via Bvh traversal
+### Intersection via BVH traversal
 
 ```C
 test flat_bvh::bench::bench_intersect_1200_triangles_flat_bvh            ... bench:         168 ns/iter (+/- 2)
@@ -163,7 +163,7 @@ test ray::bench::bench_intersects_aabb_branchless                        ... ben
 test ray::bench::bench_intersects_aabb_naive                             ... bench:      34,958 ns/iter (+/- 259)
 ```
 
-These performance measurements show that traversing a Bvh is much faster than traversing a list.
+These performance measurements show that traversing a BVH is much faster than traversing a list.
 
 ### Optimization
 
@@ -180,13 +180,13 @@ test bvh::optimization::bench::bench_randomize_120k_50p                  ... ben
 This is the place where you have to differentiate between rebuilding the tree from scratch or trying to optimize the old one.
 These tests show the impact of moving around a particular percentage of shapes (`10p` => `10%`).
 It is important to note that the randomization process here moves triangles around indiscriminately.
-This will also lead to cases where the Bvh would have to be restructured completely.
+This will also lead to cases where the BVH would have to be restructured completely.
 
 ### Intersection after the optimization
 
-These intersection tests are grouped by dataset and by the Bvh generation method.
-* `_after_optimize` uses a Bvh which was kept up to date with calls to `optimize`, while
-* `_with_rebuild` uses the same triangle data as `_after_optimize`, but constructs a Bvh from scratch.
+These intersection tests are grouped by dataset and by the BVH generation method.
+* `_after_optimize` uses a BVH which was kept up to date with calls to `optimize`, while
+* `_with_rebuild` uses the same triangle data as `_after_optimize`, but constructs a BVH from scratch.
 
 *120K Triangles*
 ```C
@@ -218,9 +218,9 @@ This set of tests shows the impact of randomly moving triangles around and produ
 The *120K Triangles* dataset has been updated randomly. The *Sponza* scene was updated using a method
 which has a maximum offset distance for shapes. This simulates a more realistic scenario.
 
-We also see that the *Sponza* scene by itself contains some structures which can be tightly wrapped in a Bvh.
+We also see that the *Sponza* scene by itself contains some structures which can be tightly wrapped in a BVH.
 By mowing those structures around we destroy the locality of the triangle groups which leads to more branches in the
-Bvh requiring a check, thus leading to a higher intersection duration.
+BVH requiring a check, thus leading to a higher intersection duration.
 
 ### Running the benchmark suite
 
