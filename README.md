@@ -167,6 +167,10 @@ These performance measurements show that traversing a BVH is much faster than tr
 
 ### Optimization
 
+> **Warning**
+> The optimization benchmarks here are no longer current, and perform around 1/4 as fast as the current implementation.
+> This section needs to be revisited.
+
 The benchmarks for how long it takes to update the scene also contain a randomization process which takes some time.
 
 ```C

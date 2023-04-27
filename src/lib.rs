@@ -10,6 +10,12 @@
 //! the BVH once in advance. This technique is especially useful in ray/path tracers. For
 //! use in a shader this module also exports a flattening procedure, which allows for
 //! iterative traversal of the BVH.
+//! 
+//! ## Note
+//! 
+//! If you are concerned about performance and do not mind using nightly, it is recommended to 
+//! use the `simd` feature as it introduces explicitly written simd to optimize certain areas
+//! of the BVH.
 //!
 //! ## Example
 //!
@@ -67,6 +73,7 @@
 //! ## Features
 //!
 //! - `serde` (default **disabled**) - adds `Serialize` and `Deserialize` implementations for some types
+//! - 'simd' (default **disabled**) - adds explicitly written SIMD instructions for certain architectures (requires nightly)
 //!
 
 #![deny(missing_docs)]
