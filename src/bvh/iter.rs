@@ -6,7 +6,6 @@ use crate::bvh::{Bvh, BvhNode};
 use crate::ray::Ray;
 
 /// Iterator to traverse a [`Bvh`] without memory allocations
-#[allow(clippy::upper_case_acronyms)]
 pub struct BvhTraverseIterator<'bvh, 'shape, T: Scalar + Copy, const D: usize, Shape: Bounded<T, D>>
 {
     /// Reference to the Bvh to traverse

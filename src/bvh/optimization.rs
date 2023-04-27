@@ -22,7 +22,6 @@ use std::collections::HashSet;
 // TODO Consider: Stop updating Aabbs upwards the tree once an Aabb didn't get changed.
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
-#[allow(clippy::upper_case_acronyms)]
 enum OptimizationIndex {
     Refit(usize),
     FixAabbs(usize),

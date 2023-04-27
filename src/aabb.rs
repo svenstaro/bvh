@@ -19,7 +19,6 @@ use num::Zero;
 /// Aabb struct.
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[allow(clippy::upper_case_acronyms)]
 pub struct Aabb<T: Scalar + Copy, const D: usize> {
     /// Minimum coordinates
     pub min: Point<T, D>,

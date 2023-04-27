@@ -25,7 +25,6 @@ use crate::utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
 ///
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[allow(clippy::upper_case_acronyms)]
 pub enum BvhNode<T: Scalar + Copy, const D: usize> {
     /// Leaf node.
     Leaf {
@@ -428,7 +427,6 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
 ///
 /// [`Bvh`]: struct.Bvh.html
 ///
-#[allow(clippy::upper_case_acronyms)]
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bvh<T: Scalar + Copy, const D: usize> {

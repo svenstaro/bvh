@@ -140,7 +140,6 @@ impl<T: Scalar + Copy + Float, const D: usize> BvhNode<T, D> {
 /// [`FlatNode`]: struct.FlatNode.html
 /// [`FlatBvh`]: struct.FlatBvh.html
 ///
-#[allow(clippy::upper_case_acronyms)]
 pub type FlatBvh<T, const D: usize> = Vec<FlatNode<T, D>>;
 
 impl<T: Scalar + Copy + Float, const D: usize> Bvh<T, D> {

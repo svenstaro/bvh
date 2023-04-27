@@ -10,7 +10,6 @@ use crate::ray::Ray;
 ///
 /// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
 ///
-#[allow(clippy::upper_case_acronyms)]
 pub trait BHShape<T: Scalar + Copy, const D: usize>: Bounded<T, D> {
     /// Sets the index of the referenced [`BoundingHierarchy`] node.
     ///
