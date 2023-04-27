@@ -21,6 +21,8 @@ use num::Float;
 /// min( NaN,  1.0):  1.0
 /// min( 1.0,  NaN):  NaN
 /// ```
+///
+/// Note: This exists because std::cmp::min requires Ord which floating point types do not satisfy
 #[inline(always)]
 #[allow(dead_code)]
 pub fn fast_min<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
@@ -46,6 +48,8 @@ pub fn fast_min<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
 /// max( NaN,  1.0):  1.0
 /// max( 1.0,  NaN):  NaN
 /// ```
+///
+/// Note: This exists because std::cmp::max requires Ord which floating point types do not satisfy
 #[inline(always)]
 #[allow(dead_code)]
 pub fn fast_max<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
