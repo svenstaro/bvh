@@ -10,10 +10,10 @@
 //! the BVH once in advance. This technique is especially useful in ray/path tracers. For
 //! use in a shader this module also exports a flattening procedure, which allows for
 //! iterative traversal of the BVH.
-//! 
+//!
 //! ## Note
-//! 
-//! If you are concerned about performance and do not mind using nightly, it is recommended to 
+//!
+//! If you are concerned about performance and do not mind using nightly, it is recommended to
 //! use the `simd` feature as it introduces explicitly written simd to optimize certain areas
 //! of the BVH.
 //!
