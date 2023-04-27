@@ -1,11 +1,11 @@
 //! This module exports methods to flatten the `Bvh` and traverse it iteratively.
-use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
-use num::{Float, FromPrimitive, ToPrimitive};
-
 use crate::aabb::{Aabb, Bounded};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
 use crate::bvh::{Bvh, BvhNode};
 use crate::ray::Ray;
+
+use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
+use num::{Float, FromPrimitive, ToPrimitive};
 
 /// A structure of a node of a flat [`Bvh`]. The structure of the nodes allows for an
 /// iterative traversal approach without the necessity to maintain a stack or queue.

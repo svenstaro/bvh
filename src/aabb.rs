@@ -1,20 +1,9 @@
 //! Axis Aligned Bounding Boxes.
 
+use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Point, SVector, Scalar, SimdPartialOrd};
+use num::{Float, FromPrimitive, One, Signed, Zero};
 use std::fmt;
 use std::ops::Index;
-
-use nalgebra::ClosedAdd;
-use nalgebra::ClosedMul;
-use nalgebra::ClosedSub;
-use nalgebra::Point;
-use nalgebra::SVector;
-use nalgebra::Scalar;
-use nalgebra::SimdPartialOrd;
-use num::Float;
-use num::FromPrimitive;
-use num::One;
-use num::Signed;
-use num::Zero;
 
 /// Aabb struct.
 #[derive(Debug, Copy, Clone)]

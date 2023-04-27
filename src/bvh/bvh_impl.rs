@@ -9,7 +9,6 @@ use num::{Float, FromPrimitive, Signed, ToPrimitive, Zero};
 
 use crate::aabb::{Aabb, Bounded};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
-//use crate::bounds::ScalarType;
 use crate::bvh::iter::BvhTraverseIterator;
 use crate::ray::Ray;
 use crate::utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};

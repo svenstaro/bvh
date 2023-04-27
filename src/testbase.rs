@@ -1,8 +1,8 @@
 //! Common utilities shared by unit tests.
 #![cfg(test)]
 
-use std::collections::HashSet;
-use std::f32;
+use crate::aabb::Bounded;
+use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
 
 use num::{FromPrimitive, Integer};
 use obj::raw::object::Polygon;
@@ -11,9 +11,8 @@ use proptest::prelude::*;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
-
-use crate::aabb::Bounded;
-use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use std::collections::HashSet;
+use std::f32;
 
 // TODO These all need to be realtyped and bounded
 

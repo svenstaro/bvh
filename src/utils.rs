@@ -1,10 +1,10 @@
 //! Utilities module.
 
-use nalgebra::{Scalar, SimdPartialOrd};
-use num::Float;
-
 use crate::aabb::Aabb;
 use crate::bounding_hierarchy::BHShape;
+
+use nalgebra::{Scalar, SimdPartialOrd};
+use num::Float;
 
 /// Fast floating point minimum.  This function matches the semantics of
 ///

@@ -1,9 +1,9 @@
-use nalgebra::{ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
-use num::Zero;
-
 use crate::aabb::Bounded;
 use crate::bvh::{Bvh, BvhNode};
 use crate::ray::Ray;
+
+use nalgebra::{ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
+use num::Zero;
 
 /// Iterator to traverse a [`Bvh`] without memory allocations
 pub struct BvhTraverseIterator<'bvh, 'shape, T: Scalar + Copy, const D: usize, Shape: Bounded<T, D>>
