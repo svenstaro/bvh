@@ -23,10 +23,10 @@ jobs:
           toolchain: nightly
           components: clippy
       - name: Run clippy
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
-  build-and-test-no-features:
-    name: CI with ${{ matrix.rust }} on ${{ matrix.os }} [no-features]
+  build-and-test-no-simd:
+    name: CI with ${{ matrix.rust }} on ${{ matrix.os }} [no SIMD]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -40,7 +40,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
 
       - name: cargo build
-        run: cargo build --workspace
+        run: cargo build
 
       - name: cargo test
         run: cargo test
@@ -50,7 +50,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
 
   build-and-test-simd:
-    name: CI with nightly on ${{ matrix.os }} [simd]
+    name: CI with nightly on ${{ matrix.os }} [SIMD]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -61,7 +61,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
 
       - name: cargo build
-        run: cargo build --workspace --features simd
+        run: cargo build --features simd
 
       - name: cargo test
         run: cargo test --features simd
