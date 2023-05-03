@@ -22,6 +22,7 @@ log = "0.4"
 serde = { optional = true, version = "1", features = ["derive"] }
 num = "0.4.0"
 nalgebra = { version = "0.32.2", features = ["default", "serde-serialize"] }
+simba = "*"
 
 [dev-dependencies]
 proptest = "1.0"

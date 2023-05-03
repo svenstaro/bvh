@@ -1,11 +1,15 @@
 //! This module defines a Ray structure and intersection algorithms
 //! for axis aligned bounding boxes and triangles.
 
-use crate::aabb::Aabb;
-use nalgebra::{
-    ClosedAdd, ClosedMul, ClosedSub, ComplexField, Point, SVector, Scalar, SimdPartialOrd,
+use crate::{
+    aabb::Aabb,
+    utils::{fast_max, fast_min},
 };
-use num::{Float, One, Zero};
+use nalgebra::{
+    ClosedAdd, ClosedMul, ClosedSub, ComplexField, Point, RealField, SVector, Scalar,
+    SimdPartialOrd,
+};
+use num::{Float, FromPrimitive, One, Signed, Zero};
 
 use super::intersect_default::RayIntersection;
 
@@ -104,6 +108,48 @@ impl<T: Scalar + Copy, const D: usize> Ray<T, D> {
         T: ClosedSub + ClosedMul + Zero + PartialOrd + SimdPartialOrd,
     {
         self.ray_intersects_aabb(aabb)
+    }
+
+    /// Intersect [`Aabb`] by [`Ray`]
+    /// Returns slice of intersections, two numbers `T`
+    /// where the first number is the distance from [`Ray`] to the nearest intersection point
+    /// and the second number is the distance from [`Ray`] to the farthest intersection point
+    ///
+    /// If there are no intersections, it returns negative one for both distances
+    pub fn intersection_slice_for_aabb(&self, aabb: &Aabb<T, D>) -> (T, T)
+    where
+        T: ClosedSub
+            + ClosedMul
+            + ClosedAdd
+            + Signed
+            + Zero
+            + PartialOrd
+            + SimdPartialOrd
+            + FromPrimitive
+            + Copy
+            + Scalar
+            + RealField,
+    {
+        // https://iquilezles.org/articles/intersectors/
+        let mut n = self.origin.coords - aabb.center().coords;
+        n.component_mul_assign(&self.inv_direction);
+
+        let k = self.inv_direction.abs().component_mul(&aabb.half_size());
+        let t1 = -n - k;
+        let t2 = -n + k;
+
+        let entry_distance = t1
+            .iter()
+            .skip(1)
+            .fold(t1[0], |acc, x| -> T { fast_max(*x, acc) });
+        let exit_distance = t2.iter().skip(1).fold(t2[0], |acc, x| fast_min(*x, acc));
+
+        // no intersection
+        if entry_distance > exit_distance || exit_distance < T::zero() {
+            return (T::from_f32(-1.0).unwrap(), T::from_f32(-1.0).unwrap());
+        }
+
+        (fast_max(entry_distance, T::zero()), exit_distance)
     }
 
     /// Implementation of the
@@ -273,12 +319,12 @@ mod tests {
                     (v - 1.0).abs() < f32::EPSILON || (u + v - 1.0).abs() < f32::EPSILON;
 
                 if !(intersection_inside || close_to_border) {
-                    println!("uvsum {}", uv_sum);
+                    println!("uvsum {uv_sum}");
                     println!("intersects.0 {}", intersects.distance);
                     println!("intersects.1 (u) {}", intersects.u);
                     println!("intersects.2 (v) {}", intersects.v);
-                    println!("u {}", u);
-                    println!("v {}", v);
+                    println!("u {u}");
+                    println!("v {v}");
                 }
 
                 assert!(intersection_inside || close_to_border);

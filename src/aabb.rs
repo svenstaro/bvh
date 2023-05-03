@@ -1,6 +1,8 @@
 //! Axis Aligned Bounding Boxes.
 
-use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Point, SVector, Scalar, SimdPartialOrd};
+use nalgebra::{
+    ClosedAdd, ClosedMul, ClosedSub, Point, RealField, SVector, Scalar, SimdPartialOrd,
+};
 use num::{Float, FromPrimitive, One, Signed, Zero};
 use std::fmt;
 use std::ops::Index;
@@ -471,6 +473,29 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
         T: ClosedSub,
     {
         self.max - self.min
+    }
+
+    /// Returns the half size of this [`Aabb`] in all three dimensions.
+    /// This can be interpreted as the distance from the center to the edges
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::aabb::Aabb;
+    /// use nalgebra::Point3;
+    ///
+    /// let aabb = Aabb::with_bounds(Point3::new(0.0,0.0,0.0), Point3::new(2.0,2.0,2.0));
+    /// let half_size = aabb.half_size();
+    /// assert!(half_size.x == 1.0 && half_size.y == 1.0 && half_size.z == 1.0);
+    /// ```
+    ///
+    /// [`Aabb`]: struct.Aabb.html
+    ///
+    #[inline]
+    pub fn half_size(&self) -> SVector<T, D>
+    where
+        T: Scalar + Copy + ClosedSub + ClosedAdd + ClosedMul + FromPrimitive + RealField,
+    {
+        self.size() * T::from_f32(0.5).unwrap()
     }
 
     /// Returns the center [`Point3`] of the [`Aabb`].
