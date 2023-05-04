@@ -95,7 +95,7 @@ it is faster to update the tree, instead of rebuilding it from scratch.
 First of all, optimizing is not helpful if more than half of the scene is not static.
 This is due to how optimizing takes place:
 Given a set of indices of all shapes which have changed, the optimize procedure tries to rotate fixed constellations
-in search for a better surface area heuristic (SAH) value. This is done recursively from bottom to top while fixing the Aabbs
+in search for a better surface area heuristic (SAH) value. This is done recursively from bottom to top while fixing the AABBs
 in the inner nodes of the BVH. Which is why it is inefficient to update the BVH in comparison to rebuilding, when a lot
 of shapes have moved.
 
@@ -116,14 +116,14 @@ test testbase::bench_intersect_sponza_list                               ... ben
 
 This is the most naive approach to intersecting a scene with a ray. It defines the baseline.
 
-### Intersection via traversal of the list of triangles with Aabb checks
+### Intersection via traversal of the list of triangles with AABB checks
 
 ```C
 test testbase::bench_intersect_120k_triangles_list_aabb                  ... bench:     229,088 ns/iter (+/- 6,727)
 test testbase::bench_intersect_sponza_list_aabb                          ... bench:     107,514 ns/iter (+/- 1,511)
 ```
 
-Aabb checks are cheap, compared to triangle-intersection algorithms. Therefore, preceeding Aabb checks
+AABB checks are cheap, compared to triangle-intersection algorithms. Therefore, preceeding AABB checks
 increase intersection speed by filtering negative results a lot faster.
 
 ### Build of a BVH from scratch
