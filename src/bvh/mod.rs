@@ -1,6 +1,6 @@
-//! This module defines a [`BVH`].
+//! This module defines a [`Bvh`].
 //!
-//! [`BVH`]: struct.BVH.html
+//! [`Bvh`]: struct.Bvh.html
 //!
 
 mod bvh_impl;

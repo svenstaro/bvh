@@ -4,20 +4,26 @@
 //! ## About
 //!
 //! This crate can be used for applications which contain intersection computations of rays
-//! with primitives. For this purpose a binary tree BVH (Bounding Volume Hierarchy) is of great
-//! use if the scene which the ray traverses contains a huge number of primitives. With a BVH the
+//! with primitives. For this purpose a binary tree [`Bvh`](bvh::Bvh) (Bounding Volume Hierarchy) is of great
+//! use if the scene which the ray traverses contains a huge number of primitives. With a [`Bvh`](bvh::Bvh) the
 //! intersection test complexity is reduced from O(n) to O(log2(n)) at the cost of building
-//! the BVH once in advance. This technique is especially useful in ray/path tracers. For
+//! the [`Bvh`](bvh::Bvh) once in advance. This technique is especially useful in ray/path tracers. For
 //! use in a shader this module also exports a flattening procedure, which allows for
-//! iterative traversal of the BVH.
+//! iterative traversal of the [`Bvh`](bvh::Bvh).
+//!
+//! ## Note
+//!
+//! If you are concerned about performance and do not mind using nightly, it is recommended to
+//! use the `simd` feature as it introduces explicitly written simd to optimize certain areas
+//! of the BVH.
 //!
 //! ## Example
 //!
 //! ```
-//! use bvh::aabb::{AABB, Bounded};
+//! use bvh::aabb::{Aabb, Bounded};
 //! use bvh::bounding_hierarchy::BHShape;
-//! use bvh::bvh::BVH;
-//! use bvh::{Point3, Vector3};
+//! use bvh::bvh::Bvh;
+//! use nalgebra::{Point3, Vector3};
 //! use bvh::ray::Ray;
 //!
 //! let origin = Point3::new(0.0,0.0,0.0);
@@ -25,21 +31,21 @@
 //! let ray = Ray::new(origin, direction);
 //!
 //! struct Sphere {
-//!     position: Point3,
+//!     position: Point3<f32>,
 //!     radius: f32,
 //!     node_index: usize,
 //! }
 //!
-//! impl Bounded for Sphere {
-//!     fn aabb(&self) -> AABB {
+//! impl Bounded<f32,3> for Sphere {
+//!     fn aabb(&self) -> Aabb<f32,3> {
 //!         let half_size = Vector3::new(self.radius, self.radius, self.radius);
 //!         let min = self.position - half_size;
 //!         let max = self.position + half_size;
-//!         AABB::with_bounds(min, max)
+//!         Aabb::with_bounds(min, max)
 //!     }
 //! }
 //!
-//! impl BHShape for Sphere {
+//! impl BHShape<f32,3> for Sphere {
 //!     fn set_bh_node_index(&mut self, index: usize) {
 //!         self.node_index = index;
 //!     }
@@ -60,33 +66,24 @@
 //!     });
 //! }
 //!
-//! let bvh = BVH::build(&mut spheres);
+//! let bvh = Bvh::build(&mut spheres);
 //! let hit_sphere_aabbs = bvh.traverse(&ray, &spheres);
 //! ```
 //!
 //! ## Features
 //!
 //! - `serde` (default **disabled**) - adds `Serialize` and `Deserialize` implementations for some types
+//! - `simd` (default **disabled**) - adds explicitly written SIMD instructions for certain architectures (requires nightly)
 //!
 
 #![deny(missing_docs)]
 #![cfg_attr(feature = "bench", feature(test))]
+#![cfg_attr(feature = "simd", feature(min_specialization))]
 
 #[cfg(all(feature = "bench", test))]
 extern crate test;
 
-/// A minimal floating value used as a lower bound.
-/// TODO: replace by/add ULPS/relative float comparison methods.
-pub const EPSILON: f32 = 0.00001;
-
-/// Point math type used by this crate. Type alias for [`glam::Vec3`].
-pub type Point3 = glam::Vec3;
-
-/// Vector math type used by this crate. Type alias for [`glam::Vec3`].
-pub type Vector3 = glam::Vec3;
-
 pub mod aabb;
-pub mod axis;
 pub mod bounding_hierarchy;
 pub mod bvh;
 pub mod flat_bvh;

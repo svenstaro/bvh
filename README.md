@@ -22,32 +22,32 @@ iterative traversal of the BVH.
 ## Example
 
 ```rust
-use bvh::aabb::{AABB, Bounded};
+use bvh::aabb::{Aabb, Bounded};
 use bvh::bounding_hierarchy::BHShape;
-use bvh::bvh::BVH;
-use bvh::{Point3, Vector3};
+use bvh::bvh::Bvh;
 use bvh::ray::Ray;
+use nalgebra::{Point3, Vector3};
 
 let origin = Point3::new(0.0,0.0,0.0);
 let direction = Vector3::new(1.0,0.0,0.0);
 let ray = Ray::new(origin, direction);
 
 struct Sphere {
-    position: Point3,
+    position: Point3<f32>,
     radius: f32,
     node_index: usize,
 }
 
-impl Bounded for Sphere {
-    fn aabb(&self) -> AABB {
+impl Bounded<f32, 3> for Sphere {
+    fn aabb(&self) -> Aabb<f32, 3> {
         let half_size = Vector3::new(self.radius, self.radius, self.radius);
         let min = self.position - half_size;
         let max = self.position + half_size;
-        AABB::with_bounds(min, max)
+        Aabb::with_bounds(min, max)
     }
 }
 
-impl BHShape for Sphere {
+impl BHShape<f32, 3> for Sphere {
     fn set_bh_node_index(&mut self, index: usize) {
         self.node_index = index;
     }
@@ -67,9 +67,21 @@ for i in 0..1000u32 {
     });
 }
 
-let bvh = BVH::build(&mut spheres);
+let bvh = Bvh::build(&mut spheres);
 let hit_sphere_aabbs = bvh.traverse(&ray, &spheres);
 ```
+
+## Explicit SIMD
+
+This crate features some manually written SIMD instructions, currently only for the `x86_64` architecture.
+While nalgebra provides us with generic SIMD optimization (and it does a great job for the most part) - 
+some important functions, such as ray-aabb-intersection have been optimized by hand.
+
+The currently optimized intersections for ray-aabb are:
+Type: f32, Dimension: 2,3,4
+Type: f64, Dimension: 2,3,4
+
+To enable these optimziations, you must build with the `nightly` toolchain and enable the `simd` flag.
 
 ## Optimization
 
@@ -154,6 +166,10 @@ test ray::bench::bench_intersects_aabb_naive                             ... ben
 These performance measurements show that traversing a BVH is much faster than traversing a list.
 
 ### Optimization
+
+> **Warning**
+> The optimization benchmarks here are no longer current, and perform around 1/4 as fast as the current implementation.
+> This section needs to be revisited.
 
 The benchmarks for how long it takes to update the scene also contain a randomization process which takes some time.
 

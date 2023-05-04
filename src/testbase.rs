@@ -1,10 +1,9 @@
 //! Common utilities shared by unit tests.
 #![cfg(test)]
 
-use std::collections::HashSet;
-use std::f32;
+use crate::aabb::Bounded;
+use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
 
-use crate::{Point3, Vector3};
 use num::{FromPrimitive, Integer};
 use obj::raw::object::Polygon;
 use obj::*;
@@ -12,15 +11,23 @@ use proptest::prelude::*;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
+use std::collections::HashSet;
+use std::f32;
 
-use crate::aabb::{Bounded, AABB};
-use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
-use crate::ray::Ray;
+// TODO These all need to be realtyped and bounded
 
 /// A vector represented as a tuple
 pub type TupleVec = (f32, f32, f32);
 
-/// Generate a `TupleVec` for [`proptest::strategy::Strategy`] from -10e10 to 10e10
+pub type TRay3 = crate::ray::Ray<f32, 3>;
+pub type TAabb3 = crate::aabb::Aabb<f32, 3>;
+pub type TBvh3 = crate::bvh::Bvh<f32, 3>;
+pub type TBvhNode3 = crate::bvh::BvhNode<f32, 3>;
+pub type TVector3 = nalgebra::SVector<f32, 3>;
+pub type TPoint3 = nalgebra::Point<f32, 3>;
+pub type TFlatBvh3 = crate::flat_bvh::FlatBvh<f32, 3>;
+
+/// Generate a [`TupleVec`] for [`proptest::strategy::Strategy`] from -10e10 to 10e10
 /// A small enough range to prevent most fp32 errors from breaking certain tests
 /// Tests which rely on this strategy should probably be rewritten
 pub fn tuplevec_small_strategy() -> impl Strategy<Value = TupleVec> {
@@ -31,7 +38,7 @@ pub fn tuplevec_small_strategy() -> impl Strategy<Value = TupleVec> {
     )
 }
 
-/// Generate a `TupleVec` for [`proptest::strategy::Strategy`] from -10e30 to 10e30
+/// Generate a [`TupleVec`] for [`proptest::strategy::Strategy`] from -10e30 to 10e30
 /// A small enough range to prevent `f32::MAX` ranges from breaking certain tests
 pub fn tuplevec_large_strategy() -> impl Strategy<Value = TupleVec> {
     (
@@ -41,25 +48,25 @@ pub fn tuplevec_large_strategy() -> impl Strategy<Value = TupleVec> {
     )
 }
 
-/// Convert a `TupleVec` to a [`Point3`].
-pub fn tuple_to_point(tpl: &TupleVec) -> Point3 {
-    Point3::new(tpl.0, tpl.1, tpl.2)
+/// Convert a [`TupleVec`] to a [`TPoint3`].
+pub fn tuple_to_point(tpl: &TupleVec) -> TPoint3 {
+    TPoint3::new(tpl.0, tpl.1, tpl.2)
 }
 
-/// Convert a `TupleVec` to a [`Vector3`].
-pub fn tuple_to_vector(tpl: &TupleVec) -> Vector3 {
-    Vector3::new(tpl.0, tpl.1, tpl.2)
+/// Convert a [`TupleVec`] to a [`TVector3`].
+pub fn tuple_to_vector(tpl: &TupleVec) -> TVector3 {
+    TVector3::new(tpl.0, tpl.1, tpl.2)
 }
 
-/// Define some `Bounded` structure.
+/// Define some [`Bounded`] structure.
 pub struct UnitBox {
     pub id: i32,
-    pub pos: Point3,
+    pub pos: TPoint3,
     node_index: usize,
 }
 
 impl UnitBox {
-    pub fn new(id: i32, pos: Point3) -> UnitBox {
+    pub fn new(id: i32, pos: TPoint3) -> UnitBox {
         UnitBox {
             id,
             pos,
@@ -68,16 +75,16 @@ impl UnitBox {
     }
 }
 
-/// `UnitBox`'s `AABB`s are unit `AABB`s centered on the box's position.
-impl Bounded for UnitBox {
-    fn aabb(&self) -> AABB {
-        let min = self.pos + Vector3::new(-0.5, -0.5, -0.5);
-        let max = self.pos + Vector3::new(0.5, 0.5, 0.5);
-        AABB::with_bounds(min, max)
+/// [`UnitBox`]'s [`Aabb`]'s are unit [`Aabb`]'s centered on the box's position.
+impl Bounded<f32, 3> for UnitBox {
+    fn aabb(&self) -> TAabb3 {
+        let min = self.pos + TVector3::new(-0.5, -0.5, -0.5);
+        let max = self.pos + TVector3::new(0.5, 0.5, 0.5);
+        TAabb3::with_bounds(min, max)
     }
 }
 
-impl BHShape for UnitBox {
+impl BHShape<f32, 3> for UnitBox {
     fn set_bh_node_index(&mut self, index: usize) {
         self.node_index = index;
     }
@@ -87,19 +94,19 @@ impl BHShape for UnitBox {
     }
 }
 
-/// Generate 21 `UnitBox`s along the X axis centered on whole numbers (-10,9,..,10).
+/// Generate 21 [`UnitBox`]'s along the X axis centered on whole numbers (-10,9,..,10).
 /// The index is set to the rounded x-coordinate of the box center.
 pub fn generate_aligned_boxes() -> Vec<UnitBox> {
     // Create 21 boxes along the x-axis
     let mut shapes = Vec::new();
     for x in -10..11 {
-        shapes.push(UnitBox::new(x, Point3::new(x as f32, 0.0, 0.0)));
+        shapes.push(UnitBox::new(x, TPoint3::new(x as f32, 0.0, 0.0)));
     }
     shapes
 }
 
-/// Creates a `BoundingHierarchy` for a fixed scene structure.
-pub fn build_some_bh<BH: BoundingHierarchy>() -> (Vec<UnitBox>, BH) {
+/// Creates a [`BoundingHierarchy`] for a fixed scene structure.
+pub fn build_some_bh<BH: BoundingHierarchy<f32, 3>>() -> (Vec<UnitBox>, BH) {
     let mut boxes = generate_aligned_boxes();
     let bh = BH::build(&mut boxes);
     (boxes, bh)
@@ -107,14 +114,14 @@ pub fn build_some_bh<BH: BoundingHierarchy>() -> (Vec<UnitBox>, BH) {
 
 /// Given a ray, a bounding hierarchy, the complete list of shapes in the scene and a list of
 /// expected hits, verifies, whether the ray hits only the expected shapes.
-fn traverse_and_verify<BH: BoundingHierarchy>(
-    ray_origin: Point3,
-    ray_direction: Vector3,
+fn traverse_and_verify<BH: BoundingHierarchy<f32, 3>>(
+    ray_origin: TPoint3,
+    ray_direction: TVector3,
     all_shapes: &[UnitBox],
     bh: &BH,
     expected_shapes: &HashSet<i32>,
 ) {
-    let ray = Ray::new(ray_origin, ray_direction);
+    let ray = TRay3::new(ray_origin, ray_direction);
     let hit_shapes = bh.traverse(&ray, all_shapes);
 
     assert_eq!(expected_shapes.len(), hit_shapes.len());
@@ -123,14 +130,14 @@ fn traverse_and_verify<BH: BoundingHierarchy>(
     }
 }
 
-/// Perform some fixed intersection tests on BH structures.
-pub fn traverse_some_bh<BH: BoundingHierarchy>() {
+/// Perform some fixed intersection tests on [`BoundingHierarchy`] structures.
+pub fn traverse_some_bh<BH: BoundingHierarchy<f32, 3>>() {
     let (all_shapes, bh) = build_some_bh::<BH>();
 
     {
         // Define a ray which traverses the x-axis from afar.
-        let origin = Point3::new(-1000.0, 0.0, 0.0);
-        let direction = Vector3::new(1.0, 0.0, 0.0);
+        let origin = TPoint3::new(-1000.0, 0.0, 0.0);
+        let direction = TVector3::new(1.0, 0.0, 0.0);
         let mut expected_shapes = HashSet::new();
 
         // It should hit everything.
@@ -142,8 +149,8 @@ pub fn traverse_some_bh<BH: BoundingHierarchy>() {
 
     {
         // Define a ray which traverses the y-axis from afar.
-        let origin = Point3::new(0.0, -1000.0, 0.0);
-        let direction = Vector3::new(0.0, 1.0, 0.0);
+        let origin = TPoint3::new(0.0, -1000.0, 0.0);
+        let direction = TVector3::new(0.0, 1.0, 0.0);
 
         // It should hit only one box.
         let mut expected_shapes = HashSet::new();
@@ -153,8 +160,8 @@ pub fn traverse_some_bh<BH: BoundingHierarchy>() {
 
     {
         // Define a ray which intersects the x-axis diagonally.
-        let origin = Point3::new(6.0, 0.5, 0.0);
-        let direction = Vector3::new(-2.0, -1.0, 0.0);
+        let origin = TPoint3::new(6.0, 0.5, 0.0);
+        let direction = TVector3::new(-2.0, -1.0, 0.0);
 
         // It should hit exactly three boxes.
         let mut expected_shapes = HashSet::new();
@@ -165,35 +172,35 @@ pub fn traverse_some_bh<BH: BoundingHierarchy>() {
     }
 }
 
-/// A triangle struct. Instance of a more complex `Bounded` primitive.
+/// A triangle struct. Instance of a more complex [`Bounded`] primitive.
 #[derive(Debug)]
 pub struct Triangle {
-    pub a: Point3,
-    pub b: Point3,
-    pub c: Point3,
-    aabb: AABB,
+    pub a: TPoint3,
+    pub b: TPoint3,
+    pub c: TPoint3,
+    aabb: TAabb3,
     node_index: usize,
 }
 
 impl Triangle {
-    pub fn new(a: Point3, b: Point3, c: Point3) -> Triangle {
+    pub fn new(a: TPoint3, b: TPoint3, c: TPoint3) -> Triangle {
         Triangle {
             a,
             b,
             c,
-            aabb: AABB::empty().grow(&a).grow(&b).grow(&c),
+            aabb: TAabb3::empty().grow(&a).grow(&b).grow(&c),
             node_index: 0,
         }
     }
 }
 
-impl Bounded for Triangle {
-    fn aabb(&self) -> AABB {
+impl Bounded<f32, 3> for Triangle {
+    fn aabb(&self) -> TAabb3 {
         self.aabb
     }
 }
 
-impl BHShape for Triangle {
+impl BHShape<f32, 3> for Triangle {
     fn set_bh_node_index(&mut self, index: usize) {
         self.node_index = index;
     }
@@ -210,10 +217,10 @@ impl<I: FromPrimitive + Integer> FromRawVertex<I> for Triangle {
         _: Vec<(f32, f32, f32)>,
         polygons: Vec<Polygon>,
     ) -> ObjResult<(Vec<Self>, Vec<I>)> {
-        // Convert the vertices to `Point3`s.
+        // Convert the vertices to `Point3`'s.
         let points = vertices
             .into_iter()
-            .map(|v| Point3::new(v.0, v.1, v.2))
+            .map(|v| TPoint3::new(v.0, v.1, v.2))
             .collect::<Vec<_>>();
 
         // Estimate for the number of triangles, assuming that each polygon is a triangle.
@@ -248,15 +255,15 @@ impl<I: FromPrimitive + Integer> FromRawVertex<I> for Triangle {
 }
 
 /// Creates a unit size cube centered at `pos` and pushes the triangles to `shapes`.
-fn push_cube(pos: Point3, shapes: &mut Vec<Triangle>) {
-    let top_front_right = pos + Vector3::new(0.5, 0.5, -0.5);
-    let top_back_right = pos + Vector3::new(0.5, 0.5, 0.5);
-    let top_back_left = pos + Vector3::new(-0.5, 0.5, 0.5);
-    let top_front_left = pos + Vector3::new(-0.5, 0.5, -0.5);
-    let bottom_front_right = pos + Vector3::new(0.5, -0.5, -0.5);
-    let bottom_back_right = pos + Vector3::new(0.5, -0.5, 0.5);
-    let bottom_back_left = pos + Vector3::new(-0.5, -0.5, 0.5);
-    let bottom_front_left = pos + Vector3::new(-0.5, -0.5, -0.5);
+fn push_cube(pos: TPoint3, shapes: &mut Vec<Triangle>) {
+    let top_front_right = pos + TVector3::new(0.5, 0.5, -0.5);
+    let top_back_right = pos + TVector3::new(0.5, 0.5, 0.5);
+    let top_back_left = pos + TVector3::new(-0.5, 0.5, 0.5);
+    let top_front_left = pos + TVector3::new(-0.5, 0.5, -0.5);
+    let bottom_front_right = pos + TVector3::new(0.5, -0.5, -0.5);
+    let bottom_back_right = pos + TVector3::new(0.5, -0.5, 0.5);
+    let bottom_back_left = pos + TVector3::new(-0.5, -0.5, 0.5);
+    let bottom_front_left = pos + TVector3::new(-0.5, -0.5, -0.5);
 
     shapes.push(Triangle::new(
         top_back_right,
@@ -326,7 +333,7 @@ fn splitmix64(x: &mut u64) -> u64 {
     z ^ (z >> 31)
 }
 
-/// Generates a new `i32` triple. Mutates the seed.
+/// Generates a new [`i32`] triple. Mutates the seed.
 pub fn next_point3_raw(seed: &mut u64) -> (i32, i32, i32) {
     let u = splitmix64(seed);
     let a = ((u >> 32) & 0xFFFFFFFF) as i64 - 0x80000000;
@@ -335,11 +342,11 @@ pub fn next_point3_raw(seed: &mut u64) -> (i32, i32, i32) {
     (a as i32, b as i32, c as i32)
 }
 
-/// Generates a new `Point3`, which will lie inside the given `aabb`. Mutates the seed.
-pub fn next_point3(seed: &mut u64, aabb: &AABB) -> Point3 {
+/// Generates a new [`Point3`], which will lie inside the given [`Aabb`]. Mutates the seed.
+pub fn next_point3(seed: &mut u64, aabb: &TAabb3) -> TPoint3 {
     let (a, b, c) = next_point3_raw(seed);
     use std::i32;
-    let float_vector = Vector3::new(
+    let float_vector = TVector3::new(
         (a as f32 / i32::MAX as f32) + 1.0,
         (b as f32 / i32::MAX as f32) + 1.0,
         (c as f32 / i32::MAX as f32) + 1.0,
@@ -350,7 +357,7 @@ pub fn next_point3(seed: &mut u64, aabb: &AABB) -> Point3 {
     assert!(float_vector.z >= 0.0 && float_vector.z <= 1.0);
 
     let size = aabb.size();
-    let offset = Vector3::new(
+    let offset = TVector3::new(
         float_vector.x * size.x,
         float_vector.y * size.y,
         float_vector.z * size.z,
@@ -358,16 +365,16 @@ pub fn next_point3(seed: &mut u64, aabb: &AABB) -> Point3 {
     aabb.min + offset
 }
 
-/// Returns an `AABB` which defines the default testing space bounds.
-pub fn default_bounds() -> AABB {
-    AABB::with_bounds(
-        Point3::new(-100_000.0, -100_000.0, -100_000.0),
-        Point3::new(100_000.0, 100_000.0, 100_000.0),
+/// Returns an [`Aabb`] which defines the default testing space bounds.
+pub fn default_bounds() -> TAabb3 {
+    TAabb3::with_bounds(
+        TPoint3::new(-100_000.0, -100_000.0, -100_000.0),
+        TPoint3::new(100_000.0, 100_000.0, 100_000.0),
     )
 }
 
-/// Creates `n` deterministic random cubes. Returns the `Vec` of surface `Triangle`s.
-pub fn create_n_cubes(n: usize, bounds: &AABB) -> Vec<Triangle> {
+/// Creates `n` deterministic random cubes. Returns the [`Vec`] of surface [`Triangle`]'s.
+pub fn create_n_cubes(n: usize, bounds: &TAabb3) -> Vec<Triangle> {
     let mut vec = Vec::new();
     let mut seed = 0;
     for _ in 0..n {
@@ -378,7 +385,7 @@ pub fn create_n_cubes(n: usize, bounds: &AABB) -> Vec<Triangle> {
 
 /// Loads the sponza model.
 #[cfg(feature = "bench")]
-pub fn load_sponza_scene() -> (Vec<Triangle>, AABB) {
+pub fn load_sponza_scene() -> (Vec<Triangle>, TAabb3) {
     use std::fs::File;
     use std::io::BufReader;
 
@@ -387,7 +394,7 @@ pub fn load_sponza_scene() -> (Vec<Triangle>, AABB) {
     let sponza_obj: Obj<Triangle> = load_obj(file_input).expect("Failed to decode .obj file data.");
     let triangles = sponza_obj.vertices;
 
-    let mut bounds = AABB::empty();
+    let mut bounds = TAabb3::empty();
     for triangle in &triangles {
         bounds.join_mut(&triangle.aabb());
     }
@@ -398,11 +405,11 @@ pub fn load_sponza_scene() -> (Vec<Triangle>, AABB) {
 /// This functions moves `amount` shapes in the `triangles` array to a new position inside
 /// `bounds`. If `max_offset_option` is not `None` then the wrapped value is used as the maximum
 /// offset of a shape. This is used to simulate a realistic scene.
-/// Returns a `HashSet` of indices of modified triangles.
+/// Returns a [`HashSet`] of indices of modified triangles.
 pub fn randomly_transform_scene(
     triangles: &mut Vec<Triangle>,
     amount: usize,
-    bounds: &AABB,
+    bounds: &TAabb3,
     max_offset_option: Option<f32>,
     seed: &mut u64,
 ) -> HashSet<usize> {
@@ -426,7 +433,7 @@ pub fn randomly_transform_scene(
         let aabb = triangles[*index].aabb();
         let min_move_bound = bounds.min - aabb.min;
         let max_move_bound = bounds.max - aabb.max;
-        let movement_bounds = AABB::with_bounds(min_move_bound, max_move_bound);
+        let movement_bounds = TAabb3::with_bounds(min_move_bound.into(), max_move_bound.into());
 
         let mut random_offset = next_point3(seed, &movement_bounds);
         random_offset.x = max_offset.min((-max_offset).max(random_offset.x));
@@ -436,9 +443,9 @@ pub fn randomly_transform_scene(
         let triangle = &mut triangles[*index];
         let old_index = triangle.bh_node_index();
         *triangle = Triangle::new(
-            triangle.a + random_offset,
-            triangle.b + random_offset,
-            triangle.c + random_offset,
+            (triangle.a.coords + random_offset.coords).into(),
+            (triangle.b.coords + random_offset.coords).into(),
+            (triangle.c.coords + random_offset.coords).into(),
         );
         triangle.set_bh_node_index(old_index);
     }
@@ -446,19 +453,19 @@ pub fn randomly_transform_scene(
     indices.into_iter().collect()
 }
 
-/// Creates a `Ray` from the random `seed`. Mutates the `seed`.
-/// The Ray origin will be inside the `bounds` and point to some other point inside this
+/// Creates a [`Ray`] from the random `seed`. Mutates the `seed`.
+/// The [`Ray`] origin will be inside the `bounds` and point to some other point inside this
 /// `bounds`.
 #[cfg(feature = "bench")]
-pub fn create_ray(seed: &mut u64, bounds: &AABB) -> Ray {
+pub fn create_ray(seed: &mut u64, bounds: &TAabb3) -> TRay3 {
     let origin = next_point3(seed, bounds);
     let direction = next_point3(seed, bounds);
-    Ray::new(origin, direction)
+    TRay3::new(origin, direction.coords)
 }
 
-/// Benchmark the construction of a `BoundingHierarchy` with `n` triangles.
+/// Benchmark the construction of a [`BoundingHierarchy`] with `n` triangles.
 #[cfg(feature = "bench")]
-fn build_n_triangles_bh<T: BoundingHierarchy>(n: usize, b: &mut ::test::Bencher) {
+fn build_n_triangles_bh<T: BoundingHierarchy<f32, 3>>(n: usize, b: &mut ::test::Bencher) {
     let bounds = default_bounds();
     let mut triangles = create_n_cubes(n, &bounds);
     b.iter(|| {
@@ -466,27 +473,27 @@ fn build_n_triangles_bh<T: BoundingHierarchy>(n: usize, b: &mut ::test::Bencher)
     });
 }
 
-/// Benchmark the construction of a `BoundingHierarchy` with 1,200 triangles.
+/// Benchmark the construction of a [`BoundingHierarchy`] with 1,200 triangles.
 #[cfg(feature = "bench")]
-pub fn build_1200_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
+pub fn build_1200_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
     build_n_triangles_bh::<T>(100, b);
 }
 
-/// Benchmark the construction of a `BoundingHierarchy` with 12,000 triangles.
+/// Benchmark the construction of a [`BoundingHierarchy`] with 12,000 triangles.
 #[cfg(feature = "bench")]
-pub fn build_12k_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
+pub fn build_12k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
     build_n_triangles_bh::<T>(1_000, b);
 }
 
-/// Benchmark the construction of a `BoundingHierarchy` with 120,000 triangles.
+/// Benchmark the construction of a [`BoundingHierarchy`] with 120,000 triangles.
 #[cfg(feature = "bench")]
-pub fn build_120k_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
+pub fn build_120k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
     build_n_triangles_bh::<T>(10_000, b);
 }
 
 /// Benchmark intersecting the `triangles` list without acceleration structures.
 #[cfg(feature = "bench")]
-pub fn intersect_list(triangles: &[Triangle], bounds: &AABB, b: &mut ::test::Bencher) {
+pub fn intersect_list(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::test::Bencher) {
     let mut seed = 0;
     b.iter(|| {
         let ray = create_ray(&mut seed, bounds);
@@ -515,17 +522,17 @@ fn bench_intersect_sponza_list(b: &mut ::test::Bencher) {
     intersect_list(&triangles, &bounds, b);
 }
 
-/// Benchmark intersecting the `triangles` list with `AABB` checks, but without acceleration
+/// Benchmark intersecting the `triangles` list with [`Aabb`] checks, but without acceleration
 /// structures.
 #[cfg(feature = "bench")]
-pub fn intersect_list_aabb(triangles: &[Triangle], bounds: &AABB, b: &mut ::test::Bencher) {
+pub fn intersect_list_aabb(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::test::Bencher) {
     let mut seed = 0;
     b.iter(|| {
         let ray = create_ray(&mut seed, bounds);
 
         // Iterate over the list of triangles.
         for triangle in triangles {
-            // First test whether the ray intersects the AABB of the triangle.
+            // First test whether the ray intersects the `Aabb` of the triangle.
             if ray.intersects_aabb(&triangle.aabb()) {
                 ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
             }
@@ -535,7 +542,7 @@ pub fn intersect_list_aabb(triangles: &[Triangle], bounds: &AABB, b: &mut ::test
 
 #[cfg(feature = "bench")]
 #[bench]
-/// Benchmark intersecting 120,000 triangles with preceeding `AABB` tests.
+/// Benchmark intersecting 120,000 triangles with preceeding [`Aabb`] tests.
 fn bench_intersect_120k_triangles_list_aabb(b: &mut ::test::Bencher) {
     let bounds = default_bounds();
     let triangles = create_n_cubes(10_000, &bounds);
@@ -544,56 +551,56 @@ fn bench_intersect_120k_triangles_list_aabb(b: &mut ::test::Bencher) {
 
 #[cfg(feature = "bench")]
 #[bench]
-/// Benchmark intersecting 120,000 triangles with preceeding `AABB` tests.
+/// Benchmark intersecting 120,000 triangles with preceeding [`Aabb`] tests.
 fn bench_intersect_sponza_list_aabb(b: &mut ::test::Bencher) {
     let (triangles, bounds) = load_sponza_scene();
     intersect_list_aabb(&triangles, &bounds, b);
 }
 
 #[cfg(feature = "bench")]
-pub fn intersect_bh<T: BoundingHierarchy>(
+pub fn intersect_bh<T: BoundingHierarchy<f32, 3>>(
     bh: &T,
     triangles: &[Triangle],
-    bounds: &AABB,
+    bounds: &TAabb3,
     b: &mut ::test::Bencher,
 ) {
     let mut seed = 0;
     b.iter(|| {
         let ray = create_ray(&mut seed, bounds);
 
-        // Traverse the `BoundingHierarchy` recursively.
+        // Traverse the [`BoundingHierarchy`] recursively.
         let hits = bh.traverse(&ray, triangles);
 
-        // Traverse the resulting list of positive `AABB` tests
+        // Traverse the resulting list of positive `Aabb` tests
         for triangle in &hits {
             ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
         }
     });
 }
 
-/// Benchmark the traversal of a `BoundingHierarchy` with `n` triangles.
+/// Benchmark the traversal of a [`BoundingHierarchy`] with `n` triangles.
 #[cfg(feature = "bench")]
-pub fn intersect_n_triangles<T: BoundingHierarchy>(n: usize, b: &mut ::test::Bencher) {
+pub fn intersect_n_triangles<T: BoundingHierarchy<f32, 3>>(n: usize, b: &mut ::test::Bencher) {
     let bounds = default_bounds();
     let mut triangles = create_n_cubes(n, &bounds);
     let bh = T::build(&mut triangles);
     intersect_bh(&bh, &triangles, &bounds, b)
 }
 
-/// Benchmark the traversal of a `BoundingHierarchy` with 1,200 triangles.
+/// Benchmark the traversal of a [`BoundingHierarchy`] with 1,200 triangles.
 #[cfg(feature = "bench")]
-pub fn intersect_1200_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
+pub fn intersect_1200_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
     intersect_n_triangles::<T>(100, b);
 }
 
-/// Benchmark the traversal of a `BoundingHierarchy` with 12,000 triangles.
+/// Benchmark the traversal of a [`BoundingHierarchy`] with 12,000 triangles.
 #[cfg(feature = "bench")]
-pub fn intersect_12k_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
+pub fn intersect_12k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
     intersect_n_triangles::<T>(1_000, b);
 }
 
-/// Benchmark the traversal of a `BoundingHierarchy` with 120,000 triangles.
+/// Benchmark the traversal of a [`BoundingHierarchy`] with 120,000 triangles.
 #[cfg(feature = "bench")]
-pub fn intersect_120k_triangles_bh<T: BoundingHierarchy>(b: &mut ::test::Bencher) {
+pub fn intersect_120k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
     intersect_n_triangles::<T>(10_000, b);
 }
