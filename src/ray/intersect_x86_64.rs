@@ -42,6 +42,7 @@ impl ToRegisterType for SVector<f32, 4> {
     }
 }
 
+/// Compute the horizontal maximum of the SIMD vector
 #[inline(always)]
 fn max_elem_m128(mm: __m128) -> f32 {
     unsafe {
@@ -56,6 +57,7 @@ fn max_elem_m128(mm: __m128) -> f32 {
     }
 }
 
+/// Compute the horizontal minimum of the SIMD vector
 #[inline(always)]
 fn min_elem_m128(mm: __m128) -> f32 {
     unsafe {
@@ -136,6 +138,7 @@ impl ToRegisterType for SVector<f64, 2> {
     }
 }
 
+/// Compute the horizontal maximum of the SIMD vector
 #[inline(always)]
 fn max_elem_m128d(mm: __m128d) -> f64 {
     unsafe {
@@ -148,6 +151,7 @@ fn max_elem_m128d(mm: __m128d) -> f64 {
     }
 }
 
+/// Compute the horizontal minimum of the SIMD vector
 #[inline(always)]
 fn min_elem_m128d(mm: __m128d) -> f64 {
     unsafe {
@@ -212,6 +216,7 @@ impl ToRegisterType for SVector<f64, 4> {
     }
 }
 
+/// Compute the horizontal maximum of the SIMD vector
 #[inline(always)]
 fn max_elem_m256d(mm: __m256d) -> f64 {
     unsafe {
@@ -226,6 +231,7 @@ fn max_elem_m256d(mm: __m256d) -> f64 {
     }
 }
 
+/// Compute the horizontal minimum of the SIMD vector
 #[inline(always)]
 fn min_elem_m256d(mm: __m256d) -> f64 {
     unsafe {
