@@ -1,4 +1,4 @@
-//! This module exports methods to flatten the `Bvh` and traverse it iteratively.
+//! This module exports methods to flatten the [`Bvh`] into a [`FlatBvh`] and traverse it iteratively.
 use crate::aabb::{Aabb, Bounded};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
 use crate::bvh::{Bvh, BvhNode};
@@ -33,7 +33,7 @@ pub struct FlatNode<T: Scalar + Copy, const D: usize> {
     ///
     pub entry_index: u32,
 
-    /// The index of the `FlatNode` to jump to, if the [`Aabb`] test is negative.
+    /// The index of the [`FlatNode`] to jump to, if the [`Aabb`] test is negative.
     ///
     /// [`Aabb`]: ../aabb/struct.Aabb.html
     ///
@@ -44,7 +44,7 @@ pub struct FlatNode<T: Scalar + Copy, const D: usize> {
 }
 
 impl<T: Scalar + Copy + Float, const D: usize> BvhNode<T, D> {
-    /// Creates a flat node from a `Bvh` inner node and its `Aabb`. Returns the next free index.
+    /// Creates a flat node from a `Bvh` inner node and its [`Aabb`]. Returns the next free index.
     /// TODO: change the algorithm which pushes `FlatNode`s to a vector to not use indices this
     /// much. Implement an algorithm which writes directly to a writable slice.
     fn create_flat_branch<F, FNodeType>(
@@ -149,7 +149,7 @@ impl<T: Scalar + Copy + Float, const D: usize> Bvh<T, D> {
     /// non-default structure.
     /// The `constructor` is fed the following arguments in this order:
     ///
-    /// 1 - &Aabb: The enclosing `Aabb`
+    /// 1 - &Aabb: The enclosing [`Aabb`]
     /// 2 - u32: The index of the nested node
     /// 3 - u32: The exit index
     /// 4 - u32: The shape index
@@ -465,7 +465,7 @@ mod bench {
     };
 
     #[bench]
-    /// Benchmark the flattening of a Bvh with 120,000 triangles.
+    /// Benchmark the flattening of a [`Bvh`] with 120,000 triangles.
     fn bench_flatten_120k_triangles_bvh(b: &mut ::test::Bencher) {
         let bounds = default_bounds();
         let mut triangles = create_n_cubes(10_000, &bounds);
@@ -476,37 +476,37 @@ mod bench {
         });
     }
     #[bench]
-    /// Benchmark the construction of a `FlatBvh` with 1,200 triangles.
+    /// Benchmark the construction of a [`FlatBvh`] with 1,200 triangles.
     fn bench_build_1200_triangles_flat_bvh(b: &mut ::test::Bencher) {
         build_1200_triangles_bh::<TFlatBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark the construction of a `FlatBvh` with 12,000 triangles.
+    /// Benchmark the construction of a [`FlatBvh`] with 12,000 triangles.
     fn bench_build_12k_triangles_flat_bvh(b: &mut ::test::Bencher) {
         build_12k_triangles_bh::<TFlatBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark the construction of a `FlatBvh` with 120,000 triangles.
+    /// Benchmark the construction of a [`FlatBvh`] with 120,000 triangles.
     fn bench_build_120k_triangles_flat_bvh(b: &mut ::test::Bencher) {
         build_120k_triangles_bh::<TFlatBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark intersecting 1,200 triangles using the recursive `FlatBvh`.
+    /// Benchmark intersecting 1,200 triangles using the recursive [`FlatBvh`].
     fn bench_intersect_1200_triangles_flat_bvh(b: &mut ::test::Bencher) {
         intersect_1200_triangles_bh::<TFlatBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark intersecting 12,000 triangles using the recursive `FlatBvh`.
+    /// Benchmark intersecting 12,000 triangles using the recursive [`FlatBvh`].
     fn bench_intersect_12k_triangles_flat_bvh(b: &mut ::test::Bencher) {
         intersect_12k_triangles_bh::<TFlatBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark intersecting 120,000 triangles using the recursive `FlatBvh`.
+    /// Benchmark intersecting 120,000 triangles using the recursive [`FlatBvh`].
     fn bench_intersect_120k_triangles_flat_bvh(b: &mut ::test::Bencher) {
         intersect_120k_triangles_bh::<TFlatBvh3>(b);
     }

@@ -4,12 +4,12 @@
 //! ## About
 //!
 //! This crate can be used for applications which contain intersection computations of rays
-//! with primitives. For this purpose a binary tree BVH (Bounding Volume Hierarchy) is of great
-//! use if the scene which the ray traverses contains a huge number of primitives. With a BVH the
+//! with primitives. For this purpose a binary tree [`Bvh`](bvh::Bvh) (Bounding Volume Hierarchy) is of great
+//! use if the scene which the ray traverses contains a huge number of primitives. With a [`Bvh`](bvh::Bvh) the
 //! intersection test complexity is reduced from O(n) to O(log2(n)) at the cost of building
-//! the BVH once in advance. This technique is especially useful in ray/path tracers. For
+//! the [`Bvh`](bvh::Bvh) once in advance. This technique is especially useful in ray/path tracers. For
 //! use in a shader this module also exports a flattening procedure, which allows for
-//! iterative traversal of the BVH.
+//! iterative traversal of the [`Bvh`](bvh::Bvh).
 //!
 //! ## Note
 //!
@@ -73,7 +73,7 @@
 //! ## Features
 //!
 //! - `serde` (default **disabled**) - adds `Serialize` and `Deserialize` implementations for some types
-//! - 'simd' (default **disabled**) - adds explicitly written SIMD instructions for certain architectures (requires nightly)
+//! - `simd` (default **disabled**) - adds explicitly written SIMD instructions for certain architectures (requires nightly)
 //!
 
 #![deny(missing_docs)]

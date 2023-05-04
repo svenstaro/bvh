@@ -8,7 +8,7 @@ use num::Zero;
 /// Iterator to traverse a [`Bvh`] without memory allocations
 pub struct BvhTraverseIterator<'bvh, 'shape, T: Scalar + Copy, const D: usize, Shape: Bounded<T, D>>
 {
-    /// Reference to the Bvh to traverse
+    /// Reference to the [`Bvh`] to traverse
     bvh: &'bvh Bvh<T, D>,
     /// Reference to the input ray
     ray: &'bvh Ray<T, D>,
@@ -29,7 +29,7 @@ impl<'bvh, 'shape, T, const D: usize, Shape: Bounded<T, D>>
 where
     T: Scalar + Copy + SimdPartialOrd + ClosedSub + PartialOrd + ClosedMul + Zero,
 {
-    /// Creates a new `BvhTraverseIterator`
+    /// Creates a new [`BvhTraverseIterator`]
     pub fn new(bvh: &'bvh Bvh<T, D>, ray: &'bvh Ray<T, D>, shapes: &'shape [Shape]) -> Self {
         BvhTraverseIterator {
             bvh,
@@ -68,7 +68,7 @@ where
     }
 
     /// Attempt to move to the left node child of the current node.
-    /// If it is a leaf, or the ray does not intersect the node `Aabb`, `has_node` will become false.
+    /// If it is a leaf, or the ray does not intersect the node [`Aabb`], `has_node` will become false.
     fn move_left(&mut self) {
         match self.bvh.nodes[self.node_index] {
             BvhNode::Node {
@@ -90,7 +90,7 @@ where
     }
 
     /// Attempt to move to the right node child of the current node.
-    /// If it is a leaf, or the ray does not intersect the node `Aabb`, `has_node` will become false.
+    /// If it is a leaf, or the ray does not intersect the node [`Aabb`], `has_node` will become false.
     fn move_right(&mut self) {
         match self.bvh.nodes[self.node_index] {
             BvhNode::Node {
@@ -158,7 +158,7 @@ mod tests {
     use crate::testbase::{generate_aligned_boxes, TBvh3, TPoint3, TVector3, UnitBox};
     use std::collections::HashSet;
 
-    /// Creates a `Bvh` for a fixed scene structure.
+    /// Creates a [`Bvh`] for a fixed scene structure.
     pub fn build_some_bvh() -> (Vec<UnitBox>, TBvh3) {
         let mut boxes = generate_aligned_boxes();
         let bvh = TBvh3::build(&mut boxes);
@@ -266,7 +266,7 @@ mod bench {
     use crate::testbase::{create_ray, load_sponza_scene, TBvh3};
 
     #[bench]
-    /// Benchmark the traversal of a `Bvh` with the Sponza scene with Vec return.
+    /// Benchmark the traversal of a [`Bvh`] with the Sponza scene with [`Vec`] return.
     fn bench_intersect_128rays_sponza_vec(b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();
         let bvh = TBvh3::build(&mut triangles);
@@ -288,7 +288,7 @@ mod bench {
     }
 
     #[bench]
-    /// Benchmark the traversal of a `Bvh` with the Sponza scene with `BvhTraverseIterator`.
+    /// Benchmark the traversal of a `Bvh` with the Sponza scene with [`BvhTraverseIterator`].
     fn bench_intersect_128rays_sponza_iter(b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();
         let bvh = TBvh3::build(&mut triangles);

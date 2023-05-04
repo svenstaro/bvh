@@ -5,7 +5,7 @@ use num::{Float, FromPrimitive, One, Signed, Zero};
 use std::fmt;
 use std::ops::Index;
 
-/// Aabb struct.
+/// [`Aabb`] struct.
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Aabb<T: Scalar + Copy, const D: usize> {
@@ -109,7 +109,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     /// let y = rand::random();
     /// let z = rand::random();
     ///
-    /// // An empty Aabb should not contain it
+    /// // An empty `Aabb` should not contain it
     /// assert!(x < min.x && y < min.y && z < min.z);
     /// assert!(max.x < x && max.y < y && max.z < z);
     /// # }
@@ -143,7 +143,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     /// let y = rand::random();
     /// let z = rand::random();
     ///
-    /// // An infintie Aabb should contain it
+    /// // An infinite `Aabb` should contain it
     /// assert!(x > min.x && y > min.y && z > min.z);
     /// assert!(max.x > x && max.y > y && max.z > z);
     /// # }
@@ -161,7 +161,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
         }
     }
 
-    /// Returns true if the [`Point3`] is inside the [`Aabb`].
+    /// Returns true if the [`Point`] is inside the [`Aabb`].
     ///
     /// # Examples
     /// ```
@@ -177,7 +177,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     /// ```
     ///
     /// [`Aabb`]: struct.Aabb.html
-    /// [`Point3`]: nalgebra::Vec3
+    /// [`Point`]: nalgebra::Point
     ///
     pub fn contains(&self, p: &Point<T, D>) -> bool
     where
@@ -775,7 +775,7 @@ mod tests {
             assert!(aabb1_contains_init_five && aabb2_contains_last_five && aabbu_contains_all);
         }
 
-        // Test whether some points relative to the center of an Aabb are classified correctly.
+        // Test whether some points relative to the center of an `Aabb` are classified correctly.
         // Currently doesn't test `approx_contains_eps` or `contains` very well due to scaling by 0.9 and 1.1.
         #[test]
         fn test_points_relative_to_center_and_size(a in tuplevec_large_strategy(), b in tuplevec_large_strategy()) {
@@ -789,11 +789,11 @@ mod tests {
             let size_half = size / 2.0;
             let center = aabb.center();
 
-            // Compute the min and the max corners of the Aabb by hand
+            // Compute the min and the max corners of the `Aabb` by hand
             let inside_ppp = center + size_half * 0.9;
             let inside_mmm = center - size_half * 0.9;
 
-            // Generate two points which are outside the Aabb
+            // Generate two points which are outside the `Aabb`
             let outside_ppp = inside_ppp + size_half * 1.1;
             let outside_mmm = inside_mmm - size_half * 1.1;
 
@@ -803,7 +803,7 @@ mod tests {
             assert!(!aabb.contains(&outside_mmm));
         }
 
-        // Test whether the surface of a nonempty Aabb is always positive.
+        // Test whether the surface of a nonempty `Aabb is always positive.
         #[test]
         fn test_surface_always_positive(a: TupleVec, b: TupleVec) {
             let aabb = TAabb3::empty()
@@ -812,7 +812,7 @@ mod tests {
             assert!(aabb.surface_area() >= 0.0);
         }
 
-        // Compute and compare the surface area of an Aabb by hand.
+        // Compute and compare the surface area of an `Aabb` by hand.
         #[test]
         fn test_surface_area_cube(pos: TupleVec, size in f32::EPSILON..10e30_f32) {
             // Generate some non-empty Aabb
@@ -826,7 +826,7 @@ mod tests {
             assert_float_eq!(area_a, area_b, rmax <= f32::EPSILON);
         }
 
-        // Test whether the volume of a nonempty Aabb is always positive.
+        // Test whether the volume of a nonempty `Aabb` is always positive.
         #[test]
         fn test_volume_always_positive(a in tuplevec_large_strategy(), b in tuplevec_large_strategy()) {
             let aabb = TAabb3::empty()
@@ -835,7 +835,7 @@ mod tests {
             assert!(aabb.volume() >= 0.0);
         }
 
-        // Compute and compare the volume of an Aabb by hand.
+        // Compute and compare the volume of an `Aabb` by hand.
         #[test]
         fn test_volume_by_hand(pos in tuplevec_large_strategy(), size in tuplevec_large_strategy()) {
             // Generate some non-empty Aabb
@@ -855,15 +855,15 @@ mod tests {
             // Create a random point
             let point = tuple_to_point(&p);
 
-            // Create a random Aabb
+            // Create a random `Aabb`
             let aabb = TAabb3::empty()
                 .grow(&tuple_to_point(&a))
                 .grow(&tuple_to_point(&b));
 
-            // Create an Aabb by using the index-access method
+            // Create an `Aabb` by using the index-access method
             let aabb_by_index = TAabb3::with_bounds(aabb[0], aabb[1]);
 
-            // The Aabbs should be the same
+            // The `Aabb`s should be the same
             assert!(aabb.contains(&point) == aabb_by_index.contains(&point));
         }
     }

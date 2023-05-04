@@ -25,7 +25,7 @@ pub struct Ray<T: Scalar + Copy, const D: usize> {
     pub inv_direction: SVector<T, D>,
 }
 
-/// A struct which is returned by the `intersects_triangle` method.
+/// A struct which is returned by the [`Ray::intersects_triangle()`] method.
 pub struct Intersection<T> {
     /// Distance from the ray origin to the intersection point.
     pub distance: T,
@@ -38,7 +38,7 @@ pub struct Intersection<T> {
 }
 
 impl<T> Intersection<T> {
-    /// Constructs an `Intersection`. `distance` should be set to positive infinity,
+    /// Constructs an [`Intersection`]. `distance` should be set to positive infinity,
     /// if the intersection does not occur.
     pub fn new(distance: T, u: T, v: T) -> Intersection<T> {
         Intersection { distance, u, v }
@@ -184,9 +184,9 @@ mod tests {
 
     use proptest::prelude::*;
 
-    /// Generates a random `Ray` which points at at a random `Aabb`.
+    /// Generates a random [`Ray`] which points at at a random [`Aabb`].
     fn gen_ray_to_aabb(data: (TupleVec, TupleVec, TupleVec)) -> (TRay3, TAabb3) {
-        // Generate a random Aabb
+        // Generate a random `Aabb`
         let aabb = TAabb3::empty()
             .grow(&tuple_to_point(&data.0))
             .grow(&tuple_to_point(&data.1));

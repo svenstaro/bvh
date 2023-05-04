@@ -22,7 +22,7 @@ use num::Float;
 /// min( 1.0,  NaN):  NaN
 /// ```
 ///
-/// Note: This exists because std::cmp::min requires Ord which floating point types do not satisfy
+/// Note: This exists because [`std::cmp::min`] requires Ord which floating point types do not satisfy
 #[inline(always)]
 #[allow(dead_code)]
 pub fn fast_min<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
@@ -49,7 +49,7 @@ pub fn fast_min<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
 /// max( 1.0,  NaN):  NaN
 /// ```
 ///
-/// Note: This exists because std::cmp::max requires Ord which floating point types do not satisfy
+/// Note: This exists because [`std::cmp::max`] requires Ord which floating point types do not satisfy
 #[inline(always)]
 #[allow(dead_code)]
 pub fn fast_max<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
@@ -71,13 +71,13 @@ pub fn concatenate_vectors<T: Sized>(vectors: &mut [Vec<T>]) -> Vec<T> {
 }
 
 /// Defines a Bucket utility object. Used to store the properties of shape-partitions
-/// in the BVH build procedure using SAH.
+/// in the [`Bvh`] build procedure using SAH.
 #[derive(Clone, Copy)]
 pub struct Bucket<T: Scalar + Copy, const D: usize> {
     /// The number of shapes in this `Bucket`.
     pub size: usize,
 
-    /// The joint `Aabb` of the shapes in this `Bucket`.
+    /// The joint [`Aabb`] of the shapes in this [`Bucket`].
     pub aabb: Aabb<T, D>,
 }
 
@@ -90,13 +90,13 @@ impl<T: Scalar + Copy + Float + SimdPartialOrd, const D: usize> Bucket<T, D> {
         }
     }
 
-    /// Extend this `Bucket` by a shape with the given `Aabb`.
+    /// Extend this [`Bucket`] by a shape with the given [`Aabb`].
     pub fn add_aabb(&mut self, aabb: &Aabb<T, D>) {
         self.size += 1;
         self.aabb = self.aabb.join(aabb);
     }
 
-    /// Join the contents of two `Bucket`s.
+    /// Join the contents of two [`Bucket`]'s.
     pub fn join_bucket(a: Bucket<T, D>, b: &Bucket<T, D>) -> Bucket<T, D> {
         Bucket {
             size: a.size + b.size,
@@ -126,7 +126,7 @@ mod tests {
     use crate::utils::concatenate_vectors;
 
     #[test]
-    /// Test if concatenating no `Vec`s yields an empty `Vec`.
+    /// Test if concatenating no [`Vec`]s yields an empty [`Vec`].
     fn test_concatenate_empty() {
         let mut vectors: Vec<Vec<usize>> = vec![];
         let expected = vec![];
@@ -136,7 +136,7 @@ mod tests {
     }
 
     #[test]
-    /// Test if concatenating some `Vec`s yields the concatenation of the vectors.
+    /// Test if concatenating some [`Vec`]s yields the concatenation of the vectors.
     fn test_concatenate_vectors() {
         let mut vectors = vec![vec![1, 2, 3], vec![], vec![4, 5, 6], vec![7, 8], vec![9]];
         let result = concatenate_vectors(vectors.as_mut_slice());

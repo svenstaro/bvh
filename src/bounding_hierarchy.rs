@@ -1,4 +1,4 @@
-//! This module defines the `BoundingHierarchy` trait.
+//! This module defines the [`BoundingHierarchy`] trait.
 
 use nalgebra::Scalar;
 

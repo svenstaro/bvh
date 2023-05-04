@@ -1,3 +1,6 @@
+//! This file contains overrides for specific SIMD implementations of [`RayIntersection`]
+//! for the x86_64 architecture.
+
 use std::arch::x86_64::*;
 
 use nalgebra::SVector;

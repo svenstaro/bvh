@@ -1,5 +1,4 @@
-//! This module holds the ray definition, and overloads for x86_64 simd operations
-
+//! This module holds the [`Ray`] definition, and `RayIntersection` functions.
 mod intersect_default;
 mod ray_impl;
 

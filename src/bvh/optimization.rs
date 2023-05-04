@@ -16,10 +16,10 @@ use num::{FromPrimitive, Zero};
 use rand::{thread_rng, Rng};
 use std::collections::HashSet;
 
-// TODO Consider: Instead of getting the scene's shapes passed, let leaf nodes store an Aabb
+// TODO Consider: Instead of getting the scene's shapes passed, let leaf nodes store an `Aabb`
 // that is updated from the outside, perhaps by passing not only the indices of the changed
-// shapes, but also their new Aabbs into optimize().
-// TODO Consider: Stop updating Aabbs upwards the tree once an Aabb didn't get changed.
+// shapes, but also their new `Aabb`'s into optimize().
+// TODO Consider: Stop updating `Aabb`'s upwards the tree once an `Aabb` didn't get changed.
 
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 enum OptimizationIndex {
@@ -79,9 +79,9 @@ where
         + PartialOrd
         + std::fmt::Display,
 {
-    /// Optimizes the `Bvh` by batch-reorganizing updated nodes.
+    /// Optimizes the [`Bvh`] by batch-reorganizing updated nodes.
     /// Based on
-    /// [`https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBvh/ssBvh.cs`]
+    /// [`https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs`]
     ///
     /// Needs all the scene's shapes, plus the indices of the shapes that were updated.
     ///
@@ -165,7 +165,7 @@ where
     }
 
     /// This method is called for each node which has been modified and needs to be updated.
-    /// If the specified node is a grandparent, then try to optimize the `Bvh` by rotating its
+    /// If the specified node is a grandparent, then try to optimize the [`Bvh`] by rotating its
     /// children.
     fn update<Shape: BHShape<T, D>>(
         &mut self,
@@ -288,12 +288,12 @@ where
     }
 
     /// Checks if there is a way to rotate a child and a grandchild (or two grandchildren) of
-    /// the given node (specified by `node_index`) that would improve the `Bvh`.
+    /// the given node (specified by `node_index`) that would improve the [`Bvh`].
     /// If there is, the best rotation found is performed.
     ///
     /// # Preconditions
     ///
-    /// This function requires that the subtree at `node_index` has correct `Aabb`s.
+    /// This function requires that the subtree at `node_index` has correct [`Aabb`]s.
     ///
     /// # Returns
     ///
@@ -348,7 +348,7 @@ where
             if node_index != 0 {
                 // Even with no rotation being useful for this node, a parent node's rotation
                 // could be beneficial, so queue the parent *sometimes*. For reference see:
-                // https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBvh/ssBvh_Node.cs#L307
+                // https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH_Node.cs#L307
                 // TODO Evaluate whether this is a smart thing to do.
                 let mut rng = thread_rng();
                 if rng.gen_bool(0.01) {
@@ -363,7 +363,7 @@ where
         }
     }
 
-    /// Sets child_l_aabb and child_r_aabb of a BvhNode::Node to match its children,
+    /// Sets `child_l_aabb` and child_r_aabb of a [`BvhNode::Node`] to match its children,
     /// right after updating the children themselves. Not recursive.
     fn fix_children_and_own_aabbs<Shape: BHShape<T, D>>(
         &mut self,
@@ -421,7 +421,7 @@ where
     }
 
     /// Switch two nodes by rewiring the involved indices (not by moving them in the nodes slice).
-    /// Also updates the Aabbs of the parents.
+    /// Also updates the [`Aabbs`]'s of the parents.
     fn rotate<Shape: BHShape<T, D>>(
         &mut self,
         node_a_index: usize,
@@ -496,7 +496,7 @@ where
     ) {
         let child_aabb = self.nodes[child_index].get_node_aabb(shapes);
         info!("\tConnecting: {} < {}.", child_index, parent_index);
-        // Set parent's child and child_aabb; and get its depth.
+        // Set parent's child and `child_aabb`; and get its depth.
         let parent_depth = {
             match self.nodes[parent_index] {
                 BvhNode::Node {
@@ -517,7 +517,7 @@ where
                     info!("\t  {}'s new {}", parent_index, child_aabb);
                     depth
                 }
-                // Assuming that our Bvh is correct, the parent cannot be a leaf.
+                // Assuming that our `Bvh` is correct, the parent cannot be a leaf.
                 _ => unreachable!(),
             }
         };
@@ -541,7 +541,7 @@ mod tests {
     use std::collections::HashSet;
 
     #[test]
-    /// Tests if `optimize` does not modify a fresh `Bvh`.
+    /// Tests if [`Bvh::optimize()`] does not modify a fresh [`Bvh`].
     fn test_optimizing_new_bvh() {
         let (shapes, mut bvh) = build_some_bh::<TBvh3>();
         let original_nodes = bvh.nodes.clone();
@@ -573,7 +573,7 @@ mod tests {
     }
 
     #[test]
-    /// Test whether a simple update on a simple Bvh yields the expected optimization result.
+    /// Test whether a simple update on a simple [`Bvh]` yields the expected optimization result.
     fn test_optimize_simple_update() {
         let mut shapes = vec![
             UnitBox::new(0, TPoint3::new(-50.0, 0.0, 0.0)),
@@ -642,7 +642,7 @@ mod tests {
         }
     }
 
-    /// Creates a small `Bvh` with 4 shapes and 7 nodes.
+    /// Creates a small [`Bvh`] with 4 shapes and 7 nodes.
     fn create_predictable_bvh() -> (Vec<UnitBox>, TBvh3) {
         let shapes = vec![
             UnitBox::new(0, TPoint3::new(0.0, 0.0, 0.0)),
@@ -926,7 +926,7 @@ mod tests {
     }
 
     #[test]
-    /// Test optimizing `Bvh` after randomizing 50% of the shapes.
+    /// Test optimizing [`Bvh`] after randomizing 50% of the shapes.
     fn test_optimize_bvh_12k_75p() {
         let bounds = default_bounds();
         let mut triangles = create_n_cubes(1_000, &bounds);
@@ -959,7 +959,7 @@ mod bench {
     };
 
     #[bench]
-    /// Benchmark randomizing 50% of the shapes in a `Bvh`.
+    /// Benchmark randomizing 50% of the shapes in a [`Bvh`].
     fn bench_randomize_120k_50p(b: &mut ::test::Bencher) {
         let bounds = default_bounds();
         let mut triangles = create_n_cubes(10_000, &bounds);
@@ -970,8 +970,8 @@ mod bench {
         });
     }
 
-    /// Benchmark optimizing a `Bvh` with 120,000 `Triangle`s, where `percent`
-    /// `Triangles` have been randomly moved.
+    /// Benchmark optimizing a [`Bvh`] with 120,000 [`Triangle`]'ss, where `percent`
+    /// [`Triangle`]'s have been randomly moved.
     fn optimize_bvh_120k(percent: f32, b: &mut ::test::Bencher) {
         let bounds = default_bounds();
         let mut triangles = create_n_cubes(10_000, &bounds);
@@ -1006,9 +1006,9 @@ mod bench {
         optimize_bvh_120k(0.5, b);
     }
 
-    /// Move `percent` `Triangle`s in the scene given by `triangles` and optimize the
-    /// `Bvh`. Iterate this procedure `iterations` times. Afterwards benchmark the performance
-    /// of intersecting this scene/`Bvh`.
+    /// Move `percent` [`Triangle`]`s in the scene given by `triangles` and optimize the
+    /// [`Bvh`]. Iterate this procedure `iterations` times. Afterwards benchmark the performance
+    /// of intersecting this scene/[`Bvh`].
     fn intersect_scene_after_optimize(
         triangles: &mut Vec<Triangle>,
         bounds: &TAabb3,
@@ -1058,9 +1058,9 @@ mod bench {
         intersect_scene_after_optimize(&mut triangles, &bounds, 0.5, None, 10, b);
     }
 
-    /// Move `percent` `Triangle`s in the scene given by `triangles` `iterations` times.
+    /// Move `percent` [`Triangle`]'s in the scene given by `triangles` `iterations` times.
     /// Afterwards optimize the `Bvh` and benchmark the performance of intersecting this
-    /// scene/`Bvh`. Used to compare optimizing with rebuilding. For reference see
+    /// scene/[`Bvh`]. Used to compare optimizing with rebuilding. For reference see
     /// `intersect_scene_after_optimize`.
     fn intersect_scene_with_rebuild(
         triangles: &mut Vec<Triangle>,
@@ -1108,7 +1108,7 @@ mod bench {
         intersect_scene_with_rebuild(&mut triangles, &bounds, 0.5, None, 10, b);
     }
 
-    /// Benchmark intersecting a `Bvh` for Sponza after randomly moving one `Triangle` and
+    /// Benchmark intersecting a [`Bvh`] for Sponza after randomly moving one [`Triangle`] and
     /// optimizing.
     fn intersect_sponza_after_optimize(percent: f32, b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();
@@ -1135,7 +1135,7 @@ mod bench {
         intersect_sponza_after_optimize(0.5, b);
     }
 
-    /// Benchmark intersecting a `Bvh` for Sponza after rebuilding. Used to compare optimizing
+    /// Benchmark intersecting a [`Bvh`] for Sponza after rebuilding. Used to compare optimizing
     /// with rebuilding. For reference see `intersect_sponza_after_optimize`.
     fn intersect_sponza_with_rebuild(percent: f32, b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();

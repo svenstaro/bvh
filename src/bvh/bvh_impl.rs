@@ -47,19 +47,19 @@ pub enum BvhNode<T: Scalar + Copy, const D: usize> {
         /// Index of the left subtree's root node.
         child_l_index: usize,
 
-        /// The convex hull of the shapes' `Aabb`s in child_l.
+        /// The convex hull of the shapes' [`Aabb`]'s in child_l.
         child_l_aabb: Aabb<T, D>,
 
         /// Index of the right subtree's root node.
         child_r_index: usize,
 
-        /// The convex hull of the shapes' `Aabb`s in child_r.
+        /// The convex hull of the shapes' [`Aabb`]'s in child_r.
         child_r_aabb: Aabb<T, D>,
     },
 }
 
 impl<T: Scalar + Copy, const D: usize> PartialEq for BvhNode<T, D> {
-    // TODO Consider also comparing Aabbs
+    // TODO Consider also comparing [`Aabbs`]
     fn eq(&self, other: &BvhNode<T, D>) -> bool {
         match (self, other) {
             (
@@ -142,7 +142,7 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         }
     }
 
-    /// Returns a mutable reference to the `Aabb` of the left child node.
+    /// Returns a mutable reference to the [`Aabb`] of the left child node.
     pub fn child_l_aabb_mut(&mut self) -> &mut Aabb<T, D> {
         match *self {
             BvhNode::Node {
@@ -161,7 +161,7 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         }
     }
 
-    /// Returns the `Aabb` of the right child node.
+    /// Returns the [`Aabb`] of the right child node.
     pub fn child_r_aabb(&self) -> Aabb<T, D> {
         match *self {
             BvhNode::Node { child_r_aabb, .. } => child_r_aabb,
@@ -169,7 +169,7 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         }
     }
 
-    /// Returns a mutable reference to the `Aabb` of the right child node.
+    /// Returns a mutable reference to the [`Aabb`] of the right child node.
     pub fn child_r_aabb_mut(&mut self) -> &mut Aabb<T, D> {
         match *self {
             BvhNode::Node {
@@ -187,9 +187,9 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         }
     }
 
-    /// Gets the `Aabb` for a `BvhNode`.
-    /// Returns the shape's `Aabb` for leaves, and the joined `Aabb` of
-    /// the two children's `Aabb`s for non-leaves.
+    /// Gets the [`Aabb`] for a [`BvhNode`].
+    /// Returns the shape's [`Aabb`] for leaves, and the joined [`Aabb`] of
+    /// the two children's [`Aabb`]'s for non-leaves.
     pub fn get_node_aabb<Shape: BHShape<T, D>>(&self, shapes: &[Shape]) -> Aabb<T, D>
     where
         T: SimdPartialOrd,
@@ -205,7 +205,7 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
     }
 
     /// Returns the index of the shape contained within the node if is a leaf,
-    /// or `None` if it is an interior node.
+    /// or [`None`] if it is an interior node.
     pub fn shape_index(&self) -> Option<usize> {
         match *self {
             BvhNode::Leaf { shape_index, .. } => Some(shape_index),
@@ -802,7 +802,7 @@ mod tests {
     }
 
     #[test]
-    /// Runs some primitive tests for intersections of a ray with a fixed scene given as a Bvh.
+    /// Runs some primitive tests for intersections of a ray with a fixed scene given as a [`Bvh`].
     fn test_traverse_bvh() {
         traverse_some_bh::<TBvh3>();
     }
@@ -845,25 +845,25 @@ mod bench {
     };
 
     #[bench]
-    /// Benchmark the construction of a `Bvh` with 1,200 triangles.
+    /// Benchmark the construction of a [`Bvh`] with 1,200 triangles.
     fn bench_build_1200_triangles_bvh(b: &mut ::test::Bencher) {
         build_1200_triangles_bh::<TBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark the construction of a `Bvh` with 12,000 triangles.
+    /// Benchmark the construction of a [`Bvh`] with 12,000 triangles.
     fn bench_build_12k_triangles_bvh(b: &mut ::test::Bencher) {
         build_12k_triangles_bh::<TBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark the construction of a `Bvh` with 120,000 triangles.
+    /// Benchmark the construction of a [`Bvh`] with 120,000 triangles.
     fn bench_build_120k_triangles_bvh(b: &mut ::test::Bencher) {
         build_120k_triangles_bh::<TBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark the construction of a `Bvh` for the Sponza scene.
+    /// Benchmark the construction of a [`Bvh`] for the Sponza scene.
     fn bench_build_sponza_bvh(b: &mut ::test::Bencher) {
         let (mut triangles, _) = load_sponza_scene();
         b.iter(|| {
@@ -872,25 +872,25 @@ mod bench {
     }
 
     #[bench]
-    /// Benchmark intersecting 1,200 triangles using the recursive `Bvh`.
+    /// Benchmark intersecting 1,200 triangles using the recursive [`Bvh`].
     fn bench_intersect_1200_triangles_bvh(b: &mut ::test::Bencher) {
         intersect_1200_triangles_bh::<TBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark intersecting 12,000 triangles using the recursive `Bvh`.
+    /// Benchmark intersecting 12,000 triangles using the recursive [`Bvh`].
     fn bench_intersect_12k_triangles_bvh(b: &mut ::test::Bencher) {
         intersect_12k_triangles_bh::<TBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark intersecting 120,000 triangles using the recursive `Bvh`.
+    /// Benchmark intersecting 120,000 triangles using the recursive [`Bvh`].
     fn bench_intersect_120k_triangles_bvh(b: &mut ::test::Bencher) {
         intersect_120k_triangles_bh::<TBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark the traversal of a `Bvh` with the Sponza scene.
+    /// Benchmark the traversal of a [`Bvh`] with the Sponza scene.
     fn bench_intersect_sponza_bvh(b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();
         let bvh = TBvh3::build(&mut triangles);

@@ -6,6 +6,7 @@ edition = "2018"
 authors = [
     "Sven-Hendrik Haase <svenstaro@gmail.com>",
     "Alexander Dmitriev <alexander.dmitriev2580@gmail.com>",
+    "Marios Staikopoulos <marstaik@gmail.com>",
 ]
 readme = "README.md"
 repository = "https://github.com/svenstaro/bvh"

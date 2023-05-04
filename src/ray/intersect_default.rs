@@ -1,8 +1,12 @@
+//! This file contains the generic implementation of [`RayIntersection`]
+
 use super::Ray;
 use crate::{aabb::Aabb, utils::fast_max};
 use nalgebra::{ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
 use num::Zero;
 
+/// The [`RayIntersection`] trait allows for generic implementation of ray intersection
+/// useful for our SIMD optimizations.
 pub trait RayIntersection<T, const D: usize>
 where
     T: Copy + Scalar,
