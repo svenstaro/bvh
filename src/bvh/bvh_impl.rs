@@ -30,9 +30,6 @@ pub enum BvhNode<T: Scalar + Copy, const D: usize> {
         /// The node's parent.
         parent_index: usize,
 
-        /// The node's depth.
-        depth: u32,
-
         /// The shape contained in this leaf.
         shape_index: usize,
     },
@@ -40,9 +37,6 @@ pub enum BvhNode<T: Scalar + Copy, const D: usize> {
     Node {
         /// The node's parent.
         parent_index: usize,
-
-        /// The node's depth.
-        depth: u32,
 
         /// Index of the left subtree's root node.
         child_l_index: usize,
@@ -65,38 +59,32 @@ impl<T: Scalar + Copy, const D: usize> PartialEq for BvhNode<T, D> {
             (
                 &BvhNode::Node {
                     parent_index: self_parent_index,
-                    depth: self_depth,
                     child_l_index: self_child_l_index,
                     child_r_index: self_child_r_index,
                     ..
                 },
                 &BvhNode::Node {
                     parent_index: other_parent_index,
-                    depth: other_depth,
                     child_l_index: other_child_l_index,
                     child_r_index: other_child_r_index,
                     ..
                 },
             ) => {
                 self_parent_index == other_parent_index
-                    && self_depth == other_depth
                     && self_child_l_index == other_child_l_index
                     && self_child_r_index == other_child_r_index
             }
             (
                 &BvhNode::Leaf {
                     parent_index: self_parent_index,
-                    depth: self_depth,
                     shape_index: self_shape_index,
                 },
                 &BvhNode::Leaf {
                     parent_index: other_parent_index,
-                    depth: other_depth,
                     shape_index: other_shape_index,
                 },
             ) => {
                 self_parent_index == other_parent_index
-                    && self_depth == other_depth
                     && self_shape_index == other_shape_index
             }
             _ => false,
@@ -134,6 +122,17 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         }
     }
 
+    /// Returns the index of the left child node.
+    pub fn child_l_mut(&mut self) -> &mut usize {
+        match *self {
+            BvhNode::Node {
+                ref mut child_l_index,
+                ..
+            } => child_l_index,
+            _ => panic!("Tried to get the left child of a leaf node."),
+        }
+    }
+
     /// Returns the `Aabb` of the right child node.
     pub fn child_l_aabb(&self) -> Aabb<T, D> {
         match *self {
@@ -160,6 +159,17 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
             _ => panic!("Tried to get the right child of a leaf node."),
         }
     }
+    
+    /// Returns the index of the right child node.
+    pub fn child_r_mut(&mut self) -> &mut usize {
+        match *self {
+            BvhNode::Node {
+                ref mut child_r_index,
+                ..
+            } => child_r_index,
+            _ => panic!("Tried to get the right child of a leaf node."),
+        }
+    }
 
     /// Returns the [`Aabb`] of the right child node.
     pub fn child_r_aabb(&self) -> Aabb<T, D> {
@@ -177,13 +187,6 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
                 ..
             } => child_r_aabb,
             _ => panic!("Tried to get the right child's `Aabb` of a leaf node."),
-        }
-    }
-
-    /// Returns the depth of the node. The root node has depth `0`.
-    pub fn depth(&self) -> u32 {
-        match *self {
-            BvhNode::Node { depth, .. } | BvhNode::Leaf { depth, .. } => depth,
         }
     }
 
@@ -213,12 +216,23 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         }
     }
 
+    /// Returns the index of the shape contained within the node if is a leaf,
+    /// or `None` if it is an interior node.
+    pub fn shape_index_mut(&mut self) -> Option<&mut usize> {
+        match *self {
+            BvhNode::Leaf {
+                ref mut shape_index,
+                ..
+            } => Some(shape_index),
+            _ => None,
+        }
+    }
+
     /// The build function sometimes needs to add nodes while their data is not available yet.
     /// A dummy cerated by this function serves the purpose of being changed later on.
     fn create_dummy() -> BvhNode<T, D> {
         BvhNode::Leaf {
             parent_index: 0,
-            depth: 0,
             shape_index: 0,
         }
     }
@@ -274,7 +288,6 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
             let node_index = nodes.len();
             nodes.push(BvhNode::Leaf {
                 parent_index,
-                depth,
                 shape_index,
             });
             // Let the shape know the index of the node that represents it.
@@ -375,7 +388,6 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         assert!(!child_r_aabb.is_empty());
         nodes[node_index] = BvhNode::Node {
             parent_index,
-            depth,
             child_l_aabb,
             child_l_index,
             child_r_aabb,
@@ -508,21 +520,20 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
                 BvhNode::Node {
                     child_l_index,
                     child_r_index,
-                    depth,
                     child_l_aabb,
                     child_r_aabb,
                     ..
                 } => {
-                    let padding: String = " ".repeat(depth as usize);
+                    let padding: String = " ".repeat(0 as usize); // TODO:(FIX)
                     println!("{}child_l {}", padding, child_l_aabb);
                     print_node(nodes, child_l_index);
                     println!("{}child_r {}", padding, child_r_aabb);
                     print_node(nodes, child_r_index);
                 }
                 BvhNode::Leaf {
-                    shape_index, depth, ..
+                    shape_index, ..
                 } => {
-                    let padding: String = " ".repeat(depth as usize);
+                    let padding: String = " ".repeat(0 as usize); // TODO:(FIX)
                     println!("{}shape\t{:?}", padding, shape_index);
                 }
             }
@@ -549,14 +560,12 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         match self.nodes[node_index] {
             BvhNode::Node {
                 parent_index,
-                depth,
                 child_l_index,
                 child_l_aabb,
                 child_r_index,
                 child_r_aabb,
             } => {
                 let correct_parent_index = expected_parent_index == parent_index;
-                let correct_depth = expected_depth == depth;
                 let left_aabb_in_parent =
                     expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, T::epsilon());
                 let right_aabb_in_parent =
@@ -579,7 +588,6 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
                 );
 
                 correct_parent_index
-                    && correct_depth
                     && left_aabb_in_parent
                     && right_aabb_in_parent
                     && left_subtree_consistent
@@ -587,16 +595,14 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
             }
             BvhNode::Leaf {
                 parent_index,
-                depth,
                 shape_index,
             } => {
                 let correct_parent_index = expected_parent_index == parent_index;
-                let correct_depth = expected_depth == depth;
                 let shape_aabb = shapes[shape_index].aabb();
                 let shape_aabb_in_parent =
                     expected_outer_aabb.approx_contains_aabb_eps(&shape_aabb, T::epsilon());
 
-                correct_parent_index && correct_depth && shape_aabb_in_parent
+                correct_parent_index && shape_aabb_in_parent
             }
         }
     }
@@ -641,12 +647,6 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
             expected_parent_index, parent,
             "Wrong parent index. Expected: {}; Actual: {}",
             expected_parent_index, parent
-        );
-        let depth = node.depth();
-        assert_eq!(
-            expected_depth, depth,
-            "Wrong depth. Expected: {}; Actual: {}",
-            expected_depth, depth
         );
 
         match *node {

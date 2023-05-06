@@ -11,8 +11,8 @@ use crate::bounding_hierarchy::BHShape;
 use crate::bvh::*;
 
 use log::info;
-use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
-use num::{FromPrimitive, Zero};
+use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd, ClosedDiv};
+use num::{FromPrimitive, Zero, Signed};
 use rand::{thread_rng, Rng};
 use std::collections::HashSet;
 
@@ -74,96 +74,13 @@ where
         + ClosedSub
         + ClosedMul
         + ClosedAdd
+        + ClosedDiv
         + Zero
         + SimdPartialOrd
         + PartialOrd
+        + Signed
         + std::fmt::Display,
 {
-    /// Optimizes the [`Bvh`] by batch-reorganizing updated nodes.
-    /// Based on
-    /// [`https://github.com/jeske/SimpleScene/blob/master/SimpleScene/Util/ssBVH/ssBVH.cs`]
-    ///
-    /// Needs all the scene's shapes, plus the indices of the shapes that were updated.
-    ///
-    pub fn optimize<Shape: BHShape<T, D>>(
-        &mut self,
-        refit_shape_indices: &HashSet<usize>,
-        shapes: &[Shape],
-    ) {
-        // `refit_node_indices` will contain the indices of the leaf nodes
-        // that reference the given shapes, sorted by their depth
-        // in increasing order.
-        let mut refit_node_indices: Vec<_> = {
-            let mut raw_indices = refit_shape_indices
-                .iter()
-                .map(|x| shapes[*x].bh_node_index())
-                .collect::<Vec<_>>();
-
-            // Sorts the Vector to have the greatest depth nodes last.
-            raw_indices.sort_by(|a, b| {
-                let depth_a = self.nodes[*a].depth();
-                let depth_b = self.nodes[*b].depth();
-                depth_a.cmp(&depth_b)
-            });
-
-            raw_indices
-                .iter()
-                .map(|x| OptimizationIndex::Refit(*x))
-                .collect()
-        };
-
-        // As long as we have refit nodes left, take the list of refit nodes
-        // with the greatest depth (sweep nodes) and try to rotate them all.
-        while !refit_node_indices.is_empty() {
-            let mut sweep_node_indices = Vec::new();
-            let max_depth = {
-                let last_node_index = refit_node_indices.last().unwrap();
-                self.nodes[last_node_index.index()].depth()
-            };
-            while !refit_node_indices.is_empty() {
-                let last_node_depth = {
-                    let last_node_index = refit_node_indices.last().unwrap();
-                    self.nodes[last_node_index.index()].depth()
-                };
-                if last_node_depth == max_depth {
-                    sweep_node_indices.push(refit_node_indices.pop().unwrap());
-                } else {
-                    break;
-                }
-            }
-
-            info!(
-                "{} sweep nodes, depth {}.",
-                sweep_node_indices.len(),
-                max_depth
-            );
-
-            // Try to find a useful tree rotation with all previously found nodes.
-            for sweep_node_index in sweep_node_indices {
-                // TODO There might be multithreading potential here
-                // In order to have threads working seperately without having to write on
-                // the nodes vector (which would lock other threads),
-                // write the results of a thread into a small data structure.
-                // Apply the changes to the nodes vector represented by the data structure
-                // in a quick, sequential loop after all threads finished their work.
-                let new_refit_node_index = match sweep_node_index {
-                    OptimizationIndex::Refit(index) => self.update(index, shapes),
-                    OptimizationIndex::FixAabbs(index) => self.fix_aabbs(index, shapes),
-                };
-
-                // Instead of finding a useful tree rotation, we found another node
-                // that we should check, so we add its index to the refit_node_indices.
-                if let Some(index) = new_refit_node_index {
-                    assert!({
-                        let new_node_depth = self.nodes[index.index()].depth();
-                        new_node_depth == max_depth - 1
-                    });
-                    refit_node_indices.push(index);
-                }
-            }
-        }
-    }
-
     /// This method is called for each node which has been modified and needs to be updated.
     /// If the specified node is a grandparent, then try to optimize the [`Bvh`] by rotating its
     /// children.
@@ -453,32 +370,6 @@ where
         );
     }
 
-    /// Updates the depth of a node, and sets the depth of its descendants accordingly.
-    fn update_depth_recursively(&mut self, node_index: usize, new_depth: u32) {
-        let children = {
-            let node = &mut self.nodes[node_index];
-            match *node {
-                BvhNode::Node {
-                    ref mut depth,
-                    child_l_index,
-                    child_r_index,
-                    ..
-                } => {
-                    *depth = new_depth;
-                    Some((child_l_index, child_r_index))
-                }
-                BvhNode::Leaf { ref mut depth, .. } => {
-                    *depth = new_depth;
-                    None
-                }
-            }
-        };
-        if let Some((child_l_index, child_r_index)) = children {
-            self.update_depth_recursively(child_l_index, new_depth + 1);
-            self.update_depth_recursively(child_r_index, new_depth + 1);
-        }
-    }
-
     fn node_is_left_child(&self, node_index: usize) -> bool {
         // Get the index of the parent.
         let node_parent_index = self.nodes[node_index].parent();
@@ -504,7 +395,6 @@ where
                     ref mut child_r_index,
                     ref mut child_l_aabb,
                     ref mut child_r_aabb,
-                    depth,
                     ..
                 } => {
                     if left_child {
@@ -515,7 +405,6 @@ where
                         *child_r_aabb = child_aabb;
                     }
                     info!("\t  {}'s new {}", parent_index, child_aabb);
-                    depth
                 }
                 // Assuming that our `Bvh` is correct, the parent cannot be a leaf.
                 _ => unreachable!(),
@@ -525,8 +414,356 @@ where
         // Set child's parent.
         *self.nodes[child_index].parent_mut() = parent_index;
 
-        // Update the node's and the node's descendants' depth values.
-        self.update_depth_recursively(child_index, parent_depth + 1);
+    }
+
+    /// Adds a shape with the given index to the `BVH`
+    /// Significantly slower at building a `BVH` than the full build or rebuild option
+    /// Useful for moving a small subset of nodes around in a large `BVH`
+    pub fn add_node<Shape: BHShape<T, D>>(&mut self, shapes: &mut [Shape], new_shape_index: usize) where T: std::ops::Div<Output = T> {
+        let mut i = 0;
+        let new_shape = &shapes[new_shape_index];
+        let shape_aabb = new_shape.aabb();
+        let shape_sa = shape_aabb.surface_area();
+
+        if self.nodes.is_empty() {
+            self.nodes.push(BvhNode::Leaf {
+                parent_index: 0,
+                shape_index: new_shape_index,
+            });
+            shapes[new_shape_index].set_bh_node_index(0);
+            return;
+        }
+
+        loop {
+            match self.nodes[i] {
+                BvhNode::Node {
+                    child_l_aabb,
+                    child_l_index,
+                    child_r_aabb,
+                    child_r_index,
+                    parent_index,
+                } => {
+                    let left_expand = child_l_aabb.join(&shape_aabb);
+
+                    let right_expand = child_r_aabb.join(&shape_aabb);
+
+                    let send_left = child_r_aabb.surface_area() + left_expand.surface_area();
+                    let send_right = child_l_aabb.surface_area() + right_expand.surface_area();
+                    let merged_aabb = child_r_aabb.join(&child_l_aabb);
+                    let merged = merged_aabb.surface_area() + shape_sa;
+
+                    let merge_discount = 0.3;
+                    
+                    //dbg!(depth);
+
+                    // compared SA of the options
+                    let min_send = if send_left < send_right {
+                        send_left
+                    } else {
+                         send_right
+                    };
+                    // merge is more expensive only do when it's significantly better
+
+                    if merged < min_send * T::from_i8(3).unwrap() / T::from_i8(10).unwrap() {
+                        //println!("Merging left and right trees");
+                        // Merge left and right trees
+                        let l_index = self.nodes.len();
+                        let new_left = BvhNode::Leaf {
+                            parent_index: i,
+                            shape_index: new_shape_index,
+                        };
+                        shapes[new_shape_index].set_bh_node_index(l_index);
+                        self.nodes.push(new_left);
+
+                        let r_index = self.nodes.len();
+                        let new_right = BvhNode::Node {
+                            child_l_aabb,
+                            child_l_index,
+                            child_r_aabb,
+                            child_r_index,
+                            parent_index: i,
+                        };
+                        self.nodes.push(new_right);
+                        *self.nodes[child_r_index].parent_mut() = r_index;
+                        *self.nodes[child_l_index].parent_mut() = r_index;
+
+                        self.nodes[i] = BvhNode::Node {
+                            child_l_aabb: shape_aabb,
+                            child_l_index: l_index,
+                            child_r_aabb: merged_aabb,
+                            child_r_index: r_index,
+                            parent_index,
+                        };
+                        //self.fix_depth(l_index, depth + 1);
+                        //self.fix_depth(r_index, depth + 1);
+                        return;
+                    } else if send_left < send_right {
+                        // send new box down left side
+                        //println!("Sending left");
+                        if i == child_l_index {
+                            panic!("broken loop");
+                        }
+                        let child_l_aabb = left_expand;
+                        self.nodes[i] = BvhNode::Node {
+                            child_l_aabb,
+                            child_l_index,
+                            child_r_aabb,
+                            child_r_index,
+                            parent_index,
+                        };
+                        i = child_l_index;
+                    } else {
+                        // send new box down right
+                        //println!("Sending right");
+                        if i == child_r_index {
+                            panic!("broken loop");
+                        }
+                        let child_r_aabb = right_expand;
+                        self.nodes[i] = BvhNode::Node {
+                            child_l_aabb,
+                            child_l_index,
+                            child_r_aabb,
+                            child_r_index,
+                            parent_index,
+                        };
+                        i = child_r_index;
+                    }
+                }
+                BvhNode::Leaf {
+                    shape_index,
+                    parent_index,
+                } => {
+                    //println!("Splitting leaf");
+                    // Split leaf into 2 nodes and insert the new box
+                    let l_index = self.nodes.len();
+                    let new_left = BvhNode::Leaf {
+                        parent_index: i,
+                        shape_index: new_shape_index,
+                    };
+                    shapes[new_shape_index].set_bh_node_index(l_index);
+                    self.nodes.push(new_left);
+
+                    let child_r_aabb = shapes[shape_index].aabb();
+                    let child_r_index = self.nodes.len();
+                    let new_right = BvhNode::Leaf {
+                        parent_index: i,
+                        shape_index,
+                    };
+                    shapes[shape_index].set_bh_node_index(child_r_index);
+                    self.nodes.push(new_right);
+
+                    let new_node = BvhNode::Node {
+                        child_l_aabb: shape_aabb,
+                        child_l_index: l_index,
+                        child_r_aabb,
+                        child_r_index,
+                        parent_index,
+                    };
+                    self.nodes[i] = new_node;
+                    self.fix_aabbs_ascending(shapes, parent_index);
+                    return;
+                }
+            }
+        }
+    }
+
+    /// Removes a shape from the `BVH`
+    /// if swap_shape is true, it swaps the shape you are removing with the last shape in the shape slice
+    /// truncation of the data structure backing the shapes slice must be performed by the user
+    pub fn remove_node<Shape: BHShape<T, D>>(
+        &mut self,
+        shapes: &mut [Shape],
+        deleted_shape_index: usize,
+        swap_shape: bool,
+    ) {
+        if self.nodes.is_empty() {
+            return;
+            //panic!("can't remove a node from a bvh with only one node");
+        }
+        let bad_shape = &shapes[deleted_shape_index];
+
+        // to remove a node, delete it from the tree, remove the parent and replace it with the sibling
+        // swap the node being removed to the end of the slice and adjust the index of the node that was removed
+        // update the removed nodes index
+        // swap the shape to the end and update the node to still point at the right shape
+        let dead_node_index = bad_shape.bh_node_index();
+
+        if self.nodes.len() == 1 {
+            if dead_node_index == 0 {
+                self.nodes.clear();
+            }
+        } else {
+            //println!("delete_i={}", dead_node_index);
+
+            let dead_node = self.nodes[dead_node_index];
+
+            let parent_index = dead_node.parent();
+            //println!("parent_i={}", parent_index);
+            let gp_index = self.nodes[parent_index].parent();
+            //println!("{}->{}->{}", gp_index, parent_index, dead_node_index);
+
+            let sibling_index = if self.node_is_left_child(dead_node_index) {
+                self.nodes[parent_index].child_r()
+            } else {
+                self.nodes[parent_index].child_l()
+            };
+
+            // TODO: fix potential issue leaving empty spot in self.nodes
+            // the node swapped to sibling_index should probably be swapped to the end
+            // of the vector and the vector truncated
+            if parent_index == gp_index {
+                // We are removing one of the children of the root node
+                // The other child needs to become the root node
+                // The old root node and the dead child then have to be moved
+
+                if parent_index != 0 {
+                    panic!(
+                        "Circular node that wasn't root parent={} node={}",
+                        parent_index, dead_node_index
+                    );
+                }
+
+                match self.nodes[sibling_index] {
+                    BvhNode::Node {
+                        child_l_index,
+                        child_r_index,
+                        ..
+                    } => {
+                        self.connect_nodes(child_l_index, parent_index, true, shapes);
+                        self.connect_nodes(child_r_index, parent_index, false, shapes);
+                    }
+                    _ => {
+                        self.nodes[0] = self.nodes[sibling_index];
+                        *self.nodes[0].parent_mut() = 0;
+                        shapes[self.nodes[0].shape_index().unwrap()].set_bh_node_index(0);
+                    }
+                }
+
+                self.swap_and_remove_index(shapes, sibling_index.max(dead_node_index));
+                self.swap_and_remove_index(shapes, sibling_index.min(dead_node_index));
+            } else {
+                let parent_is_left = self.node_is_left_child(parent_index);
+
+                self.connect_nodes(sibling_index, gp_index, parent_is_left, shapes);
+
+                self.fix_aabbs_ascending(shapes, gp_index);
+                self.swap_and_remove_index(shapes, dead_node_index.max(parent_index));
+                self.swap_and_remove_index(shapes, parent_index.min(dead_node_index));
+            }
+        }
+
+        if swap_shape {
+            let end_shape = shapes.len() - 1;
+            if deleted_shape_index < end_shape {
+                shapes.swap(deleted_shape_index, end_shape);
+                let node_index = shapes[deleted_shape_index].bh_node_index();
+                if let Some(index) = self.nodes[node_index].shape_index_mut() {
+                    *index = deleted_shape_index
+                }
+            }
+        }
+    }
+
+    /// Fixes bvh
+    pub fn optimize<'a, Shape: BHShape<T, D>>(
+        &mut self,
+        refit_shape_indices: impl IntoIterator<Item = &'a usize> + Copy,
+        shapes: &mut [Shape],
+    ) {
+        for i in refit_shape_indices {
+            self.remove_node(shapes, *i, false);
+        }
+        for i in refit_shape_indices {
+            self.add_node(shapes, *i);
+        }
+    }
+
+    fn fix_aabbs_ascending<Shape: BHShape<T, D>>(&mut self, shapes: &mut [Shape], node_index: usize) {
+        let mut index_to_fix = node_index;
+        while index_to_fix != 0 {
+            let parent = self.nodes[index_to_fix].parent();
+            match self.nodes[parent] {
+                BvhNode::Node {
+                    child_l_index,
+                    child_r_index,
+                    child_l_aabb,
+                    child_r_aabb,
+                    ..
+                } => {
+                    //println!("checking {} l={} r={}", parent, child_l_index, child_r_index);
+                    let l_aabb = self.nodes[child_l_index].get_node_aabb(shapes);
+                    let r_aabb = self.nodes[child_r_index].get_node_aabb(shapes);
+                    //println!("child_l_aabb {}", l_aabb);
+                    //println!("child_r_aabb {}", r_aabb);
+                    let mut stop = true;
+                    let epsilon = T::from_f32(0.00001).unwrap_or(T::zero());
+                    if !l_aabb.relative_eq(&child_l_aabb, epsilon) {
+                        stop = false;
+                        //println!("setting {} l = {}", parent, l_aabb);
+                        *self.nodes[parent].child_l_aabb_mut() = l_aabb;
+                    }
+                    if !r_aabb.relative_eq(&child_r_aabb, epsilon) {
+                        stop = false;
+                        //println!("setting {} r = {}", parent, r_aabb);
+                        *self.nodes[parent].child_r_aabb_mut() = r_aabb;
+                    }
+                    if !stop {
+                        index_to_fix = parent;
+                        //dbg!(parent);
+                    } else {
+                        //dbg!(index_to_fix);
+                        index_to_fix = 0;
+                    }
+                }
+                _ => index_to_fix = 0,
+            }
+        }
+    }
+    
+    fn swap_and_remove_index<Shape: BHShape<T, D>>(&mut self, shapes: &mut [Shape], node_index: usize) {
+        let end = self.nodes.len() - 1;
+        //println!("removing node {}", node_index);
+        if node_index != end {
+            self.nodes[node_index] = self.nodes[end];
+            let parent_index = self.nodes[node_index].parent();
+
+            if let BvhNode::Leaf { .. } = self.nodes[parent_index] {
+                self.nodes.truncate(end);
+                return;
+            }
+            let parent = self.nodes[parent_index];
+            let moved_left = parent.child_l() == end;
+            if !moved_left && parent.child_r() != end {
+                self.nodes.truncate(end);
+                return;
+            }
+            let ref_to_change = if moved_left {
+                self.nodes[parent_index].child_l_mut()
+            } else {
+                self.nodes[parent_index].child_r_mut()
+            };
+            //println!("on {} changing {}=>{}", node_parent, ref_to_change, node_index);
+            *ref_to_change = node_index;
+
+            match self.nodes[node_index] {
+                BvhNode::Leaf { shape_index, .. } => {
+                    shapes[shape_index].set_bh_node_index(node_index);
+                }
+                BvhNode::Node {
+                    child_l_index,
+                    child_r_index,
+                    ..
+                } => {
+                    *self.nodes[child_l_index].parent_mut() = node_index;
+                    *self.nodes[child_r_index].parent_mut() = node_index;
+
+                    //println!("{} {} {}", node_index, self.nodes[node_index].child_l_aabb(), self.nodes[node_index].child_r_aabb());
+                    //let correct_depth
+                    //self.fix_depth(child_l_index, )
+                }
+            }
+        }
+        self.nodes.truncate(end);
     }
 }
 
@@ -543,18 +780,19 @@ mod tests {
     #[test]
     /// Tests if [`Bvh::optimize()`] does not modify a fresh [`Bvh`].
     fn test_optimizing_new_bvh() {
-        let (shapes, mut bvh) = build_some_bh::<TBvh3>();
+        let (mut shapes, mut bvh) = build_some_bh::<TBvh3>();
         let original_nodes = bvh.nodes.clone();
 
         // Query an update for all nodes.
         let refit_shape_indices: HashSet<usize> = (0..shapes.len()).collect();
-        bvh.optimize(&refit_shape_indices, &shapes);
+        bvh.optimize(&refit_shape_indices, &mut shapes);
 
         // Assert that all nodes are the same as before the update.
         for (optimized, original) in bvh.nodes.iter().zip(original_nodes.iter()) {
             assert_eq!(optimized, original);
         }
     }
+
 
     #[test]
     /// Tests whether a Bvh is still consistent after a few optimization calls.
@@ -567,8 +805,8 @@ mod tests {
         shapes[4].pos = TPoint3::new(11.0, 1.0, 2.0);
         shapes[5].pos = TPoint3::new(11.0, 2.0, 2.0);
 
-        let refit_shape_indices = (0..6).collect();
-        bvh.optimize(&refit_shape_indices, &shapes);
+        let refit_shape_indices: Vec<_> = (0..6).collect();
+        bvh.optimize(&refit_shape_indices, &mut shapes);
         bvh.assert_consistent(&shapes);
     }
 
@@ -612,7 +850,7 @@ mod tests {
         // Move the first shape so that it is closer to shape #2.
         shapes[1].pos = TPoint3::new(40.0, 0.0, 0.0);
         let refit_shape_indices: HashSet<usize> = (1..2).collect();
-        bvh.optimize(&refit_shape_indices, &shapes);
+        bvh.optimize(&refit_shape_indices, &mut shapes);
         bvh.pretty_print();
         bvh.assert_consistent(&shapes);
 
@@ -655,7 +893,6 @@ mod tests {
             // Root node.
             TBvhNode3::Node {
                 parent_index: 0,
-                depth: 0,
                 child_l_aabb: shapes[0].aabb().join(&shapes[1].aabb()),
                 child_l_index: 1,
                 child_r_aabb: shapes[2].aabb().join(&shapes[3].aabb()),
@@ -664,7 +901,6 @@ mod tests {
             // Depth 1 nodes.
             TBvhNode3::Node {
                 parent_index: 0,
-                depth: 1,
                 child_l_aabb: shapes[0].aabb(),
                 child_l_index: 3,
                 child_r_aabb: shapes[1].aabb(),
@@ -672,7 +908,6 @@ mod tests {
             },
             TBvhNode3::Node {
                 parent_index: 0,
-                depth: 1,
                 child_l_aabb: shapes[2].aabb(),
                 child_l_index: 5,
                 child_r_aabb: shapes[3].aabb(),
@@ -681,22 +916,18 @@ mod tests {
             // Depth 2 nodes (leaves).
             TBvhNode3::Leaf {
                 parent_index: 1,
-                depth: 2,
                 shape_index: 0,
             },
             TBvhNode3::Leaf {
                 parent_index: 1,
-                depth: 2,
                 shape_index: 1,
             },
             TBvhNode3::Leaf {
                 parent_index: 2,
-                depth: 2,
                 shape_index: 2,
             },
             TBvhNode3::Leaf {
                 parent_index: 2,
-                depth: 2,
                 shape_index: 3,
             },
         ];
@@ -945,7 +1176,7 @@ mod tests {
         assert!(!bvh.is_consistent(&triangles), "Bvh is consistent.");
 
         // After fixing the `Aabb` consistency should be restored.
-        bvh.optimize(&updated, &triangles);
+        bvh.optimize(&updated, &mut triangles);
         bvh.assert_consistent(&triangles);
         bvh.assert_tight();
     }
@@ -982,7 +1213,7 @@ mod bench {
         b.iter(|| {
             let updated =
                 randomly_transform_scene(&mut triangles, num_move, &bounds, Some(10.0), &mut seed);
-            bvh.optimize(&updated, &triangles);
+            bvh.optimize(&updated, &mut triangles);
         });
     }
 
