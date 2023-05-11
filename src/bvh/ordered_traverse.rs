@@ -13,7 +13,6 @@ enum RestChild {
 
 /// Iterator to traverse a [`Bvh`] in order from nearest [`Aabb`] to farthest for [`Ray`],
 /// without memory allocations
-#[allow(clippy::upper_case_acronyms)]
 pub struct DistanceTraverseIterator<
     'bvh,
     'shape,
@@ -56,7 +55,7 @@ where
         }
     }
 
-    /// Test if stack is empty.
+    /// Return `true` if stack is empty.
     fn is_stack_empty(&self) -> bool {
         self.stack_size == 0
     }
@@ -81,8 +80,8 @@ where
         self.stack[self.stack_size]
     }
 
-    /// Attempt to move to the nearest to ray node child of the current node.
-    /// If it is a leaf, or the [`Ray`] does not intersect the any node [`Aabb`], `has_node` will become false.
+    /// Attempt to move to the child node that is closest to the ray, relative to the current node.
+    /// If it is a leaf, or the [`Ray`] does not intersect the any node [`Aabb`], `has_node` will become `false`.
     fn move_nearest(&mut self) -> (usize, RestChild) {
         let current_node_index = self.node_index;
         match self.bvh.nodes[current_node_index] {
@@ -98,30 +97,30 @@ where
 
                 if left_dist < T::zero() {
                     if right_dist < T::zero() {
-                        // no intersections with any child
+                        // no intersections with any children
                         self.has_node = false;
                         (current_node_index, RestChild::None)
                     } else {
-                        // have intersection only with right child
+                        // has intersection only with right child
                         self.has_node = true;
                         self.node_index = child_r_index;
                         let rest_child = RestChild::None;
                         (current_node_index, rest_child)
                     }
                 } else if right_dist < T::zero() {
-                    // have intersection only with left child
+                    // has intersection only with left child
                     self.has_node = true;
                     self.node_index = child_l_index;
                     let rest_child = RestChild::None;
                     (current_node_index, rest_child)
                 } else if left_dist > right_dist {
-                    // right is nearest than left
+                    // right is closer than left
                     self.has_node = true;
                     self.node_index = child_r_index;
                     let rest_child = RestChild::Left;
                     return (current_node_index, rest_child);
                 } else {
-                    // left is nearest than right
+                    // left is closer than right
                     self.has_node = true;
                     self.node_index = child_l_index;
                     let rest_child = RestChild::Right;
@@ -135,8 +134,8 @@ where
         }
     }
 
-    /// Attempt to move to the farthest to ray node child of the current node.
-    /// If it is a leaf, or the [`Ray`] does not intersect the node [`Aabb`], `has_node` will become false.
+    /// Attempt to move to the child node that is the farthest from the ray, relative to the current node.
+    /// If it is a leaf, or the [`Ray`] does not intersect the node [`Aabb`], `has_node` will become `false`.
     fn move_furthest(&mut self) -> (usize, RestChild) {
         let current_node_index = self.node_index;
         match self.bvh.nodes[current_node_index] {
@@ -152,30 +151,30 @@ where
 
                 if left_dist < T::zero() {
                     if right_dist < T::zero() {
-                        // no intersections with any child
+                        // no intersections with any children
                         self.has_node = false;
                         (current_node_index, RestChild::None)
                     } else {
-                        // have intersection only with right child
+                        // has intersection only with right child
                         self.has_node = true;
                         self.node_index = child_r_index;
                         let rest_child = RestChild::None;
                         (current_node_index, rest_child)
                     }
                 } else if right_dist < T::zero() {
-                    // have intersection only with left child
+                    // has intersection only with left child
                     self.has_node = true;
                     self.node_index = child_l_index;
                     let rest_child = RestChild::None;
                     (current_node_index, rest_child)
                 } else if left_dist < right_dist {
-                    // right is furthest than left
+                    // right is farther than left
                     self.has_node = true;
                     self.node_index = child_r_index;
                     let rest_child = RestChild::Left;
                     return (current_node_index, rest_child);
                 } else {
-                    // left is furthest than right
+                    // left is farther than right
                     self.has_node = true;
                     self.node_index = child_l_index;
                     let rest_child = RestChild::Right;
@@ -190,7 +189,7 @@ where
     }
 
     /// Attempt to move to the rest not visited child of the current node.
-    /// If it is a leaf, or the [`Ray`] does not intersect the node [`Aabb`], `has_node` will become false.
+    /// If it is a leaf, or the [`Ray`] does not intersect the node [`Aabb`], `has_node` will become `false`.
     fn move_rest(&mut self, rest_child: RestChild) {
         match self.bvh.nodes[self.node_index] {
             BvhNode::Node {
@@ -238,7 +237,7 @@ where
                 } else {
                     self.move_furthest()
                 };
-                // Save curent node and farthest child
+                // Save current node and farthest child
                 self.stack_push(stack_info)
             } else {
                 // Go back up the stack and see if a node or leaf was pushed.
@@ -246,7 +245,7 @@ where
                 self.node_index = node_index;
                 match self.bvh.nodes[self.node_index] {
                     BvhNode::Node { .. } => {
-                        // If a node was pushed, now attempt to move to its rest farthest child.
+                        // If a node was pushed, now move to `unvisited` rest child, next in order.
                         self.move_rest(rest_child);
                     }
                     BvhNode::Leaf { shape_index, .. } => {
@@ -261,8 +260,6 @@ where
     }
 }
 
-// Copy of part of the BH testing in testbase.
-// TODO: Once iterators are part of the BoundingHierarchy trait we can move all this to testbase.
 #[cfg(test)]
 mod tests {
     use crate::aabb::Bounded;
@@ -271,7 +268,7 @@ mod tests {
     use crate::testbase::{generate_aligned_boxes, TBvh3, TPoint3, TVector3, UnitBox};
     use std::collections::HashSet;
 
-    /// Creates a `Bvh` for a fixed scene structure.
+    /// Create a `Bvh` for a fixed scene structure.
     pub fn build_some_bvh() -> (Vec<UnitBox>, TBvh3) {
         let mut boxes = generate_aligned_boxes();
         let bvh = Bvh::build(&mut boxes);
