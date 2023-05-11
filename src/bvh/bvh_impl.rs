@@ -694,13 +694,15 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
             } => {
                 assert!(
                     expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, T::epsilon()),
-                    "{}", "Left child lies outside the expected bounds.
+                    "{}",
+                    "Left child lies outside the expected bounds.
                          \tBounds: {expected_outer_aabb}
                          \tLeft child: {child_l_aabb}"
                 );
                 assert!(
                     expected_outer_aabb.approx_contains_aabb_eps(&child_r_aabb, T::epsilon()),
-                    "{}", "Right child lies outside the expected bounds.
+                    "{}",
+                    "Right child lies outside the expected bounds.
                          \tBounds: {expected_outer_aabb}
                          \tRight child: {child_r_aabb}"
                 );
