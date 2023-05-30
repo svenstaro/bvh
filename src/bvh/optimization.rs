@@ -1,7 +1,7 @@
 //! This module defines the optimization function for the [`Bvh`].
 //! By passing the indices of shapes that have changed, the function determines possible
 //! tree rotations and optimizes the Bvh using a SAH.
-//! Based on [`http://www.cs.utah.edu/~thiago/papers/rotations.pdf`]
+//! Based on [`https://www.sci.utah.edu/~thiago/papers/rotations.pdf`]
 //!
 //! [`Bvh`]: struct.Bvh.html
 //!
