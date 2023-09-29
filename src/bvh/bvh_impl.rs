@@ -83,10 +83,7 @@ impl<T: Scalar + Copy, const D: usize> PartialEq for BvhNode<T, D> {
                     parent_index: other_parent_index,
                     shape_index: other_shape_index,
                 },
-            ) => {
-                self_parent_index == other_parent_index
-                    && self_shape_index == other_shape_index
-            }
+            ) => self_parent_index == other_parent_index && self_shape_index == other_shape_index,
             _ => false,
         }
     }
@@ -159,7 +156,7 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
             _ => panic!("Tried to get the right child of a leaf node."),
         }
     }
-    
+
     /// Returns the index of the right child node.
     pub fn child_r_mut(&mut self) -> &mut usize {
         match *self {
@@ -530,9 +527,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
                     println!("{}child_r {}", padding, child_r_aabb);
                     print_node(nodes, child_r_index);
                 }
-                BvhNode::Leaf {
-                    shape_index, ..
-                } => {
+                BvhNode::Leaf { shape_index, .. } => {
                     let padding: String = " ".repeat(0 as usize); // TODO:(FIX)
                     println!("{}shape\t{:?}", padding, shape_index);
                 }
