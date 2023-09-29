@@ -338,7 +338,7 @@ where
 
     fn fix_aabbs_ascending<Shape: BHShape<T, D>>(
         &mut self,
-        shapes: &mut [Shape],
+        shapes: &[Shape],
         node_index: usize,
     ) {
         let mut index_to_fix = node_index;
