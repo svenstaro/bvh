@@ -336,11 +336,7 @@ where
         }
     }
 
-    fn fix_aabbs_ascending<Shape: BHShape<T, D>>(
-        &mut self,
-        shapes: &[Shape],
-        node_index: usize,
-    ) {
+    fn fix_aabbs_ascending<Shape: BHShape<T, D>>(&mut self, shapes: &[Shape], node_index: usize) {
         let mut index_to_fix = node_index;
         while index_to_fix != 0 {
             let parent = self.nodes[index_to_fix].parent();
