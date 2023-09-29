@@ -111,11 +111,11 @@ pub fn joint_aabb_of_shapes<
     Shape: BHShape<T, D>,
 >(
     indices: &[usize],
-    shapes: &[Shape],
+    shapes: *const Shape,
 ) -> Aabb<T, D> {
     let mut aabb = Aabb::empty();
     for index in indices {
-        let shape = &shapes[*index];
+        let shape = unsafe { shapes.add(*index).as_ref().unwrap() };
         aabb.join_mut(&shape.aabb());
     }
     aabb

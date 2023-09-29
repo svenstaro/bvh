@@ -240,7 +240,7 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
     /// [`BvhNode`]: enum.BvhNode.html
     ///
     pub fn build<S: BHShape<T, D>>(
-        shapes: &mut [S],
+        shapes: *mut S,
         indices: &[usize],
         nodes: &mut Vec<BvhNode<T, D>>,
         parent_index: usize,
@@ -274,7 +274,10 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
 
         let mut convex_hull = Default::default();
         for index in indices {
-            convex_hull = grow_convex_hull(convex_hull, &shapes[*index].aabb());
+            convex_hull = grow_convex_hull(
+                convex_hull,
+                &unsafe { shapes.add(*index).as_ref().unwrap() }.aabb(),
+            );
         }
         let (aabb_bounds, centroid_bounds) = convex_hull;
 
@@ -287,7 +290,7 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
                 shape_index,
             });
             // Let the shape know the index of the node that represents it.
-            shapes[shape_index].set_bh_node_index(node_index);
+            unsafe { shapes.add(shape_index).as_mut().unwrap() }.set_bh_node_index(node_index);
             return node_index;
         }
 
@@ -323,7 +326,7 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
             // In this branch the `split_axis_size` is large enough to perform meaningful splits.
             // We start by assigning the shapes to `Bucket`s.
             for idx in indices {
-                let shape = &shapes[*idx];
+                let shape = &unsafe { shapes.add(*idx).as_ref().unwrap() };
                 let shape_aabb = shape.aabb();
                 let shape_center = shape_aabb.center();
 
@@ -452,7 +455,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
         let expected_node_count = shapes.len() * 2;
         let mut nodes = Vec::with_capacity(expected_node_count);
-        BvhNode::build(shapes, &indices, &mut nodes, 0);
+        BvhNode::build(shapes.as_mut_ptr(), &indices, &mut nodes, 0);
         Bvh { nodes }
     }
 
