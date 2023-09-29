@@ -509,8 +509,11 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         T: std::fmt::Display,
     {
         let nodes = &self.nodes;
-        fn print_node<T: Scalar + Copy, const D: usize>(nodes: &[BvhNode<T, D>], node_index: usize)
-        where
+        fn print_node<T: Scalar + Copy, const D: usize>(
+            nodes: &[BvhNode<T, D>],
+            node_index: usize,
+            depth: usize,
+        ) where
             T: std::fmt::Display,
         {
             match nodes[node_index] {
@@ -521,19 +524,19 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
                     child_r_aabb,
                     ..
                 } => {
-                    let padding: String = " ".repeat(0 as usize); // TODO:(FIX)
+                    let padding: String = " ".repeat(depth);
                     println!("{}child_l {}", padding, child_l_aabb);
-                    print_node(nodes, child_l_index);
+                    print_node(nodes, child_l_index, depth + 1);
                     println!("{}child_r {}", padding, child_r_aabb);
-                    print_node(nodes, child_r_index);
+                    print_node(nodes, child_r_index, depth + 1);
                 }
                 BvhNode::Leaf { shape_index, .. } => {
-                    let padding: String = " ".repeat(0 as usize); // TODO:(FIX)
+                    let padding: String = " ".repeat(depth);
                     println!("{}shape\t{:?}", padding, shape_index);
                 }
             }
         }
-        print_node(nodes, 0);
+        print_node(nodes, 0, 0);
     }
 
     /// Verifies that the node at index `node_index` lies inside `expected_outer_aabb`,
