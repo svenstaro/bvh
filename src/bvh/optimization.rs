@@ -50,29 +50,27 @@ where
     ) {
         let child_aabb = self.nodes[child_index].get_node_aabb(shapes);
         info!("\tConnecting: {} < {}.", child_index, parent_index);
-        // Set parent's child and `child_aabb`; and get its depth.
-        let _parent_depth = {
-            match self.nodes[parent_index] {
-                BvhNode::Node {
-                    ref mut child_l_index,
-                    ref mut child_r_index,
-                    ref mut child_l_aabb,
-                    ref mut child_r_aabb,
-                    ..
-                } => {
-                    if left_child {
-                        *child_l_index = child_index;
-                        *child_l_aabb = child_aabb;
-                    } else {
-                        *child_r_index = child_index;
-                        *child_r_aabb = child_aabb;
-                    }
-                    info!("\t  {}'s new {}", parent_index, child_aabb);
+        // Set parent's child aabb and index.
+        match self.nodes[parent_index] {
+            BvhNode::Node {
+                ref mut child_l_index,
+                ref mut child_r_index,
+                ref mut child_l_aabb,
+                ref mut child_r_aabb,
+                ..
+            } => {
+                if left_child {
+                    *child_l_index = child_index;
+                    *child_l_aabb = child_aabb;
+                } else {
+                    *child_r_index = child_index;
+                    *child_r_aabb = child_aabb;
                 }
-                // Assuming that our `Bvh` is correct, the parent cannot be a leaf.
-                _ => unreachable!(),
+                info!("\t  {}'s new {}", parent_index, child_aabb);
             }
-        };
+            // Assuming that our `Bvh` is correct, the parent cannot be a leaf.
+            _ => unreachable!(),
+        }
 
         // Set child's parent.
         *self.nodes[child_index].parent_mut() = parent_index;
