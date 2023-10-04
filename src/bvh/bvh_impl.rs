@@ -4,11 +4,12 @@
 //! [`BvhNode`]: struct.BvhNode.html
 //!
 
-use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
+use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, RealField, Scalar, SimdPartialOrd};
 use num::{Float, FromPrimitive, Signed, ToPrimitive, Zero};
 
 use crate::aabb::{Aabb, Bounded};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use crate::bvh::distance_traverse::DistanceTraverseIterator;
 use crate::bvh::iter::BvhTraverseIterator;
 use crate::ray::Ray;
 use crate::utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
@@ -453,7 +454,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
     }
 
     /// Traverses the [`Bvh`].
-    /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements were hit by `ray`.
+    /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     ///
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.Aabb.html
@@ -475,7 +476,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
     }
 
     /// Creates a [`BvhTraverseIterator`] to traverse the [`Bvh`].
-    /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements were hit by `ray`.
+    /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     ///
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.Aabb.html
@@ -489,6 +490,42 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         T: SimdPartialOrd + ClosedSub + PartialOrd + ClosedMul + Zero,
     {
         BvhTraverseIterator::new(self, ray, shapes)
+    }
+
+    /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
+    /// Returns a subset of [`shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Return in order from nearest to farthest for ray.
+    ///
+    /// [`Bvh`]: struct.Bvh.html
+    /// [`Aabb`]: ../aabb/struct.AABB.html
+    ///
+    pub fn nearest_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
+        &'bvh self,
+        ray: &'bvh Ray<T, D>,
+        shapes: &'shape [Shape],
+    ) -> DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, true>
+    where
+        T: RealField,
+    {
+        DistanceTraverseIterator::new(self, ray, shapes)
+    }
+
+    /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
+    /// Returns a subset of [`Shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Return in order from nearest to farthest for ray.
+    ///
+    /// [`Bvh`]: struct.Bvh.html
+    /// [`Aabb`]: ../aabb/struct.AABB.html
+    ///
+    pub fn farthest_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
+        &'bvh self,
+        ray: &'bvh Ray<T, D>,
+        shapes: &'shape [Shape],
+    ) -> DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, false>
+    where
+        T: RealField,
+    {
+        DistanceTraverseIterator::new(self, ray, shapes)
     }
 
     /// Prints the [`Bvh`] in a tree-like visualization.
@@ -514,16 +551,16 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
                     ..
                 } => {
                     let padding: String = " ".repeat(depth as usize);
-                    println!("{}child_l {}", padding, child_l_aabb);
+                    println!("{padding}child_l {child_l_aabb}");
                     print_node(nodes, child_l_index);
-                    println!("{}child_r {}", padding, child_r_aabb);
+                    println!("{padding}child_r {child_r_aabb}");
                     print_node(nodes, child_r_index);
                 }
                 BvhNode::Leaf {
                     shape_index, depth, ..
                 } => {
                     let padding: String = " ".repeat(depth as usize);
-                    println!("{}shape\t{:?}", padding, shape_index);
+                    println!("{padding}shape\t{shape_index:?}");
                 }
             }
         }
@@ -543,7 +580,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         shapes: &[Shape],
     ) -> bool
     where
-        T: Float + ClosedSub,
+        T: ClosedSub + Float,
     {
         *node_count += 1;
         match self.nodes[node_index] {
@@ -639,14 +676,12 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         let parent = node.parent();
         assert_eq!(
             expected_parent_index, parent,
-            "Wrong parent index. Expected: {}; Actual: {}",
-            expected_parent_index, parent
+            "Wrong parent index. Expected: {expected_parent_index}; Actual: {parent}"
         );
         let depth = node.depth();
         assert_eq!(
             expected_depth, depth,
-            "Wrong depth. Expected: {}; Actual: {}",
-            expected_depth, depth
+            "Wrong depth. Expected: {expected_depth}; Actual: {depth}"
         );
 
         match *node {
@@ -694,9 +729,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
                 let shape_aabb = shapes[shape_index].aabb();
                 assert!(
                     expected_outer_aabb.approx_contains_aabb_eps(&shape_aabb, T::epsilon()),
-                    "Shape's Aabb lies outside the expected bounds.\n\tBounds: {}\n\tShape: {}",
-                    expected_outer_aabb,
-                    shape_aabb
+                    "{}", "Shape's Aabb lies outside the expected bounds.\n\tBounds: {expected_outer_aabb}\n\tShape: {shape_aabb}"
                 );
             }
         }
