@@ -9,8 +9,8 @@ use num::{Float, FromPrimitive, Signed, ToPrimitive, Zero};
 
 use crate::aabb::{Aabb, Bounded};
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use crate::bvh::distance_traverse::DistanceTraverseIterator;
 use crate::bvh::iter::BvhTraverseIterator;
-use crate::bvh::ordered_traverse::DistanceTraverseIterator;
 use crate::ray::Ray;
 use crate::utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
 
@@ -694,17 +694,19 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
             } => {
                 assert!(
                     expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, T::epsilon()),
-                    "{}",
                     "Left child lies outside the expected bounds.
-                         \tBounds: {expected_outer_aabb}
-                         \tLeft child: {child_l_aabb}"
+                         \tBounds: {}
+                         \tLeft child: {}",
+                    expected_outer_aabb,
+                    child_l_aabb
                 );
                 assert!(
                     expected_outer_aabb.approx_contains_aabb_eps(&child_r_aabb, T::epsilon()),
-                    "{}",
                     "Right child lies outside the expected bounds.
-                         \tBounds: {expected_outer_aabb}
-                         \tRight child: {child_r_aabb}"
+                         \tBounds: {}
+                         \tRight child: {}",
+                    expected_outer_aabb,
+                    child_r_aabb
                 );
                 self.assert_consistent_subtree(
                     child_l_index,

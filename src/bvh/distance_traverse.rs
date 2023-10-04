@@ -275,7 +275,7 @@ mod tests {
         (boxes, bvh)
     }
 
-    fn traverse_and_verify_oredered(
+    fn traverse_distance_and_verify_order(
         ray_origin: TPoint3,
         ray_direction: TVector3,
         all_shapes: &[UnitBox],
@@ -320,7 +320,13 @@ mod tests {
             for id in -10..11 {
                 expected_shapes.insert(id);
             }
-            traverse_and_verify_oredered(origin, direction, &all_shapes, &bvh, &expected_shapes);
+            traverse_distance_and_verify_order(
+                origin,
+                direction,
+                &all_shapes,
+                &bvh,
+                &expected_shapes,
+            );
         }
 
         {
@@ -333,7 +339,13 @@ mod tests {
             expected_shapes.insert(4);
             expected_shapes.insert(5);
             expected_shapes.insert(6);
-            traverse_and_verify_oredered(origin, direction, &all_shapes, &bvh, &expected_shapes);
+            traverse_distance_and_verify_order(
+                origin,
+                direction,
+                &all_shapes,
+                &bvh,
+                &expected_shapes,
+            );
         }
     }
 
