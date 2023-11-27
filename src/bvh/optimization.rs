@@ -79,7 +79,7 @@ where
     /// Adds a shape with the given index to the `BVH`
     /// Significantly slower at building a `BVH` than the full build or rebuild option
     /// Useful for moving a small subset of nodes around in a large `BVH`
-    pub fn add_node<Shape: BHShape<T, D>>(&mut self, shapes: &mut [Shape], new_shape_index: usize)
+    pub fn add_shape<Shape: BHShape<T, D>>(&mut self, shapes: &mut [Shape], new_shape_index: usize)
     where
         T: std::ops::Div<Output = T>,
     {
@@ -153,12 +153,9 @@ where
                             child_r_index: r_index,
                             parent_index,
                         };
-                        //self.fix_depth(l_index, depth + 1);
-                        //self.fix_depth(r_index, depth + 1);
                         return;
                     } else if send_left < send_right {
                         // send new box down left side
-                        //println!("Sending left");
                         if node_index == child_l_index {
                             panic!("broken loop");
                         }
@@ -173,7 +170,6 @@ where
                         node_index = child_l_index;
                     } else {
                         // send new box down right
-                        //println!("Sending right");
                         if node_index == child_r_index {
                             panic!("broken loop");
                         }
@@ -192,7 +188,6 @@ where
                     shape_index,
                     parent_index,
                 } => {
-                    //println!("Splitting leaf");
                     // Split leaf into 2 nodes and insert the new box
                     let l_index = self.nodes.len();
                     let new_left = BvhNode::Leaf {
@@ -229,7 +224,7 @@ where
     /// Removes a shape from the `BVH`
     /// if swap_shape is true, it swaps the shape you are removing with the last shape in the shape slice
     /// truncation of the data structure backing the shapes slice must be performed by the user
-    pub fn remove_node<Shape: BHShape<T, D>>(
+    pub fn remove_shape<Shape: BHShape<T, D>>(
         &mut self,
         shapes: &mut [Shape],
         deleted_shape_index: usize,
@@ -252,14 +247,10 @@ where
                 self.nodes.clear();
             }
         } else {
-            //println!("delete_i={}", dead_node_index);
-
             let dead_node = self.nodes[dead_node_index];
 
             let parent_index = dead_node.parent();
-            //println!("parent_i={}", parent_index);
             let gp_index = self.nodes[parent_index].parent();
-            //println!("{}->{}->{}", gp_index, parent_index, dead_node_index);
 
             let sibling_index = if self.node_is_left_child(dead_node_index) {
                 self.nodes[parent_index].child_r()
@@ -329,10 +320,10 @@ where
         shapes: &mut [Shape],
     ) {
         for i in changed_shape_indices {
-            self.remove_node(shapes, *i, false);
+            self.remove_shape(shapes, *i, false);
         }
         for i in changed_shape_indices {
-            self.add_node(shapes, *i);
+            self.add_shape(shapes, *i);
         }
     }
 
@@ -348,28 +339,21 @@ where
                     child_r_aabb,
                     ..
                 } => {
-                    //println!("checking {} l={} r={}", parent, child_l_index, child_r_index);
                     let l_aabb = self.nodes[child_l_index].get_node_aabb(shapes);
                     let r_aabb = self.nodes[child_r_index].get_node_aabb(shapes);
-                    //println!("child_l_aabb {}", l_aabb);
-                    //println!("child_r_aabb {}", r_aabb);
                     let mut stop = true;
                     let epsilon = T::from_f32(0.00001).unwrap_or(T::zero());
                     if !l_aabb.relative_eq(&child_l_aabb, epsilon) {
                         stop = false;
-                        //println!("setting {} l = {}", parent, l_aabb);
                         *self.nodes[parent].child_l_aabb_mut() = l_aabb;
                     }
                     if !r_aabb.relative_eq(&child_r_aabb, epsilon) {
                         stop = false;
-                        //println!("setting {} r = {}", parent, r_aabb);
                         *self.nodes[parent].child_r_aabb_mut() = r_aabb;
                     }
                     if !stop {
                         index_to_fix = parent;
-                        //dbg!(parent);
                     } else {
-                        //dbg!(index_to_fix);
                         index_to_fix = 0;
                     }
                 }
@@ -384,7 +368,6 @@ where
         node_index: usize,
     ) {
         let end = self.nodes.len() - 1;
-        //println!("removing node {}", node_index);
         if node_index != end {
             self.nodes[node_index] = self.nodes[end];
             let parent_index = self.nodes[node_index].parent();
@@ -404,7 +387,6 @@ where
             } else {
                 self.nodes[parent_index].child_r_mut()
             };
-            //println!("on {} changing {}=>{}", node_parent, ref_to_change, node_index);
             *ref_to_change = node_index;
 
             match self.nodes[node_index] {
@@ -418,10 +400,6 @@ where
                 } => {
                     *self.nodes[child_l_index].parent_mut() = node_index;
                     *self.nodes[child_r_index].parent_mut() = node_index;
-
-                    //println!("{} {} {}", node_index, self.nodes[node_index].child_l_aabb(), self.nodes[node_index].child_r_aabb());
-                    //let correct_depth
-                    //self.fix_depth(child_l_index, )
                 }
             }
         }
