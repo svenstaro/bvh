@@ -124,7 +124,6 @@ where
                     // merge is more expensive only do when it's significantly better
 
                     if merged < min_send * T::from_i8(3).unwrap() / T::from_i8(10).unwrap() {
-                        //println!("Merging left and right trees");
                         // Merge left and right trees
                         let l_index = self.nodes.len();
                         let new_left = BvhNode::Leaf {
@@ -155,7 +154,7 @@ where
                         };
                         return;
                     } else if send_left < send_right {
-                        // send new box down left side
+                        // Send new box down left side
                         if node_index == child_l_index {
                             panic!("broken loop");
                         }
@@ -169,7 +168,7 @@ where
                         };
                         node_index = child_l_index;
                     } else {
-                        // send new box down right
+                        // Send new box down right
                         if node_index == child_r_index {
                             panic!("broken loop");
                         }
@@ -231,8 +230,7 @@ where
         swap_shape: bool,
     ) {
         if self.nodes.is_empty() {
-            return;
-            //panic!("can't remove a node from a bvh with only one node");
+            panic!("can't remove a node from a bvh with only one node");
         }
         let bad_shape = &shapes[deleted_shape_index];
 
