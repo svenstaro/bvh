@@ -407,7 +407,7 @@ pub fn load_sponza_scene() -> (Vec<Triangle>, TAabb3) {
 /// offset of a shape. This is used to simulate a realistic scene.
 /// Returns a [`HashSet`] of indices of modified triangles.
 pub fn randomly_transform_scene(
-    triangles: &mut Vec<Triangle>,
+    triangles: &mut [Triangle],
     amount: usize,
     bounds: &TAabb3,
     max_offset_option: Option<f32>,
