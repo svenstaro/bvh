@@ -725,7 +725,7 @@ mod bench {
     /// [`Bvh`]. Iterate this procedure `iterations` times. Afterwards benchmark the performance
     /// of intersecting this scene/[`Bvh`].
     fn intersect_scene_after_update_shapes(
-        triangles: &mut Vec<Triangle>,
+        triangles: &mut [Triangle],
         bounds: &TAabb3,
         percent: f32,
         max_offset: Option<f32>,
@@ -778,7 +778,7 @@ mod bench {
     /// scene/[`Bvh`]. Used to compare optimizing with rebuilding. For reference see
     /// `intersect_scene_after_optimize`.
     fn intersect_scene_with_rebuild(
-        triangles: &mut Vec<Triangle>,
+        triangles: &mut [Triangle],
         bounds: &TAabb3,
         percent: f32,
         max_offset: Option<f32>,
