@@ -9,4 +9,3 @@ mod optimization;
 
 pub use self::bvh_impl::*;
 pub use self::iter::*;
-pub use self::optimization::*;

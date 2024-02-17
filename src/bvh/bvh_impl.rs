@@ -30,9 +30,6 @@ pub enum BvhNode<T: Scalar + Copy, const D: usize> {
         /// The node's parent.
         parent_index: usize,
 
-        /// The node's depth.
-        depth: u32,
-
         /// The shape contained in this leaf.
         shape_index: usize,
     },
@@ -40,9 +37,6 @@ pub enum BvhNode<T: Scalar + Copy, const D: usize> {
     Node {
         /// The node's parent.
         parent_index: usize,
-
-        /// The node's depth.
-        depth: u32,
 
         /// Index of the left subtree's root node.
         child_l_index: usize,
@@ -65,40 +59,31 @@ impl<T: Scalar + Copy, const D: usize> PartialEq for BvhNode<T, D> {
             (
                 &BvhNode::Node {
                     parent_index: self_parent_index,
-                    depth: self_depth,
                     child_l_index: self_child_l_index,
                     child_r_index: self_child_r_index,
                     ..
                 },
                 &BvhNode::Node {
                     parent_index: other_parent_index,
-                    depth: other_depth,
                     child_l_index: other_child_l_index,
                     child_r_index: other_child_r_index,
                     ..
                 },
             ) => {
                 self_parent_index == other_parent_index
-                    && self_depth == other_depth
                     && self_child_l_index == other_child_l_index
                     && self_child_r_index == other_child_r_index
             }
             (
                 &BvhNode::Leaf {
                     parent_index: self_parent_index,
-                    depth: self_depth,
                     shape_index: self_shape_index,
                 },
                 &BvhNode::Leaf {
                     parent_index: other_parent_index,
-                    depth: other_depth,
                     shape_index: other_shape_index,
                 },
-            ) => {
-                self_parent_index == other_parent_index
-                    && self_depth == other_depth
-                    && self_shape_index == other_shape_index
-            }
+            ) => self_parent_index == other_parent_index && self_shape_index == other_shape_index,
             _ => false,
         }
     }
@@ -134,6 +119,17 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         }
     }
 
+    /// Returns the index of the left child node.
+    pub fn child_l_mut(&mut self) -> &mut usize {
+        match *self {
+            BvhNode::Node {
+                ref mut child_l_index,
+                ..
+            } => child_l_index,
+            _ => panic!("Tried to get the left child of a leaf node."),
+        }
+    }
+
     /// Returns the `Aabb` of the right child node.
     pub fn child_l_aabb(&self) -> Aabb<T, D> {
         match *self {
@@ -161,6 +157,17 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         }
     }
 
+    /// Returns the index of the right child node.
+    pub fn child_r_mut(&mut self) -> &mut usize {
+        match *self {
+            BvhNode::Node {
+                ref mut child_r_index,
+                ..
+            } => child_r_index,
+            _ => panic!("Tried to get the right child of a leaf node."),
+        }
+    }
+
     /// Returns the [`Aabb`] of the right child node.
     pub fn child_r_aabb(&self) -> Aabb<T, D> {
         match *self {
@@ -177,13 +184,6 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
                 ..
             } => child_r_aabb,
             _ => panic!("Tried to get the right child's `Aabb` of a leaf node."),
-        }
-    }
-
-    /// Returns the depth of the node. The root node has depth `0`.
-    pub fn depth(&self) -> u32 {
-        match *self {
-            BvhNode::Node { depth, .. } | BvhNode::Leaf { depth, .. } => depth,
         }
     }
 
@@ -213,12 +213,23 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         }
     }
 
+    /// Returns the index of the shape contained within the node if is a leaf,
+    /// or `None` if it is an interior node.
+    pub fn shape_index_mut(&mut self) -> Option<&mut usize> {
+        match *self {
+            BvhNode::Leaf {
+                ref mut shape_index,
+                ..
+            } => Some(shape_index),
+            _ => None,
+        }
+    }
+
     /// The build function sometimes needs to add nodes while their data is not available yet.
     /// A dummy cerated by this function serves the purpose of being changed later on.
     fn create_dummy() -> BvhNode<T, D> {
         BvhNode::Leaf {
             parent_index: 0,
-            depth: 0,
             shape_index: 0,
         }
     }
@@ -233,7 +244,6 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         indices: &[usize],
         nodes: &mut Vec<BvhNode<T, D>>,
         parent_index: usize,
-        depth: u32,
     ) -> usize
     where
         T: FromPrimitive + ClosedSub + ClosedAdd + SimdPartialOrd + ClosedMul + Float,
@@ -274,7 +284,6 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
             let node_index = nodes.len();
             nodes.push(BvhNode::Leaf {
                 parent_index,
-                depth,
                 shape_index,
             });
             // Let the shape know the index of the node that represents it.
@@ -302,10 +311,8 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
             let child_r_aabb = joint_aabb_of_shapes(child_r_indices, shapes);
 
             // Proceed recursively.
-            let child_l_index =
-                BvhNode::build(shapes, child_l_indices, nodes, node_index, depth + 1);
-            let child_r_index =
-                BvhNode::build(shapes, child_r_indices, nodes, node_index, depth + 1);
+            let child_l_index = BvhNode::build(shapes, child_l_indices, nodes, node_index);
+            let child_r_index = BvhNode::build(shapes, child_r_indices, nodes, node_index);
             (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
         } else {
             // Create six `Bucket`s, and six index assignment vector.
@@ -363,10 +370,8 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
             let child_r_indices = concatenate_vectors(r_assignments);
 
             // Proceed recursively.
-            let child_l_index =
-                BvhNode::build(shapes, &child_l_indices, nodes, node_index, depth + 1);
-            let child_r_index =
-                BvhNode::build(shapes, &child_r_indices, nodes, node_index, depth + 1);
+            let child_l_index = BvhNode::build(shapes, &child_l_indices, nodes, node_index);
+            let child_r_index = BvhNode::build(shapes, &child_r_indices, nodes, node_index);
             (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
         };
 
@@ -375,7 +380,6 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         assert!(!child_r_aabb.is_empty());
         nodes[node_index] = BvhNode::Node {
             parent_index,
-            depth,
             child_l_aabb,
             child_l_index,
             child_r_aabb,
@@ -448,7 +452,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         let indices = (0..shapes.len()).collect::<Vec<usize>>();
         let expected_node_count = shapes.len() * 2;
         let mut nodes = Vec::with_capacity(expected_node_count);
-        BvhNode::build(shapes, &indices, &mut nodes, 0, 0);
+        BvhNode::build(shapes, &indices, &mut nodes, 0);
         Bvh { nodes }
     }
 
@@ -500,45 +504,44 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         T: std::fmt::Display,
     {
         let nodes = &self.nodes;
-        fn print_node<T: Scalar + Copy, const D: usize>(nodes: &[BvhNode<T, D>], node_index: usize)
-        where
+        fn print_node<T: Scalar + Copy, const D: usize>(
+            nodes: &[BvhNode<T, D>],
+            node_index: usize,
+            depth: usize,
+        ) where
             T: std::fmt::Display,
         {
             match nodes[node_index] {
                 BvhNode::Node {
                     child_l_index,
                     child_r_index,
-                    depth,
                     child_l_aabb,
                     child_r_aabb,
                     ..
                 } => {
-                    let padding: String = " ".repeat(depth as usize);
+                    let padding: String = " ".repeat(depth);
                     println!("{}child_l {}", padding, child_l_aabb);
-                    print_node(nodes, child_l_index);
+                    print_node(nodes, child_l_index, depth + 1);
                     println!("{}child_r {}", padding, child_r_aabb);
-                    print_node(nodes, child_r_index);
+                    print_node(nodes, child_r_index, depth + 1);
                 }
-                BvhNode::Leaf {
-                    shape_index, depth, ..
-                } => {
-                    let padding: String = " ".repeat(depth as usize);
+                BvhNode::Leaf { shape_index, .. } => {
+                    let padding: String = " ".repeat(depth);
                     println!("{}shape\t{:?}", padding, shape_index);
                 }
             }
         }
-        print_node(nodes, 0);
+        print_node(nodes, 0, 0);
     }
 
     /// Verifies that the node at index `node_index` lies inside `expected_outer_aabb`,
     /// its parent index is equal to `expected_parent_index`, its depth is equal to
-    /// `expected_depth`. Increares `node_count` by the number of visited nodes.
+    /// `expected_depth`. Increases `node_count` by the number of visited nodes.
     fn is_consistent_subtree<Shape: BHShape<T, D>>(
         &self,
         node_index: usize,
         expected_parent_index: usize,
         expected_outer_aabb: &Aabb<T, D>,
-        expected_depth: u32,
         node_count: &mut usize,
         shapes: &[Shape],
     ) -> bool
@@ -549,14 +552,12 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         match self.nodes[node_index] {
             BvhNode::Node {
                 parent_index,
-                depth,
                 child_l_index,
                 child_l_aabb,
                 child_r_index,
                 child_r_aabb,
             } => {
                 let correct_parent_index = expected_parent_index == parent_index;
-                let correct_depth = expected_depth == depth;
                 let left_aabb_in_parent =
                     expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, T::epsilon());
                 let right_aabb_in_parent =
@@ -565,7 +566,6 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
                     child_l_index,
                     node_index,
                     &child_l_aabb,
-                    expected_depth + 1,
                     node_count,
                     shapes,
                 );
@@ -573,13 +573,11 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
                     child_r_index,
                     node_index,
                     &child_r_aabb,
-                    expected_depth + 1,
                     node_count,
                     shapes,
                 );
 
                 correct_parent_index
-                    && correct_depth
                     && left_aabb_in_parent
                     && right_aabb_in_parent
                     && left_subtree_consistent
@@ -587,16 +585,14 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
             }
             BvhNode::Leaf {
                 parent_index,
-                depth,
                 shape_index,
             } => {
                 let correct_parent_index = expected_parent_index == parent_index;
-                let correct_depth = expected_depth == depth;
                 let shape_aabb = shapes[shape_index].aabb();
                 let shape_aabb_in_parent =
                     expected_outer_aabb.approx_contains_aabb_eps(&shape_aabb, T::epsilon());
 
-                correct_parent_index && correct_depth && shape_aabb_in_parent
+                correct_parent_index && shape_aabb_in_parent
             }
         }
     }
@@ -612,8 +608,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
 
         // The counter for all nodes.
         let mut node_count = 0;
-        let subtree_consistent =
-            self.is_consistent_subtree(0, 0, &space, 0, &mut node_count, shapes);
+        let subtree_consistent = self.is_consistent_subtree(0, 0, &space, &mut node_count, shapes);
 
         // Check if all nodes have been counted from the root node.
         // If this is false, it means we have a detached subtree.
@@ -627,7 +622,6 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         node_index: usize,
         expected_parent_index: usize,
         expected_outer_aabb: &Aabb<T, D>,
-        expected_depth: u32,
         node_count: &mut usize,
         shapes: &[Shape],
     ) where
@@ -641,12 +635,6 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
             expected_parent_index, parent,
             "Wrong parent index. Expected: {}; Actual: {}",
             expected_parent_index, parent
-        );
-        let depth = node.depth();
-        assert_eq!(
-            expected_depth, depth,
-            "Wrong depth. Expected: {}; Actual: {}",
-            expected_depth, depth
         );
 
         match *node {
@@ -677,7 +665,6 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
                     child_l_index,
                     node_index,
                     &child_l_aabb,
-                    expected_depth + 1,
                     node_count,
                     shapes,
                 );
@@ -685,7 +672,6 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
                     child_r_index,
                     node_index,
                     &child_r_aabb,
-                    expected_depth + 1,
                     node_count,
                     shapes,
                 );
@@ -712,7 +698,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
 
         // The counter for all nodes.
         let mut node_count = 0;
-        self.assert_consistent_subtree(0, 0, &space, 0, &mut node_count, shapes);
+        self.assert_consistent_subtree(0, 0, &space, &mut node_count, shapes);
 
         // Check if all nodes have been counted from the root node.
         // If this is false, it means we have a detached subtree.
