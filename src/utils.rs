@@ -3,8 +3,8 @@
 use crate::aabb::Aabb;
 use crate::bounding_hierarchy::BHShape;
 
-use nalgebra::{Scalar, SimdPartialOrd};
-use num::Float;
+use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
+use num::{Float, FromPrimitive};
 
 /// Fast floating point minimum.  This function matches the semantics of
 ///
@@ -74,19 +74,27 @@ pub fn concatenate_vectors<T: Sized>(vectors: &mut [Vec<T>]) -> Vec<T> {
 /// in the [`Bvh`] build procedure using SAH.
 #[derive(Clone, Copy)]
 pub struct Bucket<T: Scalar + Copy, const D: usize> {
-    /// The number of shapes in this `Bucket`.
+    /// The number of shapes in this [`Bucket`].
     pub size: usize,
 
     /// The joint [`Aabb`] of the shapes in this [`Bucket`].
     pub aabb: Aabb<T, D>,
+
+    /// The [`Aabb`] of the centers of the shapes in this [`Bucket`]
+    pub centroid: Aabb<T, D>,
 }
 
-impl<T: Scalar + Copy + Float + SimdPartialOrd, const D: usize> Bucket<T, D> {
+impl<
+        T: Scalar + Copy + Float + SimdPartialOrd + ClosedSub + ClosedAdd + ClosedMul + FromPrimitive,
+        const D: usize,
+    > Bucket<T, D>
+{
     /// Returns an empty bucket.
     pub fn empty() -> Bucket<T, D> {
         Bucket {
             size: 0,
             aabb: Aabb::empty(),
+            centroid: Aabb::empty(),
         }
     }
 
@@ -94,6 +102,7 @@ impl<T: Scalar + Copy + Float + SimdPartialOrd, const D: usize> Bucket<T, D> {
     pub fn add_aabb(&mut self, aabb: &Aabb<T, D>) {
         self.size += 1;
         self.aabb = self.aabb.join(aabb);
+        self.centroid.grow_mut(&aabb.center());
     }
 
     /// Join the contents of two [`Bucket`]'s.
@@ -101,24 +110,27 @@ impl<T: Scalar + Copy + Float + SimdPartialOrd, const D: usize> Bucket<T, D> {
         Bucket {
             size: a.size + b.size,
             aabb: a.aabb.join(&b.aabb),
+            centroid: a.centroid.join(&b.centroid),
         }
     }
 }
 
 pub fn joint_aabb_of_shapes<
-    T: Scalar + Copy + Float + SimdPartialOrd,
+    T: Scalar + Copy + Float + SimdPartialOrd + FromPrimitive + ClosedAdd + ClosedMul + ClosedSub,
     const D: usize,
     Shape: BHShape<T, D>,
 >(
     indices: &[usize],
     shapes: *const Shape,
-) -> Aabb<T, D> {
+) -> (Aabb<T, D>, Aabb<T, D>) {
     let mut aabb = Aabb::empty();
+    let mut centroid = Aabb::empty();
     for index in indices {
         let shape = unsafe { shapes.add(*index).as_ref().unwrap() };
         aabb.join_mut(&shape.aabb());
+        centroid.grow_mut(&shape.aabb().center());
     }
-    aabb
+    (aabb, centroid)
 }
 
 #[cfg(test)]

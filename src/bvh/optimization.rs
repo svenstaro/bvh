@@ -425,7 +425,6 @@ mod tests {
         shapes[3].pos = TPoint3::new(-10.0, 10.0, -10.0);
         shapes[4].pos = TPoint3::new(11.0, 1.0, 2.0);
         shapes[5].pos = TPoint3::new(11.0, 2.0, 2.0);
-
         let refit_shape_indices: Vec<_> = (0..6).collect();
         bvh.update_shapes(&refit_shape_indices, &mut shapes);
         bvh.assert_consistent(&shapes);

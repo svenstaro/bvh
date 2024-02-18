@@ -8,10 +8,20 @@ use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
 use num::{Float, FromPrimitive, Signed, ToPrimitive, Zero};
 
 use crate::aabb::{Aabb, Bounded};
+// use crate::axis::Axis;
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
 use crate::bvh::iter::BvhTraverseIterator;
 use crate::ray::Ray;
-use crate::utils::{concatenate_vectors, joint_aabb_of_shapes, Bucket};
+use crate::utils::{joint_aabb_of_shapes, Bucket};
+use std::cell::RefCell;
+use std::mem::MaybeUninit;
+
+const NUM_BUCKETS: usize = 6;
+
+thread_local! {
+    /// Thread local for the buckets used while building to reduce allocations during build
+    static BUCKETS: RefCell<[Vec<usize>; NUM_BUCKETS]> = RefCell::new(Default::default());
+}
 
 /// The [`BvhNode`] enum that describes a node in a [`Bvh`].
 /// It's either a leaf node and references a shape (by holding its index)
@@ -241,63 +251,32 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
     ///
     pub fn build<S: BHShape<T, D>>(
         shapes: *mut S,
-        indices: &[usize],
-        nodes: &mut Vec<BvhNode<T, D>>,
+        indices: &mut [usize],
+        nodes: &mut [MaybeUninit<BvhNode<T, D>>],
         parent_index: usize,
-    ) -> usize
-    where
+        depth: u32,
+        node_index: usize,
+        aabb_bounds: Aabb<T, D>,
+        centroid_bounds: Aabb<T, D>,
+    ) where
         T: FromPrimitive + ClosedSub + ClosedAdd + SimdPartialOrd + ClosedMul + Float,
     {
-        // Helper function to accumulate the Aabb joint and the centroids Aabb
-        fn grow_convex_hull<
-            T: Scalar
-                + Copy
-                + ClosedSub
-                + ClosedMul
-                + SimdPartialOrd
-                + ClosedAdd
-                + FromPrimitive
-                + ToPrimitive,
-            const D: usize,
-        >(
-            convex_hull: (Aabb<T, D>, Aabb<T, D>),
-            shape_aabb: &Aabb<T, D>,
-        ) -> (Aabb<T, D>, Aabb<T, D>) {
-            let center = &shape_aabb.center();
-            let convex_hull_aabbs = &convex_hull.0;
-            let convex_hull_centroids = &convex_hull.1;
-            (
-                convex_hull_aabbs.join(shape_aabb),
-                convex_hull_centroids.grow(center),
-            )
-        }
-
-        let mut convex_hull = Default::default();
-        for index in indices {
-            convex_hull = grow_convex_hull(
-                convex_hull,
-                &unsafe { shapes.add(*index).as_ref().unwrap() }.aabb(),
-            );
-        }
-        let (aabb_bounds, centroid_bounds) = convex_hull;
-
         // If there is only one element left, don't split anymore
         if indices.len() == 1 {
             let shape_index = indices[0];
-            let node_index = nodes.len();
-            nodes.push(BvhNode::Leaf {
+            nodes[0].write(BvhNode::Leaf {
                 parent_index,
                 shape_index,
             });
             // Let the shape know the index of the node that represents it.
             unsafe { shapes.add(shape_index).as_mut().unwrap() }.set_bh_node_index(node_index);
-            return node_index;
+            return;
         }
 
-        // From here on we handle the recursive case. This dummy is required, because the children
-        // must know their parent, and it's easier to update one parent node than the child nodes.
-        let node_index = nodes.len();
-        nodes.push(BvhNode::create_dummy());
+        let mut parallel_recurse = false;
+        if indices.len() > 64 {
+            parallel_recurse = true;
+        }
 
         // Find the axis along which the shapes are spread the most.
         let split_axis = centroid_bounds.largest_axis();
@@ -309,24 +288,122 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         {
             // In this branch the shapes lie too close together so that splitting them in a
             // sensible way is not possible. Instead we just split the list of shapes in half.
-            let (child_l_indices, child_r_indices) = indices.split_at(indices.len() / 2);
-            let child_l_aabb = joint_aabb_of_shapes(child_l_indices, shapes);
-            let child_r_aabb = joint_aabb_of_shapes(child_r_indices, shapes);
+            let (child_l_indices, child_r_indices) = indices.split_at_mut(indices.len() / 2);
+            let (child_l_aabb, child_l_centroid) = joint_aabb_of_shapes(child_l_indices, shapes);
+            let (child_r_aabb, child_r_centroid) = joint_aabb_of_shapes(child_r_indices, shapes);
+
+            let next_nodes = &mut nodes[1..];
+            let (l_nodes, r_nodes) = next_nodes.split_at_mut(child_l_indices.len() * 2 - 1);
+            let child_l_index = node_index + 1;
+            let child_r_index = child_l_index + l_nodes.len();
 
             // Proceed recursively.
-            let child_l_index = BvhNode::build(shapes, child_l_indices, nodes, node_index);
-            let child_r_index = BvhNode::build(shapes, child_r_indices, nodes, node_index);
+            BvhNode::build(
+                shapes,
+                child_l_indices,
+                l_nodes,
+                node_index,
+                depth + 1,
+                child_l_index,
+                child_l_aabb,
+                child_l_centroid,
+            );
+            BvhNode::build(
+                shapes,
+                child_r_indices,
+                r_nodes,
+                node_index,
+                depth + 1,
+                child_r_index,
+                child_r_aabb,
+                child_r_centroid,
+            );
             (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
         } else {
-            // Create six `Bucket`s, and six index assignment vector.
-            const NUM_BUCKETS: usize = 6;
+            let (
+                (child_l_aabb, child_l_centroid, child_l_indices),
+                (child_r_aabb, child_r_centroid, child_r_indices),
+            ) = BvhNode::build_buckets(
+                shapes,
+                indices,
+                split_axis,
+                split_axis_size,
+                &centroid_bounds,
+                &aabb_bounds,
+            );
+
+            let next_nodes = &mut nodes[1..];
+            let (l_nodes, r_nodes) = next_nodes.split_at_mut(child_l_indices.len() * 2 - 1);
+
+            let child_l_index = node_index + 1;
+            let child_r_index = child_l_index + l_nodes.len();
+
+            // Proceed recursively.
+            BvhNode::build(
+                shapes,
+                child_l_indices,
+                l_nodes,
+                node_index,
+                depth + 1,
+                child_l_index,
+                child_l_aabb,
+                child_l_centroid,
+            );
+            BvhNode::build(
+                shapes,
+                child_r_indices,
+                r_nodes,
+                node_index,
+                depth + 1,
+                child_r_index,
+                child_r_aabb,
+                child_r_centroid,
+            );
+            (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
+        };
+
+        // Construct the actual data structure and replace the dummy node.
+        assert!(!child_l_aabb.is_empty());
+        assert!(!child_r_aabb.is_empty());
+        nodes[0].write(BvhNode::Node {
+            parent_index,
+            child_l_aabb,
+            child_l_index,
+            child_r_aabb,
+            child_r_index,
+        });
+    }
+
+    #[allow(clippy::type_complexity)]
+    fn build_buckets<'a, S: BHShape<T, D>>(
+        shapes: *mut S,
+        indices: &'a mut [usize],
+        split_axis: usize,
+        split_axis_size: T,
+        centroid_bounds: &Aabb<T, D>,
+        aabb_bounds: &Aabb<T, D>,
+    ) -> (
+        (Aabb<T, D>, Aabb<T, D>, &'a mut [usize]),
+        (Aabb<T, D>, Aabb<T, D>, &'a mut [usize]),
+    )
+    where
+        T: FromPrimitive + ClosedSub + ClosedAdd + SimdPartialOrd + ClosedMul + Float,
+    {
+        // Create six `Bucket`s, and six index assignment vector.
+        // let mut buckets = [Bucket::empty(); NUM_BUCKETS];
+        // let mut bucket_assignments: [SmallVec<[usize; 1024]>; NUM_BUCKETS] = Default::default();
+        BUCKETS.with(move |buckets| {
+            let bucket_assignments = &mut *buckets.borrow_mut();
             let mut buckets = [Bucket::empty(); NUM_BUCKETS];
-            let mut bucket_assignments: [Vec<usize>; NUM_BUCKETS] = Default::default();
+            buckets.fill(Bucket::empty());
+            for b in bucket_assignments.iter_mut() {
+                b.clear();
+            }
 
             // In this branch the `split_axis_size` is large enough to perform meaningful splits.
             // We start by assigning the shapes to `Bucket`s.
-            for idx in indices {
-                let shape = &unsafe { shapes.add(*idx).as_ref().unwrap() };
+            for idx in indices.iter() {
+                let shape = unsafe { shapes.add(*idx).as_ref().unwrap() };
                 let shape_aabb = shape.aabb();
                 let shape_center = shape_aabb.center();
 
@@ -335,9 +412,8 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
                     (shape_center[split_axis] - centroid_bounds.min[split_axis]) / split_axis_size;
 
                 // Convert that to the actual `Bucket` number.
-                // TODO check this for integers
                 let bucket_num = (bucket_num_relative
-                    * (T::from_usize(NUM_BUCKETS).unwrap() - T::from_f32(0.01).unwrap()))
+                    * (T::from(NUM_BUCKETS).unwrap() - T::from(0.01).unwrap()))
                 .to_usize()
                 .unwrap();
 
@@ -350,46 +426,56 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
             let mut min_bucket = 0;
             let mut min_cost = T::infinity();
             let mut child_l_aabb = Aabb::empty();
+            let mut child_l_centroid = Aabb::empty();
             let mut child_r_aabb = Aabb::empty();
+            let mut child_r_centroid = Aabb::empty();
             for i in 0..(NUM_BUCKETS - 1) {
                 let (l_buckets, r_buckets) = buckets.split_at(i + 1);
                 let child_l = l_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
                 let child_r = r_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
 
-                let cost = (T::from_usize(child_l.size).unwrap() * child_l.aabb.surface_area()
-                    + T::from_usize(child_r.size).unwrap() * child_r.aabb.surface_area())
+                let cost = (T::from(child_l.size).unwrap() * child_l.aabb.surface_area()
+                    + T::from(child_r.size).unwrap() * child_r.aabb.surface_area())
                     / aabb_bounds.surface_area();
                 if cost < min_cost {
                     min_bucket = i;
                     min_cost = cost;
                     child_l_aabb = child_l.aabb;
+                    child_l_centroid = child_l.centroid;
                     child_r_aabb = child_r.aabb;
+                    child_r_centroid = child_r.centroid;
+                }
+            }
+            // Join together all index buckets.
+            // split input indices, loop over assignments and assign
+            let (l_assignments, r_assignments) = bucket_assignments.split_at_mut(min_bucket + 1);
+
+            let mut l_count = 0;
+            for group in l_assignments.iter() {
+                l_count += group.len();
+            }
+
+            let (child_l_indices, child_r_indices) = indices.split_at_mut(l_count);
+            let mut i = 0;
+            for group in l_assignments.iter() {
+                for x in group {
+                    child_l_indices[i] = *x;
+                    i += 1;
+                }
+            }
+            i = 0;
+            for group in r_assignments.iter() {
+                for x in group {
+                    child_r_indices[i] = *x;
+                    i += 1;
                 }
             }
 
-            // Join together all index buckets.
-            let (l_assignments, r_assignments) = bucket_assignments.split_at_mut(min_bucket + 1);
-            let child_l_indices = concatenate_vectors(l_assignments);
-            let child_r_indices = concatenate_vectors(r_assignments);
-
-            // Proceed recursively.
-            let child_l_index = BvhNode::build(shapes, &child_l_indices, nodes, node_index);
-            let child_r_index = BvhNode::build(shapes, &child_r_indices, nodes, node_index);
-            (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
-        };
-
-        // Construct the actual data structure and replace the dummy node.
-        assert!(!child_l_aabb.is_empty());
-        assert!(!child_r_aabb.is_empty());
-        nodes[node_index] = BvhNode::Node {
-            parent_index,
-            child_l_aabb,
-            child_l_index,
-            child_r_aabb,
-            child_r_index,
-        };
-
-        node_index
+            (
+                (child_l_aabb, child_l_centroid, child_l_indices),
+                (child_r_aabb, child_r_centroid, child_r_indices),
+            )
+        })
     }
 
     /// Traverses the [`Bvh`] recursively and returns all shapes whose [`Aabb`] is
@@ -452,10 +538,35 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
     where
         T: FromPrimitive + ToPrimitive + Float + ClosedSub + ClosedAdd + ClosedMul + SimdPartialOrd,
     {
-        let indices = (0..shapes.len()).collect::<Vec<usize>>();
-        let expected_node_count = shapes.len() * 2;
+        if shapes.is_empty() {
+            return Bvh { nodes: Vec::new() };
+        }
+
+        let mut indices = (0..shapes.len()).collect::<Vec<usize>>();
+        let expected_node_count = shapes.len() * 2 - 1;
         let mut nodes = Vec::with_capacity(expected_node_count);
-        BvhNode::build(shapes.as_mut_ptr(), &indices, &mut nodes, 0);
+
+        let uninit_slice = unsafe {
+            std::slice::from_raw_parts_mut(
+                nodes.as_mut_ptr() as *mut MaybeUninit<BvhNode<T, D>>,
+                expected_node_count,
+            )
+        };
+        let (aabb, centroid) = joint_aabb_of_shapes(&indices, shapes.as_ptr());
+        BvhNode::build(
+            shapes.as_mut_ptr(),
+            &mut indices,
+            uninit_slice,
+            0,
+            0,
+            0,
+            aabb,
+            centroid,
+        );
+
+        unsafe {
+            nodes.set_len(expected_node_count);
+        }
         Bvh { nodes }
     }
 
