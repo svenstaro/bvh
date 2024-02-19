@@ -53,7 +53,7 @@ impl<S> Shapes<'_, S> {
     }
 
     /// Create from a slice
-    pub fn from_slice<'a, T: BHValue, const D: usize>(slice: &'a mut [S]) -> Shapes<'a, S>
+    pub fn from_slice<T: BHValue, const D: usize>(slice: &mut [S]) -> Shapes<S>
     where
         S: BHShape<T, D>,
     {
@@ -366,9 +366,9 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
     ///
     /// [`BvhNode`]: enum.BvhNode.html
     ///
-    pub fn prep_build<'a, S: BHShape<T, D>>(
-        args: BvhNodeBuildArgs<'a, S, T, D>,
-    ) -> Option<(BvhNodeBuildArgs<'a, S, T, D>, BvhNodeBuildArgs<'a, S, T, D>)> {
+    pub fn prep_build<S: BHShape<T, D>>(
+        args: BvhNodeBuildArgs<S, T, D>,
+    ) -> Option<(BvhNodeBuildArgs<S, T, D>, BvhNodeBuildArgs<S, T, D>)> {
         let BvhNodeBuildArgs {
             shapes,
             indices,
