@@ -6,7 +6,7 @@
 //! [`Bvh`]: struct.Bvh.html
 //!
 
-use crate::bounding_hierarchy::BHShape;
+use crate::bounding_hierarchy::{BHShape, BHValue};
 use crate::bvh::*;
 
 use log::info;
@@ -18,21 +18,7 @@ use num::{FromPrimitive, Signed, Zero};
 // shapes, but also their new `Aabb`'s into update_shapes().
 // TODO Consider: Stop updating `Aabb`'s upwards the tree once an `Aabb` didn't get changed.
 
-impl<T, const D: usize> Bvh<T, D>
-where
-    T: Scalar
-        + Copy
-        + FromPrimitive
-        + ClosedSub
-        + ClosedMul
-        + ClosedAdd
-        + ClosedDiv
-        + Zero
-        + SimdPartialOrd
-        + PartialOrd
-        + Signed
-        + std::fmt::Display,
-{
+impl<T: BHValue, const D: usize> Bvh<T, D> {
     fn node_is_left_child(&self, node_index: usize) -> bool {
         // Get the index of the parent.
         let node_parent_index = self.nodes[node_index].parent();

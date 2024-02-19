@@ -491,6 +491,35 @@ pub fn build_120k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Ben
     build_n_triangles_bh::<T>(10_000, b);
 }
 
+#[cfg(feature = "bench")]
+fn build_n_triangles_bh_rayon<T: BoundingHierarchy<f32, 3>>(n: usize, b: &mut ::test::Bencher) {
+    use crate::bvh::rayon_executor;
+
+    let bounds = default_bounds();
+    let mut triangles = create_n_cubes(n, &bounds);
+    b.iter(|| {
+        T::build_with_executor(&mut triangles, rayon_executor);
+    });
+}
+
+/// Benchmark the construction of a [`BoundingHierarchy`] with 1,200 triangles.
+#[cfg(feature = "bench")]
+pub fn build_1200_triangles_bh_rayon<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
+    build_n_triangles_bh_rayon::<T>(100, b);
+}
+
+/// Benchmark the construction of a [`BoundingHierarchy`] with 12,000 triangles.
+#[cfg(feature = "bench")]
+pub fn build_12k_triangles_bh_rayon<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
+    build_n_triangles_bh_rayon::<T>(1_000, b);
+}
+
+/// Benchmark the construction of a [`BoundingHierarchy`] with 120,000 triangles.
+#[cfg(feature = "bench")]
+pub fn build_120k_triangles_bh_rayon<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
+    build_n_triangles_bh_rayon::<T>(10_000, b);
+}
+
 /// Benchmark intersecting the `triangles` list without acceleration structures.
 #[cfg(feature = "bench")]
 pub fn intersect_list(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::test::Bencher) {

@@ -9,11 +9,12 @@ use num::{Float, FromPrimitive, Signed, ToPrimitive, Zero};
 
 use crate::aabb::{Aabb, Bounded};
 // use crate::axis::Axis;
-use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
 use crate::bvh::iter::BvhTraverseIterator;
 use crate::ray::Ray;
 use crate::utils::{joint_aabb_of_shapes, Bucket};
 use std::cell::RefCell;
+use std::marker::PhantomData;
 use std::mem::MaybeUninit;
 
 const NUM_BUCKETS: usize = 6;
@@ -21,6 +22,122 @@ const NUM_BUCKETS: usize = 6;
 thread_local! {
     /// Thread local for the buckets used while building to reduce allocations during build
     static BUCKETS: RefCell<[Vec<usize>; NUM_BUCKETS]> = RefCell::new(Default::default());
+}
+
+/// Shapes
+pub struct Shapes<'a, S> {
+    ptr: *mut S,
+    len: usize,
+    marker: PhantomData<&'a S>,
+}
+
+impl<S> Shapes<'_, S> {
+    /// Set node index on a shape
+    pub fn set_node_index<T: BHValue, const D: usize>(&self, shape_index: usize, node_index: usize)
+    where
+        S: BHShape<T, D>,
+    {
+        assert!(shape_index < self.len);
+        unsafe {
+            self.ptr
+                .add(shape_index)
+                .as_mut()
+                .unwrap()
+                .set_bh_node_index(node_index);
+        }
+    }
+    /// Get the shape
+    pub fn get<T: BHValue, const D: usize>(&self, shape_index: usize) -> &S
+    where
+        S: BHShape<T, D>,
+    {
+        assert!(shape_index < self.len);
+        unsafe { self.ptr.add(shape_index).as_ref().unwrap() }
+    }
+
+    /// Create from a slice
+    pub fn from_slice<'a, T: BHValue, const D: usize>(slice: &'a mut [S]) -> Shapes<'a, S>
+    where
+        S: BHShape<T, D>,
+    {
+        Shapes {
+            ptr: slice.as_mut_ptr(),
+            len: slice.len(),
+            marker: PhantomData,
+        }
+    }
+}
+
+unsafe impl<S: Send> Send for Shapes<'_, S> {}
+
+unsafe impl<S> Sync for Shapes<'_, S> {}
+
+/// Holds the arguments for calling build.
+pub struct BvhNodeBuildArgs<'a, S, T: BHValue, const D: usize> {
+    shapes: &'a Shapes<'a, S>,
+    indices: &'a mut [usize],
+    nodes: &'a mut [MaybeUninit<BvhNode<T, D>>],
+    parent_index: usize,
+    depth: u32,
+    node_index: usize,
+    aabb_bounds: Aabb<T, D>,
+    centroid_bounds: Aabb<T, D>,
+}
+
+impl<'a, S, T: BHValue, const D: usize> BvhNodeBuildArgs<'a, S, T, D> {
+    /// Creates the args
+    pub fn new(
+        shapes: &'a Shapes<'a, S>,
+        indices: &'a mut [usize],
+        nodes: &'a mut [MaybeUninit<BvhNode<T, D>>],
+        parent_index: usize,
+        depth: u32,
+        node_index: usize,
+        aabb_bounds: Aabb<T, D>,
+        centroid_bounds: Aabb<T, D>,
+    ) -> Self {
+        Self {
+            shapes,
+            indices,
+            nodes,
+            parent_index,
+            depth,
+            node_index,
+            aabb_bounds,
+            centroid_bounds,
+        }
+    }
+
+    /// Finish building this portion of the bvh.
+    pub fn build(self)
+    where
+        S: BHShape<T, D>,
+    {
+        BvhNode::<T, D>::build(self)
+    }
+
+    /// Finish building this portion of the bvh using a custom executor.
+    pub fn build_with_executor(
+        self,
+        executor: impl FnMut(BvhNodeBuildArgs<'_, S, T, D>, BvhNodeBuildArgs<'_, S, T, D>),
+    ) where
+        S: BHShape<T, D>,
+    {
+        BvhNode::<T, D>::build_with_executor(self, executor)
+    }
+}
+
+/// Rayon based executor
+pub fn rayon_executor<S, T: Send + BHValue, const D: usize>(
+    left: BvhNodeBuildArgs<S, T, D>,
+    right: BvhNodeBuildArgs<S, T, D>,
+) where
+    S: BHShape<T, D> + Send,
+{
+    rayon::join(
+        || left.build_with_executor(rayon_executor),
+        || right.build_with_executor(rayon_executor),
+    );
 }
 
 /// The [`BvhNode`] enum that describes a node in a [`Bvh`].
@@ -34,7 +151,7 @@ thread_local! {
 ///
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum BvhNode<T: Scalar + Copy, const D: usize> {
+pub enum BvhNode<T: BHValue, const D: usize> {
     /// Leaf node.
     Leaf {
         /// The node's parent.
@@ -62,7 +179,7 @@ pub enum BvhNode<T: Scalar + Copy, const D: usize> {
     },
 }
 
-impl<T: Scalar + Copy, const D: usize> PartialEq for BvhNode<T, D> {
+impl<T: BHValue, const D: usize> PartialEq for BvhNode<T, D> {
     // TODO Consider also comparing [`Aabbs`]
     fn eq(&self, other: &BvhNode<T, D>) -> bool {
         match (self, other) {
@@ -99,7 +216,7 @@ impl<T: Scalar + Copy, const D: usize> PartialEq for BvhNode<T, D> {
     }
 }
 
-impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
+impl<T: BHValue, const D: usize> BvhNode<T, D> {
     /// Returns the index of the parent node.
     pub fn parent(&self) -> usize {
         match *self {
@@ -200,10 +317,7 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
     /// Gets the [`Aabb`] for a [`BvhNode`].
     /// Returns the shape's [`Aabb`] for leaves, and the joined [`Aabb`] of
     /// the two children's [`Aabb`]'s for non-leaves.
-    pub fn get_node_aabb<Shape: BHShape<T, D>>(&self, shapes: &[Shape]) -> Aabb<T, D>
-    where
-        T: SimdPartialOrd,
-    {
+    pub fn get_node_aabb<Shape: BHShape<T, D>>(&self, shapes: &[Shape]) -> Aabb<T, D> {
         match *self {
             BvhNode::Node {
                 child_l_aabb,
@@ -235,32 +349,51 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         }
     }
 
-    /// The build function sometimes needs to add nodes while their data is not available yet.
-    /// A dummy cerated by this function serves the purpose of being changed later on.
-    fn create_dummy() -> BvhNode<T, D> {
-        BvhNode::Leaf {
-            parent_index: 0,
-            shape_index: 0,
+    /// Builds a [`BvhNode`] recursively using SAH partitioning.
+    ///
+    /// [`BvhNode`]: enum.BvhNode.html
+    ///
+    pub fn build<S: BHShape<T, D>>(args: BvhNodeBuildArgs<S, T, D>) {
+        if let Some((left, right)) = Self::prep_build(args) {
+            Self::build(left);
+            Self::build(right);
+            // BvhBuildStrategy::<X, Y>::dispatch(|| Self::build(left, strategy), || Self::build(right, strategy), left.indices.len() + right.indices.len(), left.depth as usize)
+        }
+    }
+
+    /// Builds a [`BvhNode`] recursively in parallel using SAH partitioning.
+    ///
+    /// [`BvhNode`]: enum.BvhNode.html
+    ///
+    pub fn build_with_executor<S: BHShape<T, D>>(
+        args: BvhNodeBuildArgs<S, T, D>,
+        mut executor: impl FnMut(BvhNodeBuildArgs<S, T, D>, BvhNodeBuildArgs<S, T, D>),
+    ) {
+        if let Some((left, right)) = Self::prep_build(args) {
+            // Self::build(left);
+            // Self::build(right);
+            executor(left, right);
+            // RayonBuildStrategy::dispatch(|| Self::build(left), || Self::build(right), left.indices.len() + right.indices.len(), left.depth as usize)
         }
     }
 
     /// Builds a [`BvhNode`] recursively using SAH partitioning.
-    /// Returns the index of the new node in the nodes vector.
     ///
     /// [`BvhNode`]: enum.BvhNode.html
     ///
-    pub fn build<S: BHShape<T, D>>(
-        shapes: *mut S,
-        indices: &mut [usize],
-        nodes: &mut [MaybeUninit<BvhNode<T, D>>],
-        parent_index: usize,
-        depth: u32,
-        node_index: usize,
-        aabb_bounds: Aabb<T, D>,
-        centroid_bounds: Aabb<T, D>,
-    ) where
-        T: FromPrimitive + ClosedSub + ClosedAdd + SimdPartialOrd + ClosedMul + Float,
-    {
+    pub fn prep_build<'a, S: BHShape<T, D>>(
+        args: BvhNodeBuildArgs<'a, S, T, D>,
+    ) -> Option<(BvhNodeBuildArgs<'a, S, T, D>, BvhNodeBuildArgs<'a, S, T, D>)> {
+        let BvhNodeBuildArgs {
+            shapes,
+            indices,
+            nodes,
+            parent_index,
+            depth,
+            node_index,
+            aabb_bounds,
+            centroid_bounds,
+        } = args;
         // If there is only one element left, don't split anymore
         if indices.len() == 1 {
             let shape_index = indices[0];
@@ -269,13 +402,8 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
                 shape_index,
             });
             // Let the shape know the index of the node that represents it.
-            unsafe { shapes.add(shape_index).as_mut().unwrap() }.set_bh_node_index(node_index);
-            return;
-        }
-
-        let mut parallel_recurse = false;
-        if indices.len() > 64 {
-            parallel_recurse = true;
+            shapes.set_node_index(shape_index, node_index);
+            return None;
         }
 
         // Find the axis along which the shapes are spread the most.
@@ -283,88 +411,36 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         let split_axis_size = centroid_bounds.max[split_axis] - centroid_bounds.min[split_axis];
 
         // The following `if` partitions `indices` for recursively calling `Bvh::build`.
-        let (child_l_index, child_l_aabb, child_r_index, child_r_aabb) = if split_axis_size
-            < T::epsilon()
-        {
+        let (
+            (child_l_aabb, child_l_centroid, child_l_indices),
+            (child_r_aabb, child_r_centroid, child_r_indices),
+        ) = if split_axis_size < T::epsilon() {
             // In this branch the shapes lie too close together so that splitting them in a
             // sensible way is not possible. Instead we just split the list of shapes in half.
             let (child_l_indices, child_r_indices) = indices.split_at_mut(indices.len() / 2);
             let (child_l_aabb, child_l_centroid) = joint_aabb_of_shapes(child_l_indices, shapes);
             let (child_r_aabb, child_r_centroid) = joint_aabb_of_shapes(child_r_indices, shapes);
 
-            let next_nodes = &mut nodes[1..];
-            let (l_nodes, r_nodes) = next_nodes.split_at_mut(child_l_indices.len() * 2 - 1);
-            let child_l_index = node_index + 1;
-            let child_r_index = child_l_index + l_nodes.len();
-
-            // Proceed recursively.
-            BvhNode::build(
-                shapes,
-                child_l_indices,
-                l_nodes,
-                node_index,
-                depth + 1,
-                child_l_index,
-                child_l_aabb,
-                child_l_centroid,
-            );
-            BvhNode::build(
-                shapes,
-                child_r_indices,
-                r_nodes,
-                node_index,
-                depth + 1,
-                child_r_index,
-                child_r_aabb,
-                child_r_centroid,
-            );
-            (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
-        } else {
-            let (
+            (
                 (child_l_aabb, child_l_centroid, child_l_indices),
                 (child_r_aabb, child_r_centroid, child_r_indices),
-            ) = BvhNode::build_buckets(
+            )
+        } else {
+            BvhNode::build_buckets(
                 shapes,
                 indices,
                 split_axis,
                 split_axis_size,
                 &centroid_bounds,
                 &aabb_bounds,
-            );
-
-            let next_nodes = &mut nodes[1..];
-            let (l_nodes, r_nodes) = next_nodes.split_at_mut(child_l_indices.len() * 2 - 1);
-
-            let child_l_index = node_index + 1;
-            let child_r_index = child_l_index + l_nodes.len();
-
-            // Proceed recursively.
-            BvhNode::build(
-                shapes,
-                child_l_indices,
-                l_nodes,
-                node_index,
-                depth + 1,
-                child_l_index,
-                child_l_aabb,
-                child_l_centroid,
-            );
-            BvhNode::build(
-                shapes,
-                child_r_indices,
-                r_nodes,
-                node_index,
-                depth + 1,
-                child_r_index,
-                child_r_aabb,
-                child_r_centroid,
-            );
-            (child_l_index, child_l_aabb, child_r_index, child_r_aabb)
+            )
         };
 
+        let left_len = child_l_indices.len() * 2 - 1;
+        let child_l_index = node_index + 1;
+        let child_r_index = child_l_index + left_len;
+
         // Construct the actual data structure and replace the dummy node.
-        assert!(!child_l_aabb.is_empty());
-        assert!(!child_r_aabb.is_empty());
         nodes[0].write(BvhNode::Node {
             parent_index,
             child_l_aabb,
@@ -372,11 +448,37 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
             child_r_aabb,
             child_r_index,
         });
+
+        let next_nodes = &mut nodes[1..];
+        let (l_nodes, r_nodes) = next_nodes.split_at_mut(left_len);
+
+        Some((
+            BvhNodeBuildArgs::new(
+                shapes,
+                child_l_indices,
+                l_nodes,
+                node_index,
+                depth + 1,
+                child_l_index,
+                child_l_aabb,
+                child_l_centroid,
+            ),
+            BvhNodeBuildArgs::new(
+                shapes,
+                child_r_indices,
+                r_nodes,
+                node_index,
+                depth + 1,
+                child_r_index,
+                child_r_aabb,
+                child_r_centroid,
+            ),
+        ))
     }
 
     #[allow(clippy::type_complexity)]
     fn build_buckets<'a, S: BHShape<T, D>>(
-        shapes: *mut S,
+        shapes: &Shapes<S>,
         indices: &'a mut [usize],
         split_axis: usize,
         split_axis_size: T,
@@ -385,10 +487,7 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
     ) -> (
         (Aabb<T, D>, Aabb<T, D>, &'a mut [usize]),
         (Aabb<T, D>, Aabb<T, D>, &'a mut [usize]),
-    )
-    where
-        T: FromPrimitive + ClosedSub + ClosedAdd + SimdPartialOrd + ClosedMul + Float,
-    {
+    ) {
         // Create six `Bucket`s, and six index assignment vector.
         // let mut buckets = [Bucket::empty(); NUM_BUCKETS];
         // let mut bucket_assignments: [SmallVec<[usize; 1024]>; NUM_BUCKETS] = Default::default();
@@ -403,7 +502,7 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
             // In this branch the `split_axis_size` is large enough to perform meaningful splits.
             // We start by assigning the shapes to `Bucket`s.
             for idx in indices.iter() {
-                let shape = unsafe { shapes.add(*idx).as_ref().unwrap() };
+                let shape = shapes.get(*idx);
                 let shape_aabb = shape.aabb();
                 let shape_center = shape_aabb.center();
 
@@ -490,9 +589,7 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
         node_index: usize,
         ray: &Ray<T, D>,
         indices: &mut Vec<usize>,
-    ) where
-        T: PartialOrd + Zero + ClosedSub + ClosedMul + SimdPartialOrd,
-    {
+    ) {
         match nodes[node_index] {
             BvhNode::Node {
                 ref child_l_aabb,
@@ -521,7 +618,7 @@ impl<T: Scalar + Copy, const D: usize> BvhNode<T, D> {
 ///
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Bvh<T: Scalar + Copy, const D: usize> {
+pub struct Bvh<T: BHValue, const D: usize> {
     /// The list of nodes of the [`Bvh`].
     ///
     /// [`Bvh`]: struct.Bvh.html
@@ -529,15 +626,28 @@ pub struct Bvh<T: Scalar + Copy, const D: usize> {
     pub nodes: Vec<BvhNode<T, D>>,
 }
 
-impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
+impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Creates a new [`Bvh`] from the `shapes` slice.
     ///
     /// [`Bvh`]: struct.Bvh.html
     ///
-    pub fn build<Shape: BHShape<T, D>>(shapes: &mut [Shape]) -> Bvh<T, D>
-    where
-        T: FromPrimitive + ToPrimitive + Float + ClosedSub + ClosedAdd + ClosedMul + SimdPartialOrd,
-    {
+    pub fn build<Shape: BHShape<T, D>>(shapes: &mut [Shape]) -> Bvh<T, D> {
+        Self::build_with_executor(shapes, |left, right| {
+            left.build();
+            right.build();
+        })
+    }
+
+    /// Creates a new [`Bvh`] from the `shapes` slice.
+    /// The executor parameter allows you to parallelize the build of the [`Bvh`]. Using something like rayon::join.
+    /// You must call either build or build_with_executor on both arguments in order to succesfully complete the build.
+    ///
+    /// [`Bvh`]: struct.Bvh.html
+    ///
+    pub fn build_with_executor<Shape: BHShape<T, D>>(
+        shapes: &mut [Shape],
+        executor: impl FnMut(BvhNodeBuildArgs<Shape, T, D>, BvhNodeBuildArgs<Shape, T, D>),
+    ) -> Bvh<T, D> {
         if shapes.is_empty() {
             return Bvh { nodes: Vec::new() };
         }
@@ -552,18 +662,16 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
                 expected_node_count,
             )
         };
-        let (aabb, centroid) = joint_aabb_of_shapes(&indices, shapes.as_ptr());
-        BvhNode::build(
-            shapes.as_mut_ptr(),
-            &mut indices,
-            uninit_slice,
-            0,
-            0,
-            0,
-            aabb,
-            centroid,
+        let shapes = Shapes::from_slice(shapes);
+        let (aabb, centroid) = joint_aabb_of_shapes(&indices, &shapes);
+        BvhNode::build_with_executor(
+            BvhNodeBuildArgs::new(&shapes, &mut indices, uninit_slice, 0, 0, 0, aabb, centroid),
+            executor,
         );
 
+        // SAFETY
+        // The vec is allocated with this capacity above and is only mutated through slice methods so
+        // it is guaranteed that the allocated size has not changed.
         unsafe {
             nodes.set_len(expected_node_count);
         }
@@ -580,10 +688,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         &'a self,
         ray: &Ray<T, D>,
         shapes: &'a [Shape],
-    ) -> Vec<&Shape>
-    where
-        T: PartialOrd + Zero + ClosedSub + ClosedMul + SimdPartialOrd,
-    {
+    ) -> Vec<&Shape> {
         let mut indices = Vec::new();
         BvhNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
         indices
@@ -602,10 +707,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         &'bvh self,
         ray: &'bvh Ray<T, D>,
         shapes: &'shape [Shape],
-    ) -> BvhTraverseIterator<'bvh, 'shape, T, D, Shape>
-    where
-        T: SimdPartialOrd + ClosedSub + PartialOrd + ClosedMul + Zero,
-    {
+    ) -> BvhTraverseIterator<'bvh, 'shape, T, D, Shape> {
         BvhTraverseIterator::new(self, ray, shapes)
     }
 
@@ -618,7 +720,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         T: std::fmt::Display,
     {
         let nodes = &self.nodes;
-        fn print_node<T: Scalar + Copy, const D: usize>(
+        fn print_node<T: BHValue, const D: usize>(
             nodes: &[BvhNode<T, D>],
             node_index: usize,
             depth: usize,
@@ -658,10 +760,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         expected_outer_aabb: &Aabb<T, D>,
         node_count: &mut usize,
         shapes: &[Shape],
-    ) -> bool
-    where
-        T: Float + ClosedSub,
-    {
+    ) -> bool {
         *node_count += 1;
         match self.nodes[node_index] {
             BvhNode::Node {
@@ -713,10 +812,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
 
     /// Checks if all children of a node have the correct parent index, and that there is no
     /// detached subtree. Also checks if the `Aabb` hierarchy is consistent.
-    pub fn is_consistent<Shape: BHShape<T, D>>(&self, shapes: &[Shape]) -> bool
-    where
-        T: Float + ClosedSub,
-    {
+    pub fn is_consistent<Shape: BHShape<T, D>>(&self, shapes: &[Shape]) -> bool {
         // The root node of the bvh is not bounded by anything.
         let space = Aabb::infinite();
 
@@ -739,7 +835,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
         node_count: &mut usize,
         shapes: &[Shape],
     ) where
-        T: Float + ClosedSub + std::fmt::Display,
+        T: std::fmt::Display,
     {
         *node_count += 1;
         let node = &self.nodes[node_index];
@@ -805,7 +901,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
     /// Assert version of `is_consistent`.
     pub fn assert_consistent<Shape: BHShape<T, D>>(&self, shapes: &[Shape])
     where
-        T: Float + ClosedSub + std::fmt::Display,
+        T: std::fmt::Display,
     {
         // The root node of the bvh is not bounded by anything.
         let space = Aabb::infinite();
@@ -822,10 +918,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
     /// Check that the `Aabb`s in the `Bvh` are tight, which means, that parent `Aabb`s are not
     /// larger than they should be. This function checks, whether the children of node `node_index`
     /// lie inside `outer_aabb`.
-    pub fn assert_tight_subtree(&self, node_index: usize, outer_aabb: &Aabb<T, D>)
-    where
-        T: Float + SimdPartialOrd + ClosedSub + Signed,
-    {
+    pub fn assert_tight_subtree(&self, node_index: usize, outer_aabb: &Aabb<T, D>) {
         if let BvhNode::Node {
             child_l_index,
             child_l_aabb,
@@ -843,10 +936,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
 
     /// Check that the `Aabb`s in the `Bvh` are tight, which means, that parent `Aabb`s are not
     /// larger than they should be.
-    pub fn assert_tight(&self)
-    where
-        T: SimdPartialOrd + Float + ClosedSub + Signed,
-    {
+    pub fn assert_tight(&self) {
         // When starting to check whether the `Bvh` is tight, we cannot provide a minimum
         // outer `Aabb`, therefore we compute the correct one in this instance.
         if let BvhNode::Node {
@@ -861,19 +951,7 @@ impl<T: Scalar + Copy, const D: usize> Bvh<T, D> {
     }
 }
 
-impl<T, const D: usize> BoundingHierarchy<T, D> for Bvh<T, D>
-where
-    T: Scalar
-        + Copy
-        + FromPrimitive
-        + ToPrimitive
-        + Float
-        + ClosedSub
-        + ClosedAdd
-        + ClosedMul
-        + SimdPartialOrd
-        + std::fmt::Display,
-{
+impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for Bvh<T, D> {
     fn build<Shape: BHShape<T, D>>(shapes: &mut [Shape]) -> Bvh<T, D> {
         Bvh::build(shapes)
     }
@@ -888,6 +966,16 @@ where
 
     fn pretty_print(&self) {
         self.pretty_print();
+    }
+
+    fn build_with_executor<
+        Shape: BHShape<T, D>,
+        Executor: FnMut(BvhNodeBuildArgs<'_, Shape, T, D>, BvhNodeBuildArgs<'_, Shape, T, D>),
+    >(
+        shapes: &mut [Shape],
+        executor: Executor,
+    ) -> Self {
+        Bvh::build_with_executor(shapes, executor)
     }
 }
 
@@ -938,8 +1026,10 @@ mod tests {
 
 #[cfg(all(feature = "bench", test))]
 mod bench {
+    use crate::bvh::rayon_executor;
     use crate::testbase::{
-        build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh,
+        build_1200_triangles_bh, build_1200_triangles_bh_rayon, build_120k_triangles_bh,
+        build_120k_triangles_bh_rayon, build_12k_triangles_bh, build_12k_triangles_bh_rayon,
         intersect_1200_triangles_bh, intersect_120k_triangles_bh, intersect_12k_triangles_bh,
         intersect_bh, load_sponza_scene, TBvh3,
     };
@@ -968,6 +1058,33 @@ mod bench {
         let (mut triangles, _) = load_sponza_scene();
         b.iter(|| {
             TBvh3::build(&mut triangles);
+        });
+    }
+
+    #[bench]
+    /// Benchmark the construction of a `BVH` with 1,200 triangles.
+    fn bench_build_1200_triangles_bvh_rayon(b: &mut ::test::Bencher) {
+        build_1200_triangles_bh_rayon::<TBvh3>(b);
+    }
+
+    #[bench]
+    /// Benchmark the construction of a `BVH` with 12,000 triangles.
+    fn bench_build_12k_triangles_bvh_rayon(b: &mut ::test::Bencher) {
+        build_12k_triangles_bh_rayon::<TBvh3>(b);
+    }
+
+    #[bench]
+    /// Benchmark the construction of a `BVH` with 120,000 triangles.
+    fn bench_build_120k_triangles_bvh_rayon(b: &mut ::test::Bencher) {
+        build_120k_triangles_bh_rayon::<TBvh3>(b);
+    }
+
+    #[bench]
+    /// Benchmark the construction of a `BVH` for the Sponza scene.
+    fn bench_build_sponza_bvh_rayon(b: &mut ::test::Bencher) {
+        let (mut triangles, _) = load_sponza_scene();
+        b.iter(|| {
+            TBvh3::build_with_executor(&mut triangles, rayon_executor);
         });
     }
 

@@ -1,7 +1,7 @@
 //! Utilities module.
 
-use crate::aabb::Aabb;
-use crate::bounding_hierarchy::BHShape;
+use crate::bounding_hierarchy::{BHShape, BHValue};
+use crate::{aabb::Aabb, bvh::Shapes};
 
 use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
 use num::{Float, FromPrimitive};
@@ -60,20 +60,10 @@ pub fn fast_max<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
     }
 }
 
-/// Concatenates the list of vectors into a single vector.
-/// Drains the elements from the source `vectors`.
-pub fn concatenate_vectors<T: Sized>(vectors: &mut [Vec<T>]) -> Vec<T> {
-    let mut result = Vec::new();
-    for vector in vectors.iter_mut() {
-        result.append(vector);
-    }
-    result
-}
-
 /// Defines a Bucket utility object. Used to store the properties of shape-partitions
 /// in the [`Bvh`] build procedure using SAH.
 #[derive(Clone, Copy)]
-pub struct Bucket<T: Scalar + Copy, const D: usize> {
+pub struct Bucket<T: BHValue, const D: usize> {
     /// The number of shapes in this [`Bucket`].
     pub size: usize,
 
@@ -84,11 +74,7 @@ pub struct Bucket<T: Scalar + Copy, const D: usize> {
     pub centroid: Aabb<T, D>,
 }
 
-impl<
-        T: Scalar + Copy + Float + SimdPartialOrd + ClosedSub + ClosedAdd + ClosedMul + FromPrimitive,
-        const D: usize,
-    > Bucket<T, D>
-{
+impl<T: BHValue, const D: usize> Bucket<T, D> {
     /// Returns an empty bucket.
     pub fn empty() -> Bucket<T, D> {
         Bucket {
@@ -115,18 +101,14 @@ impl<
     }
 }
 
-pub fn joint_aabb_of_shapes<
-    T: Scalar + Copy + Float + SimdPartialOrd + FromPrimitive + ClosedAdd + ClosedMul + ClosedSub,
-    const D: usize,
-    Shape: BHShape<T, D>,
->(
+pub fn joint_aabb_of_shapes<T: BHValue, const D: usize, Shape: BHShape<T, D>>(
     indices: &[usize],
-    shapes: *const Shape,
+    shapes: &Shapes<Shape>,
 ) -> (Aabb<T, D>, Aabb<T, D>) {
     let mut aabb = Aabb::empty();
     let mut centroid = Aabb::empty();
     for index in indices {
-        let shape = unsafe { shapes.add(*index).as_ref().unwrap() };
+        let shape = shapes.get(*index);
         aabb.join_mut(&shape.aabb());
         centroid.grow_mut(&shape.aabb().center());
     }
@@ -134,26 +116,4 @@ pub fn joint_aabb_of_shapes<
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::utils::concatenate_vectors;
-
-    #[test]
-    /// Test if concatenating no [`Vec`]s yields an empty [`Vec`].
-    fn test_concatenate_empty() {
-        let mut vectors: Vec<Vec<usize>> = vec![];
-        let expected = vec![];
-        assert_eq!(concatenate_vectors(vectors.as_mut_slice()), expected);
-        let expected_remainder: Vec<Vec<usize>> = vec![];
-        assert_eq!(vectors, expected_remainder);
-    }
-
-    #[test]
-    /// Test if concatenating some [`Vec`]s yields the concatenation of the vectors.
-    fn test_concatenate_vectors() {
-        let mut vectors = vec![vec![1, 2, 3], vec![], vec![4, 5, 6], vec![7, 8], vec![9]];
-        let result = concatenate_vectors(vectors.as_mut_slice());
-        let expected = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
-        assert_eq!(result, expected);
-        assert_eq!(vectors, vec![vec![], vec![], vec![], vec![], vec![]]);
-    }
-}
+mod tests {}

@@ -1,6 +1,6 @@
 //! This module exports methods to flatten the [`Bvh`] into a [`FlatBvh`] and traverse it iteratively.
 use crate::aabb::{Aabb, Bounded};
-use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
 use crate::bvh::{Bvh, BvhNode};
 use crate::ray::Ray;
 
@@ -12,7 +12,7 @@ use num::{Float, FromPrimitive, ToPrimitive};
 ///
 /// [`Bvh`]: ../bvh/struct.Bvh.html
 ///
-pub struct FlatNode<T: Scalar + Copy, const D: usize> {
+pub struct FlatNode<T: BHValue, const D: usize> {
     /// The [`Aabb`] of the [`Bvh`] node. Prior to testing the [`Aabb`] bounds,
     /// the `entry_index` must be checked. In case the entry_index is [`u32::max_value()`],
     /// the [`Aabb`] is undefined.
@@ -43,7 +43,7 @@ pub struct FlatNode<T: Scalar + Copy, const D: usize> {
     pub shape_index: u32,
 }
 
-impl<T: Scalar + Copy + Float, const D: usize> BvhNode<T, D> {
+impl<T: BHValue + Float, const D: usize> BvhNode<T, D> {
     /// Creates a flat node from a `Bvh` inner node and its [`Aabb`]. Returns the next free index.
     /// TODO: change the algorithm which pushes `FlatNode`s to a vector to not use indices this
     /// much. Implement an algorithm which writes directly to a writable slice.
@@ -142,7 +142,7 @@ impl<T: Scalar + Copy + Float, const D: usize> BvhNode<T, D> {
 ///
 pub type FlatBvh<T, const D: usize> = Vec<FlatNode<T, D>>;
 
-impl<T: Scalar + Copy + Float, const D: usize> Bvh<T, D> {
+impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Flattens the [`Bvh`] so that it can be traversed iteratively.
     /// Constructs the flat nodes using the supplied function.
     /// This function can be used, when the flat bvh nodes should be of some particular
@@ -305,18 +305,7 @@ impl<T: Scalar + Copy + Float, const D: usize> Bvh<T, D> {
     }
 }
 
-impl<T, const D: usize> BoundingHierarchy<T, D> for FlatBvh<T, D>
-where
-    T: Scalar
-        + Copy
-        + FromPrimitive
-        + ToPrimitive
-        + Float
-        + ClosedSub
-        + ClosedAdd
-        + ClosedMul
-        + SimdPartialOrd,
-{
+impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for FlatBvh<T, D> {
     /// A [`FlatBvh`] is built from a regular [`Bvh`] using the [`Bvh::flatten`] method.
     ///
     /// [`FlatBvh`]: struct.FlatBvh.html
@@ -435,6 +424,20 @@ where
                 i, node.entry_index, node.exit_index, node.shape_index
             );
         }
+    }
+
+    fn build_with_executor<
+        Shape: BHShape<T, D>,
+        Executor: FnMut(
+            crate::bvh::BvhNodeBuildArgs<'_, Shape, T, D>,
+            crate::bvh::BvhNodeBuildArgs<'_, Shape, T, D>,
+        ),
+    >(
+        shapes: &mut [Shape],
+        executor: Executor,
+    ) -> Self {
+        let bvh = Bvh::build_with_executor(shapes, executor);
+        bvh.flatten()
     }
 }
 
