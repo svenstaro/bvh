@@ -3,8 +3,7 @@
 use crate::bounding_hierarchy::{BHShape, BHValue};
 use crate::{aabb::Aabb, bvh::Shapes};
 
-use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
-use num::{Float, FromPrimitive};
+use nalgebra::Scalar;
 
 /// Fast floating point minimum.  This function matches the semantics of
 ///

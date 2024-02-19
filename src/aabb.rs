@@ -1,7 +1,7 @@
 //! Axis Aligned Bounding Boxes.
 
-use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Point, SVector, Scalar, SimdPartialOrd};
-use num::{Float, FromPrimitive, One, Signed, Zero};
+use nalgebra::{Point, SVector};
+use num::{Float, FromPrimitive, Signed};
 use std::fmt;
 use std::ops::Index;
 

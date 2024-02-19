@@ -3,9 +3,6 @@ use crate::bounding_hierarchy::BHValue;
 use crate::bvh::{Bvh, BvhNode};
 use crate::ray::Ray;
 
-use nalgebra::{ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
-use num::Zero;
-
 /// Iterator to traverse a [`Bvh`] without memory allocations
 pub struct BvhTraverseIterator<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>> {
     /// Reference to the [`Bvh`] to traverse

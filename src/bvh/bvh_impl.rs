@@ -4,8 +4,7 @@
 //! [`BvhNode`]: struct.BvhNode.html
 //!
 
-use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
-use num::{Float, FromPrimitive, Signed, ToPrimitive, Zero};
+use num::{Float, ToPrimitive};
 
 use crate::aabb::{Aabb, Bounded};
 // use crate::axis::Axis;

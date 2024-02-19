@@ -2,7 +2,7 @@
 
 use super::Ray;
 use crate::{aabb::Aabb, bounding_hierarchy::BHValue, utils::fast_max};
-use nalgebra::{ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
+
 use num::Zero;
 
 /// The [`RayIntersection`] trait allows for generic implementation of ray intersection

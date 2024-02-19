@@ -19,6 +19,7 @@ pub trait BHValue:
     + ClosedDiv
     + Float
     + Signed
+    + std::fmt::Display
 {
 }
 
@@ -33,6 +34,7 @@ impl<T> BHValue for T where
         + ClosedDiv
         + Float
         + Signed
+        + std::fmt::Display
 {
 }
 

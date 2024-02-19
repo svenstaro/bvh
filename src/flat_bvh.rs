@@ -4,8 +4,7 @@ use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
 use crate::bvh::{Bvh, BvhNode};
 use crate::ray::Ray;
 
-use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
-use num::{Float, FromPrimitive, ToPrimitive};
+use num::Float;
 
 /// A structure of a node of a flat [`Bvh`]. The structure of the nodes allows for an
 /// iterative traversal approach without the necessity to maintain a stack or queue.
