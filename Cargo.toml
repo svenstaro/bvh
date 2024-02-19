@@ -21,7 +21,7 @@ log = "0.4"
 serde = { optional = true, version = "1", features = ["derive"] }
 num = "0.4.0"
 nalgebra = { version = "0.32.2", features = ["default", "serde-serialize"] }
-rayon = "1.8.1"
+rayon = {optional = true, version = "1.8.1" }
 
 [dev-dependencies]
 proptest = "1.0"
@@ -30,6 +30,7 @@ float_eq = "1"
 doc-comment = "0.3"
 
 [features]
+default = ["rayon"]
 bench = []
 simd = []
 

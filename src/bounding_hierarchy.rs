@@ -4,10 +4,12 @@ use nalgebra::{ClosedAdd, ClosedDiv, ClosedMul, ClosedSub, Scalar, SimdPartialOr
 use num::{Float, FromPrimitive, Signed};
 
 use crate::aabb::Bounded;
+#[cfg(feature = "rayon")]
+use crate::bvh::rayon_executor;
 use crate::bvh::BvhNodeBuildArgs;
 use crate::ray::Ray;
 
-/// Encapsulates the required traits for the type used in the Bvh.
+/// Encapsulates the required traits for the value type used in the Bvh.
 pub trait BHValue:
     Scalar
     + Copy
@@ -158,6 +160,16 @@ pub trait BoundingHierarchy<T: BHValue, const D: usize> {
         shapes: &mut [Shape],
         executor: Executor,
     ) -> Self;
+
+    /// Builds the bvh with a rayon based executor.
+    #[cfg(feature = "rayon")]
+    fn build_par<Shape: BHShape<T, D> + Send>(shapes: &mut [Shape]) -> Self
+    where
+        T: Send,
+        Self: Sized,
+    {
+        Self::build_with_executor(shapes, rayon_executor)
+    }
 
     /// Traverses the [`BoundingHierarchy`].
     /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements were hit by `ray`.

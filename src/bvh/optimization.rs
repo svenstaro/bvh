@@ -11,8 +11,6 @@ use crate::bvh::*;
 
 use log::info;
 
-use num::{FromPrimitive, Zero};
-
 // TODO Consider: Instead of getting the scene's shapes passed, let leaf nodes store an `Aabb`
 // that is updated from the outside, perhaps by passing not only the indices of the changed
 // shapes, but also their new `Aabb`'s into update_shapes().

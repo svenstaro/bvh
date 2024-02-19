@@ -4,8 +4,6 @@
 //! [`BvhNode`]: struct.BvhNode.html
 //!
 
-use num::{Float, ToPrimitive};
-
 use crate::aabb::{Aabb, Bounded};
 // use crate::axis::Axis;
 use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
@@ -124,19 +122,6 @@ impl<'a, S, T: BHValue, const D: usize> BvhNodeBuildArgs<'a, S, T, D> {
     {
         BvhNode::<T, D>::build_with_executor(self, executor)
     }
-}
-
-/// Rayon based executor
-pub fn rayon_executor<S, T: Send + BHValue, const D: usize>(
-    left: BvhNodeBuildArgs<S, T, D>,
-    right: BvhNodeBuildArgs<S, T, D>,
-) where
-    S: BHShape<T, D> + Send,
-{
-    rayon::join(
-        || left.build_with_executor(rayon_executor),
-        || right.build_with_executor(rayon_executor),
-    );
 }
 
 /// The [`BvhNode`] enum that describes a node in a [`Bvh`].
@@ -978,6 +963,25 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     }
 }
 
+/// Rayon based executor
+#[cfg(feature = "rayon")]
+pub fn rayon_executor<S, T: Send + BHValue, const D: usize>(
+    left: BvhNodeBuildArgs<S, T, D>,
+    right: BvhNodeBuildArgs<S, T, D>,
+) where
+    S: BHShape<T, D> + Send,
+{
+    if left.indices.len() + right.indices.len() < 64 {
+        left.build();
+        right.build();
+    } else {
+        rayon::join(
+            || left.build_with_executor(rayon_executor),
+            || right.build_with_executor(rayon_executor),
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::testbase::{build_some_bh, traverse_some_bh, TBvh3, TBvhNode3};
@@ -1025,12 +1029,16 @@ mod tests {
 
 #[cfg(all(feature = "bench", test))]
 mod bench {
-    use crate::bvh::rayon_executor;
+    #[cfg(feature = "rayon")]
+    use crate::bounding_hierarchy::BoundingHierarchy;
     use crate::testbase::{
-        build_1200_triangles_bh, build_1200_triangles_bh_rayon, build_120k_triangles_bh,
-        build_120k_triangles_bh_rayon, build_12k_triangles_bh, build_12k_triangles_bh_rayon,
+        build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh,
         intersect_1200_triangles_bh, intersect_120k_triangles_bh, intersect_12k_triangles_bh,
         intersect_bh, load_sponza_scene, TBvh3,
+    };
+    #[cfg(feature = "rayon")]
+    use crate::testbase::{
+        build_1200_triangles_bh_rayon, build_120k_triangles_bh_rayon, build_12k_triangles_bh_rayon,
     };
 
     #[bench]
@@ -1060,6 +1068,7 @@ mod bench {
         });
     }
 
+    #[cfg(feature = "rayon")]
     #[bench]
     /// Benchmark the construction of a `BVH` with 1,200 triangles.
     fn bench_build_1200_triangles_bvh_rayon(b: &mut ::test::Bencher) {
@@ -1067,26 +1076,28 @@ mod bench {
     }
 
     #[bench]
+    #[cfg(feature = "rayon")]
     /// Benchmark the construction of a `BVH` with 12,000 triangles.
     fn bench_build_12k_triangles_bvh_rayon(b: &mut ::test::Bencher) {
         build_12k_triangles_bh_rayon::<TBvh3>(b);
     }
 
     #[bench]
+    #[cfg(feature = "rayon")]
     /// Benchmark the construction of a `BVH` with 120,000 triangles.
     fn bench_build_120k_triangles_bvh_rayon(b: &mut ::test::Bencher) {
         build_120k_triangles_bh_rayon::<TBvh3>(b);
     }
 
     #[bench]
+    #[cfg(feature = "rayon")]
     /// Benchmark the construction of a `BVH` for the Sponza scene.
     fn bench_build_sponza_bvh_rayon(b: &mut ::test::Bencher) {
         let (mut triangles, _) = load_sponza_scene();
         b.iter(|| {
-            TBvh3::build_with_executor(&mut triangles, rayon_executor);
+            TBvh3::build_par(&mut triangles);
         });
     }
-
     #[bench]
     /// Benchmark intersecting 1,200 triangles using the recursive [`Bvh`].
     fn bench_intersect_1200_triangles_bvh(b: &mut ::test::Bencher) {

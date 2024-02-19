@@ -3,8 +3,6 @@
 use super::Ray;
 use crate::{aabb::Aabb, bounding_hierarchy::BHValue, utils::fast_max};
 
-use num::Zero;
-
 /// The [`RayIntersection`] trait allows for generic implementation of ray intersection
 /// useful for our SIMD optimizations.
 pub trait RayIntersection<T: BHValue, const D: usize> {
