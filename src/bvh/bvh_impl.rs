@@ -83,6 +83,7 @@ pub struct BvhNodeBuildArgs<'a, S, T: BHValue, const D: usize> {
 
 impl<'a, S, T: BHValue, const D: usize> BvhNodeBuildArgs<'a, S, T, D> {
     /// Creates the args
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         shapes: &'a Shapes<'a, S>,
         indices: &'a mut [usize],
