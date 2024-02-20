@@ -55,7 +55,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         }
 
         let mut indices = (0..shapes.len())
-            .map(|x| ShapeIndex(x))
+            .map(ShapeIndex)
             .collect::<Vec<ShapeIndex>>();
         let expected_node_count = shapes.len() * 2 - 1;
         let mut nodes = Vec::with_capacity(expected_node_count);
@@ -391,7 +391,7 @@ pub fn rayon_executor<S, T: Send + BHValue, const D: usize>(
 ) where
     S: BHShape<T, D> + Send,
 {
-    if left.len() + right.len() < 64 {
+    if left.node_count() + right.node_count() < 64 {
         left.build();
         right.build();
     } else {
@@ -424,6 +424,55 @@ mod tests {
         use std::collections::HashSet;
 
         let (all_shapes, bh) = build_some_bh::<TBvh3>();
+
+        // It should find all shape indices.
+        let expected_shapes: HashSet<_> = (0..all_shapes.len()).collect();
+        let mut found_shapes = HashSet::new();
+
+        for node in bh.nodes.iter() {
+            match *node {
+                TBvhNode3::Node { .. } => {
+                    assert_eq!(node.shape_index(), None);
+                }
+                TBvhNode3::Leaf { .. } => {
+                    found_shapes.insert(
+                        node.shape_index()
+                            .expect("getting a shape index from a leaf node"),
+                    );
+                }
+            }
+        }
+
+        assert_eq!(expected_shapes, found_shapes);
+    }
+
+    #[test]
+    #[cfg(feature = "rayon")]
+    /// Tests whether the building procedure succeeds in not failing.
+    fn test_build_bvh_rayon() {
+        use crate::testbase::build_some_bh_rayon;
+
+        build_some_bh_rayon::<TBvh3>();
+    }
+
+    #[test]
+    #[cfg(feature = "rayon")]
+    /// Runs some primitive tests for intersections of a ray with a fixed scene given as a [`Bvh`].
+    fn test_traverse_bvh_rayon() {
+        use crate::testbase::traverse_some_bh_rayon;
+
+        traverse_some_bh_rayon::<TBvh3>();
+    }
+
+    #[test]
+    #[cfg(feature = "rayon")]
+    /// Verify contents of the bounding hierarchy for a fixed scene structure
+    fn test_bvh_shape_indices_rayon() {
+        use std::collections::HashSet;
+
+        use crate::testbase::build_some_bh_rayon;
+
+        let (all_shapes, bh) = build_some_bh_rayon::<TBvh3>();
 
         // It should find all shape indices.
         let expected_shapes: HashSet<_> = (0..all_shapes.len()).collect();

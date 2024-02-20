@@ -112,6 +112,14 @@ pub fn build_some_bh<BH: BoundingHierarchy<f32, 3>>() -> (Vec<UnitBox>, BH) {
     (boxes, bh)
 }
 
+/// Creates a [`BoundingHierarchy`] for a fixed scene structure in parallel.
+#[cfg(feature = "rayon")]
+pub fn build_some_bh_rayon<BH: BoundingHierarchy<f32, 3>>() -> (Vec<UnitBox>, BH) {
+    let mut boxes = generate_aligned_boxes();
+    let bh = BH::build_par(&mut boxes);
+    (boxes, bh)
+}
+
 /// Given a ray, a bounding hierarchy, the complete list of shapes in the scene and a list of
 /// expected hits, verifies, whether the ray hits only the expected shapes.
 fn traverse_and_verify<BH: BoundingHierarchy<f32, 3>>(
@@ -133,7 +141,18 @@ fn traverse_and_verify<BH: BoundingHierarchy<f32, 3>>(
 /// Perform some fixed intersection tests on [`BoundingHierarchy`] structures.
 pub fn traverse_some_bh<BH: BoundingHierarchy<f32, 3>>() {
     let (all_shapes, bh) = build_some_bh::<BH>();
+    traverse_some_built_bh(&all_shapes, bh);
+}
 
+/// Perform some fixed intersection tests on [`BoundingHierarchy`] structures.
+#[cfg(feature = "rayon")]
+pub fn traverse_some_bh_rayon<BH: BoundingHierarchy<f32, 3>>() {
+    let (all_shapes, bh) = build_some_bh_rayon::<BH>();
+    traverse_some_built_bh(&all_shapes, bh);
+}
+
+/// Perform some fixed intersection tests on [`BoundingHierarchy`] structures.
+fn traverse_some_built_bh<BH: BoundingHierarchy<f32, 3>>(all_shapes: &[UnitBox], bh: BH) {
     {
         // Define a ray which traverses the x-axis from afar.
         let origin = TPoint3::new(-1000.0, 0.0, 0.0);

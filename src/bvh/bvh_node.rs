@@ -426,7 +426,7 @@ impl<'a, S, T: BHValue, const D: usize> BvhNodeBuildArgs<'a, S, T, D> {
     }
 
     /// Returns the number of nodes that are part of this build.
-    pub fn len(&self) -> usize {
+    pub fn node_count(&self) -> usize {
         self.indices.len()
     }
 
