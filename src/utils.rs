@@ -1,6 +1,7 @@
 //! Utilities module.
 
 use crate::bounding_hierarchy::{BHShape, BHValue};
+use crate::bvh::ShapeIndex;
 use crate::{aabb::Aabb, bvh::Shapes};
 
 use nalgebra::Scalar;
@@ -101,7 +102,7 @@ impl<T: BHValue, const D: usize> Bucket<T, D> {
 }
 
 pub fn joint_aabb_of_shapes<T: BHValue, const D: usize, Shape: BHShape<T, D>>(
-    indices: &[usize],
+    indices: &[ShapeIndex],
     shapes: &Shapes<Shape>,
 ) -> (Aabb<T, D>, Aabb<T, D>) {
     let mut aabb = Aabb::empty();
