@@ -163,7 +163,7 @@ fn traverse_some_built_bh<BH: BoundingHierarchy<f32, 3>>(all_shapes: &[UnitBox],
         for id in -10..11 {
             expected_shapes.insert(id);
         }
-        traverse_and_verify(origin, direction, &all_shapes, &bh, &expected_shapes);
+        traverse_and_verify(origin, direction, all_shapes, &bh, &expected_shapes);
     }
 
     {
@@ -174,7 +174,7 @@ fn traverse_some_built_bh<BH: BoundingHierarchy<f32, 3>>(all_shapes: &[UnitBox],
         // It should hit only one box.
         let mut expected_shapes = HashSet::new();
         expected_shapes.insert(0);
-        traverse_and_verify(origin, direction, &all_shapes, &bh, &expected_shapes);
+        traverse_and_verify(origin, direction, all_shapes, &bh, &expected_shapes);
     }
 
     {
@@ -187,7 +187,7 @@ fn traverse_some_built_bh<BH: BoundingHierarchy<f32, 3>>(all_shapes: &[UnitBox],
         expected_shapes.insert(4);
         expected_shapes.insert(5);
         expected_shapes.insert(6);
-        traverse_and_verify(origin, direction, &all_shapes, &bh, &expected_shapes);
+        traverse_and_verify(origin, direction, all_shapes, &bh, &expected_shapes);
     }
 }
 
