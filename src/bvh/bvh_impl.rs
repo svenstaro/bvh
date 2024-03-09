@@ -69,7 +69,16 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         let shapes = Shapes::from_slice(shapes);
         let (aabb, centroid) = joint_aabb_of_shapes(&indices, &shapes);
         BvhNode::build_with_executor(
-            BvhNodeBuildArgs::new(&shapes, &mut indices, uninit_slice, 0, 0, 0, aabb, centroid),
+            BvhNodeBuildArgs {
+                shapes: &shapes,
+                indices: &mut indices,
+                nodes: uninit_slice,
+                parent_index: 0,
+                depth: 0,
+                node_index: 0,
+                aabb_bounds: aabb,
+                centroid_bounds: centroid,
+            },
             executor,
         );
 
@@ -119,18 +128,13 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     ///
     /// [`Bvh`]: struct.Bvh.html
     ///
-    pub fn pretty_print(&self)
-    where
-        T: std::fmt::Display,
-    {
+    pub fn pretty_print(&self) {
         let nodes = &self.nodes;
         fn print_node<T: BHValue, const D: usize>(
             nodes: &[BvhNode<T, D>],
             node_index: usize,
             depth: usize,
-        ) where
-            T: std::fmt::Display,
-        {
+        ) {
             match nodes[node_index] {
                 BvhNode::Node {
                     child_l_index,
@@ -391,6 +395,7 @@ pub fn rayon_executor<S, T: Send + BHValue, const D: usize>(
 ) where
     S: BHShape<T, D> + Send,
 {
+    // 64 was found experimentally. Calling join() has overhead that makes the build slower without this.
     if left.node_count() + right.node_count() < 64 {
         left.build();
         right.build();

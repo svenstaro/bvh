@@ -114,6 +114,3 @@ pub fn joint_aabb_of_shapes<T: BHValue, const D: usize, Shape: BHShape<T, D>>(
     }
     (aabb, centroid)
 }
-
-#[cfg(test)]
-mod tests {}

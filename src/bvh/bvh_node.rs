@@ -62,7 +62,6 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
         if let Some((left, right)) = Self::prep_build(args) {
             Self::build(left);
             Self::build(right);
-            // BvhBuildStrategy::<X, Y>::dispatch(|| Self::build(left, strategy), || Self::build(right, strategy), left.indices.len() + right.indices.len(), left.depth as usize)
         }
     }
 
@@ -75,10 +74,7 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
         mut executor: impl FnMut(BvhNodeBuildArgs<S, T, D>, BvhNodeBuildArgs<S, T, D>),
     ) {
         if let Some((left, right)) = Self::prep_build(args) {
-            // Self::build(left);
-            // Self::build(right);
             executor(left, right);
-            // RayonBuildStrategy::dispatch(|| Self::build(left), || Self::build(right), left.indices.len() + right.indices.len(), left.depth as usize)
         }
     }
 
@@ -158,26 +154,26 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
         let (l_nodes, r_nodes) = next_nodes.split_at_mut(left_len);
 
         Some((
-            BvhNodeBuildArgs::new(
+            BvhNodeBuildArgs {
                 shapes,
-                child_l_indices,
-                l_nodes,
-                node_index,
-                depth + 1,
-                child_l_index,
-                child_l_aabb,
-                child_l_centroid,
-            ),
-            BvhNodeBuildArgs::new(
+                indices: child_l_indices,
+                nodes: l_nodes,
+                parent_index: node_index,
+                depth: depth + 1,
+                node_index: child_l_index,
+                aabb_bounds: child_l_aabb,
+                centroid_bounds: child_l_centroid,
+            },
+            BvhNodeBuildArgs {
                 shapes,
-                child_r_indices,
-                r_nodes,
-                node_index,
-                depth + 1,
-                child_r_index,
-                child_r_aabb,
-                child_r_centroid,
-            ),
+                indices: child_r_indices,
+                nodes: r_nodes,
+                parent_index: node_index,
+                depth: depth + 1,
+                node_index: child_r_index,
+                aabb_bounds: child_r_aabb,
+                centroid_bounds: child_r_centroid,
+            },
         ))
     }
 
@@ -260,19 +256,20 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
             }
 
             let (child_l_indices, child_r_indices) = indices.split_at_mut(l_count);
-            let mut i = 0;
-            for group in l_assignments.iter() {
-                for x in group {
-                    child_l_indices[i] = *x;
-                    i += 1;
-                }
+
+            for (l_i, shape_index) in l_assignments
+                .iter()
+                .flat_map(|group| group.iter())
+                .enumerate()
+            {
+                child_l_indices[l_i] = *shape_index;
             }
-            i = 0;
-            for group in r_assignments.iter() {
-                for x in group {
-                    child_r_indices[i] = *x;
-                    i += 1;
-                }
+            for (r_i, shape_index) in r_assignments
+                .iter()
+                .flat_map(|group| group.iter())
+                .enumerate()
+            {
+                child_r_indices[r_i] = *shape_index;
             }
 
             (
@@ -328,9 +325,12 @@ pub struct Shapes<'a, S> {
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug)]
+/// ShapeIndex represents an entry into the Shapes struct. It is used to help ensure that we are only accessing Shapes
+/// with unique indices.
 pub(crate) struct ShapeIndex(pub usize);
 
 impl<S> Shapes<'_, S> {
+    /// Calls set_bh_node_index on the Shape found at shape_index.
     pub(crate) fn set_node_index<T: BHValue, const D: usize>(
         &self,
         shape_index: ShapeIndex,
@@ -347,6 +347,8 @@ impl<S> Shapes<'_, S> {
                 .set_bh_node_index(node_index);
         }
     }
+
+    /// Returns a reference to the Shape found at shape_index.
     pub(crate) fn get<T: BHValue, const D: usize>(&self, shape_index: ShapeIndex) -> &S
     where
         S: BHShape<T, D>,
@@ -355,6 +357,7 @@ impl<S> Shapes<'_, S> {
         unsafe { self.ptr.add(shape_index.0).as_ref().unwrap() }
     }
 
+    /// Creates a ```Shapes``` that inherits its lifetime from the slice.
     pub(crate) fn from_slice<T: BHValue, const D: usize>(slice: &mut [S]) -> Shapes<S>
     where
         S: BHShape<T, D>,
@@ -372,41 +375,17 @@ unsafe impl<S> Sync for Shapes<'_, S> {}
 
 /// Holds the arguments for calling build.
 pub struct BvhNodeBuildArgs<'a, S, T: BHValue, const D: usize> {
-    shapes: &'a Shapes<'a, S>,
-    indices: &'a mut [ShapeIndex],
-    nodes: &'a mut [MaybeUninit<BvhNode<T, D>>],
-    parent_index: usize,
-    depth: u32,
-    node_index: usize,
-    aabb_bounds: Aabb<T, D>,
-    centroid_bounds: Aabb<T, D>,
+    pub(crate) shapes: &'a Shapes<'a, S>,
+    pub(crate) indices: &'a mut [ShapeIndex],
+    pub(crate) nodes: &'a mut [MaybeUninit<BvhNode<T, D>>],
+    pub(crate) parent_index: usize,
+    pub(crate) depth: u32,
+    pub(crate) node_index: usize,
+    pub(crate) aabb_bounds: Aabb<T, D>,
+    pub(crate) centroid_bounds: Aabb<T, D>,
 }
 
 impl<'a, S, T: BHValue, const D: usize> BvhNodeBuildArgs<'a, S, T, D> {
-    /// Creates the args
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new(
-        shapes: &'a Shapes<'a, S>,
-        indices: &'a mut [ShapeIndex],
-        nodes: &'a mut [MaybeUninit<BvhNode<T, D>>],
-        parent_index: usize,
-        depth: u32,
-        node_index: usize,
-        aabb_bounds: Aabb<T, D>,
-        centroid_bounds: Aabb<T, D>,
-    ) -> Self {
-        Self {
-            shapes,
-            indices,
-            nodes,
-            parent_index,
-            depth,
-            node_index,
-            aabb_bounds,
-            centroid_bounds,
-        }
-    }
-
     /// Finish building this portion of the bvh.
     pub fn build(self)
     where
