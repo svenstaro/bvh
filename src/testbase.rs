@@ -546,7 +546,7 @@ pub fn intersect_list(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::test::B
 
         // Iterate over the list of triangles.
         for triangle in triangles {
-            ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
+            std::hint::black_box(ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c));
         }
     });
 }
@@ -580,7 +580,11 @@ pub fn intersect_list_aabb(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::te
         for triangle in triangles {
             // First test whether the ray intersects the `Aabb` of the triangle.
             if ray.intersects_aabb(&triangle.aabb()) {
-                ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
+                std::hint::black_box(ray.intersects_triangle(
+                    &triangle.a,
+                    &triangle.b,
+                    &triangle.c,
+                ));
             }
         }
     });
