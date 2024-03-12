@@ -23,7 +23,7 @@ iterative traversal of the BVH.
 
 ```rust
 use bvh::aabb::{Aabb, Bounded};
-use bvh::bounding_hierarchy::BHShape;
+use bvh::bounding_hierarchy::{BHShape, BoundingHierarchy};
 use bvh::bvh::Bvh;
 use bvh::ray::Ray;
 use nalgebra::{Point3, Vector3};
@@ -107,7 +107,7 @@ The following benchmarks are run with two different datasets:
 * A randomly generated scene with unit sized cubes containing a total of (1200, 12000, and 120000 triangles).
 * Sponza, a popular scene for benchmarking graphics engines.
 
-All of these benchmarks were taken on a Ryzen 3900x.
+All benchmarks were taken on a Ryzen 3900x.
 
 All benchmarks unless otherwise noted were captured with the simd feature off.
 

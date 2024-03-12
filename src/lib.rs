@@ -21,7 +21,7 @@
 //!
 //! ```
 //! use bvh::aabb::{Aabb, Bounded};
-//! use bvh::bounding_hierarchy::BHShape;
+//! use bvh::bounding_hierarchy::{BHShape, BoundingHierarchy};
 //! use bvh::bvh::Bvh;
 //! use nalgebra::{Point3, Vector3};
 //! use bvh::ray::Ray;
@@ -66,7 +66,7 @@
 //!     });
 //! }
 //!
-//! let bvh = Bvh::build(&mut spheres);
+//! let bvh = Bvh::build_par(&mut spheres);
 //! let hit_sphere_aabbs = bvh.traverse(&ray, &spheres);
 //! ```
 //!
