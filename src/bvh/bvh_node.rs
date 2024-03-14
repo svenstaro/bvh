@@ -65,7 +65,7 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
         }
     }
 
-    /// Builds a [`BvhNode`] recursively in parallel using SAH partitioning.
+    /// Builds a [`BvhNode`] with a custom executor function using SAH partitioning.
     ///
     /// [`BvhNode`]: enum.BvhNode.html
     ///
@@ -78,11 +78,14 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
         }
     }
 
-    /// Builds a [`BvhNode`] recursively using SAH partitioning.
+    /// Builds a single [`BvhNode`] in the [`Bvh`] heirarchy.
+    /// Returns the arguments needed to call this function and build the future
+    /// children of this node. If you do not call this function using the arguments
+    /// returned then the Bvh will not be completely built.
     ///
     /// [`BvhNode`]: enum.BvhNode.html
     ///
-    pub fn prep_build<S: BHShape<T, D>>(
+    fn prep_build<S: BHShape<T, D>>(
         args: BvhNodeBuildArgs<S, T, D>,
     ) -> Option<(BvhNodeBuildArgs<S, T, D>, BvhNodeBuildArgs<S, T, D>)> {
         let BvhNodeBuildArgs {
@@ -137,8 +140,12 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
             )
         };
 
+        // Since the Bvh is a full binary tree, we can calculate exactly how many indices each side of the tree
+        // will occupy with the formula 2 * (num_shapes) - 1.
         let left_len = child_l_indices.len() * 2 - 1;
+        // Place the left child right after the current node.
         let child_l_index = node_index + 1;
+        // Place the right child after all of the nodes in the tree under the left child.
         let child_r_index = child_l_index + left_len;
 
         // Construct the actual data structure and replace the dummy node.
@@ -150,7 +157,9 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
             child_r_index,
         });
 
+        // Remove the current node from the future build steps.
         let next_nodes = &mut nodes[1..];
+        // Split the remaining nodes in the slice based on how many nodes we will need for each subtree.
         let (l_nodes, r_nodes) = next_nodes.split_at_mut(left_len);
 
         Some((
@@ -189,11 +198,9 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
         (Aabb<T, D>, Aabb<T, D>, &'a mut [ShapeIndex]),
         (Aabb<T, D>, Aabb<T, D>, &'a mut [ShapeIndex]),
     ) {
-        // Create six `Bucket`s, and six index assignment vector.
-        // let mut buckets = [Bucket::empty(); NUM_BUCKETS];
-        // let mut bucket_assignments: [SmallVec<[usize; 1024]>; NUM_BUCKETS] = Default::default();
-        BUCKETS.with(move |buckets| {
-            let bucket_assignments = &mut *buckets.borrow_mut();
+        // Use fixed size arrays of `Bucket`s, and thread local index assignment vectors.
+        BUCKETS.with(move |buckets_ref| {
+            let bucket_assignments = &mut *buckets_ref.borrow_mut();
             let mut buckets = [Bucket::empty(); NUM_BUCKETS];
             buckets.fill(Bucket::empty());
             for b in bucket_assignments.iter_mut() {
@@ -357,7 +364,7 @@ impl<S> Shapes<'_, S> {
         unsafe { self.ptr.add(shape_index.0).as_ref().unwrap() }
     }
 
-    /// Creates a ```Shapes``` that inherits its lifetime from the slice.
+    /// Creates a [`Shapes`] that inherits its lifetime from the slice.
     pub(crate) fn from_slice<T: BHValue, const D: usize>(slice: &mut [S]) -> Shapes<S>
     where
         S: BHShape<T, D>,
