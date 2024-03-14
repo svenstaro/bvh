@@ -109,7 +109,7 @@ The following benchmarks are run with two different datasets:
 
 All benchmarks were taken on a Ryzen 3900x.
 
-All benchmarks unless otherwise noted were captured with the simd feature off.
+All benchmarks unless otherwise noted were captured with the `simd` feature off.
 
 ### Intersection via traversal of the list of triangles
 
