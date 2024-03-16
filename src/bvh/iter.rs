@@ -1,13 +1,10 @@
 use crate::aabb::Bounded;
+use crate::bounding_hierarchy::BHValue;
 use crate::bvh::{Bvh, BvhNode};
 use crate::ray::Ray;
 
-use nalgebra::{ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
-use num::Zero;
-
 /// Iterator to traverse a [`Bvh`] without memory allocations
-pub struct BvhTraverseIterator<'bvh, 'shape, T: Scalar + Copy, const D: usize, Shape: Bounded<T, D>>
-{
+pub struct BvhTraverseIterator<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>> {
     /// Reference to the [`Bvh`] to traverse
     bvh: &'bvh Bvh<T, D>,
     /// Reference to the input ray
@@ -24,10 +21,8 @@ pub struct BvhTraverseIterator<'bvh, 'shape, T: Scalar + Copy, const D: usize, S
     has_node: bool,
 }
 
-impl<'bvh, 'shape, T, const D: usize, Shape: Bounded<T, D>>
+impl<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>>
     BvhTraverseIterator<'bvh, 'shape, T, D, Shape>
-where
-    T: Scalar + Copy + SimdPartialOrd + ClosedSub + PartialOrd + ClosedMul + Zero,
 {
     /// Creates a new [`BvhTraverseIterator`]
     pub fn new(bvh: &'bvh Bvh<T, D>, ray: &'bvh Ray<T, D>, shapes: &'shape [Shape]) -> Self {
@@ -112,10 +107,8 @@ where
     }
 }
 
-impl<'bvh, 'shape, T, const D: usize, Shape: Bounded<T, D>> Iterator
+impl<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>> Iterator
     for BvhTraverseIterator<'bvh, 'shape, T, D, Shape>
-where
-    T: Scalar + Copy + SimdPartialOrd + ClosedSub + PartialOrd + ClosedMul + Zero,
 {
     type Item = &'shape Shape;
 

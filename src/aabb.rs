@@ -1,14 +1,15 @@
 //! Axis Aligned Bounding Boxes.
 
-use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, Point, SVector, Scalar, SimdPartialOrd};
-use num::{Float, FromPrimitive, One, Signed, Zero};
+use nalgebra::{Point, SVector};
 use std::fmt;
 use std::ops::Index;
+
+use crate::bounding_hierarchy::BHValue;
 
 /// [`Aabb`] struct.
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Aabb<T: Scalar + Copy, const D: usize> {
+pub struct Aabb<T: BHValue, const D: usize> {
     /// Minimum coordinates
     pub min: Point<T, D>,
 
@@ -16,7 +17,7 @@ pub struct Aabb<T: Scalar + Copy, const D: usize> {
     pub max: Point<T, D>,
 }
 
-impl<T: Scalar + Copy + std::fmt::Display, const D: usize> fmt::Display for Aabb<T, D> {
+impl<T: BHValue + std::fmt::Display, const D: usize> fmt::Display for Aabb<T, D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Min bound: {}; Max bound: {}", self.min, self.max)
     }
@@ -26,7 +27,7 @@ impl<T: Scalar + Copy + std::fmt::Display, const D: usize> fmt::Display for Aabb
 ///
 /// [`Aabb`]: struct.Aabb.html
 ///
-pub trait Bounded<T: Scalar + Copy, const D: usize> {
+pub trait Bounded<T: BHValue, const D: usize> {
     /// Returns the geometric bounds of this object in the form of an [`Aabb`].
     ///
     /// # Examples
@@ -56,25 +57,25 @@ pub trait Bounded<T: Scalar + Copy, const D: usize> {
     fn aabb(&self) -> Aabb<T, D>;
 }
 
-impl<T: Scalar + Copy, const D: usize, B: Bounded<T, D>> Bounded<T, D> for &B {
+impl<T: BHValue, const D: usize, B: Bounded<T, D>> Bounded<T, D> for &B {
     fn aabb(&self) -> Aabb<T, D> {
         B::aabb(self)
     }
 }
 
-impl<T: Scalar + Copy, const D: usize, B: Bounded<T, D>> Bounded<T, D> for &mut B {
+impl<T: BHValue, const D: usize, B: Bounded<T, D>> Bounded<T, D> for &mut B {
     fn aabb(&self) -> Aabb<T, D> {
         B::aabb(self)
     }
 }
 
-impl<T: Scalar + Copy, const D: usize, B: Bounded<T, D>> Bounded<T, D> for Box<B> {
+impl<T: BHValue, const D: usize, B: Bounded<T, D>> Bounded<T, D> for Box<B> {
     fn aabb(&self) -> Aabb<T, D> {
         B::aabb(self)
     }
 }
 
-impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
+impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// Creates a new [`Aabb`] with the given bounds.
     ///
     /// # Examples
@@ -117,10 +118,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     ///
     /// [`Aabb`]: struct.Aabb.html
     ///
-    pub fn empty() -> Self
-    where
-        T: Float,
-    {
+    pub fn empty() -> Self {
         Self {
             min: SVector::<T, D>::from_element(T::infinity()).into(),
             max: SVector::<T, D>::from_element(T::neg_infinity()).into(),
@@ -151,10 +149,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     ///
     /// [`Aabb`]: struct.Aabb.html
     ///
-    pub fn infinite() -> Self
-    where
-        T: Float,
-    {
+    pub fn infinite() -> Self {
         Self {
             min: SVector::<T, D>::from_element(T::neg_infinity()).into(),
             max: SVector::<T, D>::from_element(T::infinity()).into(),
@@ -179,10 +174,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     /// [`Aabb`]: struct.Aabb.html
     /// [`Point`]: nalgebra::Point
     ///
-    pub fn contains(&self, p: &Point<T, D>) -> bool
-    where
-        T: PartialOrd,
-    {
+    pub fn contains(&self, p: &Point<T, D>) -> bool {
         p >= &self.min && p <= &self.max
     }
 
@@ -205,10 +197,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     /// [`Aabb`]: struct.Aabb.html
     /// [`Point3`]: nalgebra::Point3
     ///
-    pub fn approx_contains_eps(&self, p: &Point<T, D>, epsilon: T) -> bool
-    where
-        T: ClosedSub + PartialOrd + Float,
-    {
+    pub fn approx_contains_eps(&self, p: &Point<T, D>, epsilon: T) -> bool {
         let ne = -epsilon;
         (p - self.min) > SVector::from_element(ne)
             && (p - self.max) < SVector::from_element(epsilon)
@@ -231,10 +220,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     /// ```
     ///
     /// [`Aabb`]: struct.Aabb.html
-    pub fn approx_contains_aabb_eps(&self, other: &Aabb<T, D>, epsilon: T) -> bool
-    where
-        T: ClosedSub + PartialOrd + Float,
-    {
+    pub fn approx_contains_aabb_eps(&self, other: &Aabb<T, D>, epsilon: T) -> bool {
         self.approx_contains_eps(&other.min, epsilon)
             && self.approx_contains_eps(&other.max, epsilon)
     }
@@ -256,10 +242,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     /// ```
     ///
     /// [`Aabb`]: struct.Aabb.html
-    pub fn relative_eq(&self, other: &Aabb<T, D>, epsilon: T) -> bool
-    where
-        T: ClosedSub + PartialOrd + Signed,
-    {
+    pub fn relative_eq(&self, other: &Aabb<T, D>, epsilon: T) -> bool {
         let ep_vec = SVector::from_element(epsilon);
         (self.min - other.min).abs() < ep_vec && (self.max - other.max).abs() < ep_vec
     }
@@ -295,10 +278,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     ///
     /// [`Aabb`]: struct.Aabb.html
     ///
-    pub fn join(&self, other: &Aabb<T, D>) -> Aabb<T, D>
-    where
-        T: SimdPartialOrd,
-    {
+    pub fn join(&self, other: &Aabb<T, D>) -> Aabb<T, D> {
         Aabb::with_bounds(
             self.min.coords.inf(&other.min.coords).into(),
             self.max.coords.sup(&other.max.coords).into(),
@@ -340,10 +320,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     ///
     /// [`Aabb::join`]: struct.Aabb.html
     ///
-    pub fn join_mut(&mut self, other: &Aabb<T, D>)
-    where
-        T: SimdPartialOrd,
-    {
+    pub fn join_mut(&mut self, other: &Aabb<T, D>) {
         *self = self.join(other);
     }
 
@@ -373,10 +350,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     /// [`Aabb`]: struct.Aabb.html
     /// [`Point3`]: nalgebra::Point3
     ///
-    pub fn grow(&self, other: &Point<T, D>) -> Aabb<T, D>
-    where
-        T: SimdPartialOrd,
-    {
+    pub fn grow(&self, other: &Point<T, D>) -> Aabb<T, D> {
         Aabb::with_bounds(
             self.min.coords.inf(&other.coords).into(),
             self.max.coords.sup(&other.coords).into(),
@@ -409,10 +383,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     /// [`Aabb::grow`]: struct.Aabb.html
     /// [`Point3`]: nalgebra::Point3
     ///
-    pub fn grow_mut(&mut self, other: &Point<T, D>)
-    where
-        T: SimdPartialOrd,
-    {
+    pub fn grow_mut(&mut self, other: &Point<T, D>) {
         *self = self.grow(other);
     }
 
@@ -445,10 +416,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     /// [`Aabb`]: struct.Aabb.html
     /// [`Bounded`]: trait.Bounded.html
     ///
-    pub fn join_bounded<B: Bounded<T, D>>(&self, other: &B) -> Aabb<T, D>
-    where
-        T: SimdPartialOrd,
-    {
+    pub fn join_bounded<B: Bounded<T, D>>(&self, other: &B) -> Aabb<T, D> {
         self.join(&other.aabb())
     }
 
@@ -466,10 +434,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     ///
     /// [`Aabb`]: struct.Aabb.html
     ///
-    pub fn size(&self) -> SVector<T, D>
-    where
-        T: ClosedSub,
-    {
+    pub fn size(&self) -> SVector<T, D> {
         self.max - self.min
     }
 
@@ -491,10 +456,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     /// [`Aabb`]: struct.Aabb.html
     /// [`Point3`]: nalgebra::Point3
     ///
-    pub fn center(&self) -> Point<T, D>
-    where
-        T: ClosedSub + ClosedAdd + ClosedMul + FromPrimitive,
-    {
+    pub fn center(&self) -> Point<T, D> {
         (self.min.coords + (self.size() * T::from_f32(0.5).unwrap())).into()
     }
 
@@ -518,10 +480,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     ///
     /// [`Aabb`]: struct.Aabb.html
     ///
-    pub fn is_empty(&self) -> bool
-    where
-        T: SimdPartialOrd,
-    {
+    pub fn is_empty(&self) -> bool {
         // Special trick here, we use a join/supremum to pick the highest values, and if the highest
         // values are not equal to the max, then obviously a min was higher!
         // This should be two simd instructions (I hope) for vectors/points up to size 4.
@@ -546,10 +505,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     ///
     /// [`Aabb`]: struct.Aabb.html
     ///
-    pub fn surface_area(&self) -> T
-    where
-        T: FromPrimitive + ClosedSub + ClosedAdd + ClosedMul + Zero,
-    {
+    pub fn surface_area(&self) -> T {
         let size = self.size();
         T::from_f32(2.0).unwrap() * size.dot(&size)
     }
@@ -571,10 +527,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     ///
     /// [`Aabb`]: struct.Aabb.html
     ///
-    pub fn volume(&self) -> T
-    where
-        T: ClosedSub + ClosedMul + One,
-    {
+    pub fn volume(&self) -> T {
         self.size().product()
     }
 
@@ -595,10 +548,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
     ///
     /// [`Aabb`]: struct.Aabb.html
     ///
-    pub fn largest_axis(&self) -> usize
-    where
-        T: ClosedSub + PartialOrd,
-    {
+    pub fn largest_axis(&self) -> usize {
         self.size().imax()
     }
 }
@@ -608,7 +558,7 @@ impl<T: Scalar + Copy, const D: usize> Aabb<T, D> {
 /// [`Aabb`]: struct.Aabb.html
 /// [`empty()`]: #method.empty
 ///
-impl<T: Scalar + Copy + Float, const D: usize> Default for Aabb<T, D> {
+impl<T: BHValue, const D: usize> Default for Aabb<T, D> {
     fn default() -> Aabb<T, D> {
         Aabb::empty()
     }
@@ -632,7 +582,7 @@ impl<T: Scalar + Copy + Float, const D: usize> Default for Aabb<T, D> {
 ///
 /// [`Aabb`]: struct.Aabb.html
 ///
-impl<T: Scalar + Copy, const D: usize> Index<usize> for Aabb<T, D> {
+impl<T: BHValue, const D: usize> Index<usize> for Aabb<T, D> {
     type Output = Point<T, D>;
 
     fn index(&self, index: usize) -> &Point<T, D> {
@@ -660,7 +610,7 @@ impl<T: Scalar + Copy, const D: usize> Index<usize> for Aabb<T, D> {
 /// [`Aabb`]: struct.Aabb.html
 /// [`Bounded`]: trait.Bounded.html
 ///
-impl<T: Scalar + Copy, const D: usize> Bounded<T, D> for Aabb<T, D> {
+impl<T: BHValue, const D: usize> Bounded<T, D> for Aabb<T, D> {
     fn aabb(&self) -> Aabb<T, D> {
         *self
     }
@@ -682,7 +632,7 @@ impl<T: Scalar + Copy, const D: usize> Bounded<T, D> for Aabb<T, D> {
 /// [`Bounded`]: trait.Bounded.html
 /// [`Point3`]: nalgebra::Point3
 ///
-impl<T: Scalar + Copy, const D: usize> Bounded<T, D> for Point<T, D> {
+impl<T: BHValue, const D: usize> Bounded<T, D> for Point<T, D> {
     fn aabb(&self) -> Aabb<T, D> {
         Aabb::with_bounds(*self, *self)
     }

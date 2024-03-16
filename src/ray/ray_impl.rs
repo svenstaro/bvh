@@ -1,17 +1,15 @@
 //! This module defines a Ray structure and intersection algorithms
 //! for axis aligned bounding boxes and triangles.
 
-use crate::aabb::Aabb;
-use nalgebra::{
-    ClosedAdd, ClosedMul, ClosedSub, ComplexField, Point, SVector, Scalar, SimdPartialOrd,
-};
+use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
+use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, ComplexField, Point, SVector, SimdPartialOrd};
 use num::{Float, One, Zero};
 
 use super::intersect_default::RayIntersection;
 
 /// A struct which defines a ray and some of its cached values.
 #[derive(Debug, Clone, Copy)]
-pub struct Ray<T: Scalar + Copy, const D: usize> {
+pub struct Ray<T: BHValue, const D: usize> {
     /// The ray origin.
     pub origin: Point<T, D>,
 
@@ -45,7 +43,7 @@ impl<T> Intersection<T> {
     }
 }
 
-impl<T: Scalar + Copy, const D: usize> Ray<T, D> {
+impl<T: BHValue, const D: usize> Ray<T, D> {
     /// Creates a new [`Ray`] from an `origin` and a `direction`.
     /// `direction` will be normalized.
     ///

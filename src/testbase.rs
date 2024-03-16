@@ -112,6 +112,14 @@ pub fn build_some_bh<BH: BoundingHierarchy<f32, 3>>() -> (Vec<UnitBox>, BH) {
     (boxes, bh)
 }
 
+/// Creates a [`BoundingHierarchy`] for a fixed scene structure in parallel.
+#[cfg(feature = "rayon")]
+pub fn build_some_bh_rayon<BH: BoundingHierarchy<f32, 3>>() -> (Vec<UnitBox>, BH) {
+    let mut boxes = generate_aligned_boxes();
+    let bh = BH::build_par(&mut boxes);
+    (boxes, bh)
+}
+
 /// Given a ray, a bounding hierarchy, the complete list of shapes in the scene and a list of
 /// expected hits, verifies, whether the ray hits only the expected shapes.
 fn traverse_and_verify<BH: BoundingHierarchy<f32, 3>>(
@@ -133,7 +141,18 @@ fn traverse_and_verify<BH: BoundingHierarchy<f32, 3>>(
 /// Perform some fixed intersection tests on [`BoundingHierarchy`] structures.
 pub fn traverse_some_bh<BH: BoundingHierarchy<f32, 3>>() {
     let (all_shapes, bh) = build_some_bh::<BH>();
+    traverse_some_built_bh(&all_shapes, bh);
+}
 
+/// Perform some fixed intersection tests on [`BoundingHierarchy`] structures.
+#[cfg(feature = "rayon")]
+pub fn traverse_some_bh_rayon<BH: BoundingHierarchy<f32, 3>>() {
+    let (all_shapes, bh) = build_some_bh_rayon::<BH>();
+    traverse_some_built_bh(&all_shapes, bh);
+}
+
+/// Perform some fixed intersection tests on [`BoundingHierarchy`] structures.
+fn traverse_some_built_bh<BH: BoundingHierarchy<f32, 3>>(all_shapes: &[UnitBox], bh: BH) {
     {
         // Define a ray which traverses the x-axis from afar.
         let origin = TPoint3::new(-1000.0, 0.0, 0.0);
@@ -144,7 +163,7 @@ pub fn traverse_some_bh<BH: BoundingHierarchy<f32, 3>>() {
         for id in -10..11 {
             expected_shapes.insert(id);
         }
-        traverse_and_verify(origin, direction, &all_shapes, &bh, &expected_shapes);
+        traverse_and_verify(origin, direction, all_shapes, &bh, &expected_shapes);
     }
 
     {
@@ -155,7 +174,7 @@ pub fn traverse_some_bh<BH: BoundingHierarchy<f32, 3>>() {
         // It should hit only one box.
         let mut expected_shapes = HashSet::new();
         expected_shapes.insert(0);
-        traverse_and_verify(origin, direction, &all_shapes, &bh, &expected_shapes);
+        traverse_and_verify(origin, direction, all_shapes, &bh, &expected_shapes);
     }
 
     {
@@ -168,7 +187,7 @@ pub fn traverse_some_bh<BH: BoundingHierarchy<f32, 3>>() {
         expected_shapes.insert(4);
         expected_shapes.insert(5);
         expected_shapes.insert(6);
-        traverse_and_verify(origin, direction, &all_shapes, &bh, &expected_shapes);
+        traverse_and_verify(origin, direction, all_shapes, &bh, &expected_shapes);
     }
 }
 
@@ -491,6 +510,33 @@ pub fn build_120k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Ben
     build_n_triangles_bh::<T>(10_000, b);
 }
 
+#[cfg(all(feature = "bench", feature = "rayon"))]
+fn build_n_triangles_bh_rayon<T: BoundingHierarchy<f32, 3>>(n: usize, b: &mut ::test::Bencher) {
+    let bounds = default_bounds();
+    let mut triangles = create_n_cubes(n, &bounds);
+    b.iter(|| {
+        T::build_par(&mut triangles);
+    });
+}
+
+/// Benchmark the construction of a [`BoundingHierarchy`] with 1,200 triangles.
+#[cfg(all(feature = "bench", feature = "rayon"))]
+pub fn build_1200_triangles_bh_rayon<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
+    build_n_triangles_bh_rayon::<T>(100, b);
+}
+
+/// Benchmark the construction of a [`BoundingHierarchy`] with 12,000 triangles.
+#[cfg(all(feature = "bench", feature = "rayon"))]
+pub fn build_12k_triangles_bh_rayon<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
+    build_n_triangles_bh_rayon::<T>(1_000, b);
+}
+
+/// Benchmark the construction of a [`BoundingHierarchy`] with 120,000 triangles.
+#[cfg(all(feature = "bench", feature = "rayon"))]
+pub fn build_120k_triangles_bh_rayon<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
+    build_n_triangles_bh_rayon::<T>(10_000, b);
+}
+
 /// Benchmark intersecting the `triangles` list without acceleration structures.
 #[cfg(feature = "bench")]
 pub fn intersect_list(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::test::Bencher) {
@@ -500,7 +546,7 @@ pub fn intersect_list(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::test::B
 
         // Iterate over the list of triangles.
         for triangle in triangles {
-            ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
+            std::hint::black_box(ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c));
         }
     });
 }
@@ -534,7 +580,11 @@ pub fn intersect_list_aabb(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::te
         for triangle in triangles {
             // First test whether the ray intersects the `Aabb` of the triangle.
             if ray.intersects_aabb(&triangle.aabb()) {
-                ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
+                std::hint::black_box(ray.intersects_triangle(
+                    &triangle.a,
+                    &triangle.b,
+                    &triangle.c,
+                ));
             }
         }
     });

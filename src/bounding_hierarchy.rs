@@ -1,16 +1,51 @@
 //! This module defines the [`BoundingHierarchy`] trait.
 
-use nalgebra::Scalar;
+use nalgebra::{ClosedAdd, ClosedDiv, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
+use num::{Float, FromPrimitive, Signed};
 
 use crate::aabb::Bounded;
+#[cfg(feature = "rayon")]
+use crate::bvh::rayon_executor;
+use crate::bvh::BvhNodeBuildArgs;
 use crate::ray::Ray;
+
+/// Encapsulates the required traits for the value type used in the Bvh.
+pub trait BHValue:
+    Scalar
+    + Copy
+    + FromPrimitive
+    + ClosedSub
+    + ClosedAdd
+    + SimdPartialOrd
+    + ClosedMul
+    + ClosedDiv
+    + Float
+    + Signed
+    + std::fmt::Display
+{
+}
+
+impl<T> BHValue for T where
+    T: Scalar
+        + Copy
+        + FromPrimitive
+        + ClosedSub
+        + ClosedAdd
+        + SimdPartialOrd
+        + ClosedMul
+        + ClosedDiv
+        + Float
+        + Signed
+        + std::fmt::Display
+{
+}
 
 /// Describes a shape as referenced by a [`BoundingHierarchy`] leaf node.
 /// Knows the index of the node in the [`BoundingHierarchy`] it is in.
 ///
 /// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
 ///
-pub trait BHShape<T: Scalar + Copy, const D: usize>: Bounded<T, D> {
+pub trait BHShape<T: BHValue, const D: usize>: Bounded<T, D> {
     /// Sets the index of the referenced [`BoundingHierarchy`] node.
     ///
     /// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
@@ -24,7 +59,7 @@ pub trait BHShape<T: Scalar + Copy, const D: usize>: Bounded<T, D> {
     fn bh_node_index(&self) -> usize;
 }
 
-impl<T: Scalar + Copy, const D: usize, S: BHShape<T, D>> BHShape<T, D> for &mut S {
+impl<T: BHValue, const D: usize, S: BHShape<T, D>> BHShape<T, D> for &mut S {
     fn set_bh_node_index(&mut self, idx: usize) {
         S::set_bh_node_index(self, idx)
     }
@@ -34,7 +69,7 @@ impl<T: Scalar + Copy, const D: usize, S: BHShape<T, D>> BHShape<T, D> for &mut 
     }
 }
 
-impl<T: Scalar + Copy, const D: usize, S: BHShape<T, D>> BHShape<T, D> for Box<S> {
+impl<T: BHValue, const D: usize, S: BHShape<T, D>> BHShape<T, D> for Box<S> {
     fn set_bh_node_index(&mut self, idx: usize) {
         S::set_bh_node_index(self, idx)
     }
@@ -46,7 +81,7 @@ impl<T: Scalar + Copy, const D: usize, S: BHShape<T, D>> BHShape<T, D> for Box<S
 
 /// This trait defines an acceleration structure with space partitioning.
 /// This structure is used to efficiently compute ray-scene intersections.
-pub trait BoundingHierarchy<T: Scalar + Copy, const D: usize> {
+pub trait BoundingHierarchy<T: BHValue, const D: usize> {
     /// Creates a new [`BoundingHierarchy`] from the `shapes` slice.
     ///
     /// # Examples
@@ -116,6 +151,25 @@ pub trait BoundingHierarchy<T: Scalar + Copy, const D: usize> {
     /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
     ///
     fn build<Shape: BHShape<T, D>>(shapes: &mut [Shape]) -> Self;
+
+    /// Builds the bvh with a custom executor.
+    fn build_with_executor<
+        Shape: BHShape<T, D>,
+        Executor: FnMut(BvhNodeBuildArgs<'_, Shape, T, D>, BvhNodeBuildArgs<'_, Shape, T, D>),
+    >(
+        shapes: &mut [Shape],
+        executor: Executor,
+    ) -> Self;
+
+    /// Builds the bvh with a rayon based executor.
+    #[cfg(feature = "rayon")]
+    fn build_par<Shape: BHShape<T, D> + Send>(shapes: &mut [Shape]) -> Self
+    where
+        T: Send,
+        Self: Sized,
+    {
+        Self::build_with_executor(shapes, rayon_executor)
+    }
 
     /// Traverses the [`BoundingHierarchy`].
     /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements were hit by `ray`.
@@ -197,9 +251,7 @@ pub trait BoundingHierarchy<T: Scalar + Copy, const D: usize> {
     fn pretty_print(&self) {}
 }
 
-impl<T: Scalar + Copy, const D: usize, H: BoundingHierarchy<T, D>> BoundingHierarchy<T, D>
-    for Box<H>
-{
+impl<T: BHValue, const D: usize, H: BoundingHierarchy<T, D>> BoundingHierarchy<T, D> for Box<H> {
     fn build<Shape: BHShape<T, D>>(shapes: &mut [Shape]) -> Self {
         Box::new(H::build(shapes))
     }
@@ -210,5 +262,15 @@ impl<T: Scalar + Copy, const D: usize, H: BoundingHierarchy<T, D>> BoundingHiera
         shapes: &'a [Shape],
     ) -> Vec<&Shape> {
         H::traverse(self, ray, shapes)
+    }
+
+    fn build_with_executor<
+        Shape: BHShape<T, D>,
+        Executor: FnMut(BvhNodeBuildArgs<'_, Shape, T, D>, BvhNodeBuildArgs<'_, Shape, T, D>),
+    >(
+        shapes: &mut [Shape],
+        executor: Executor,
+    ) -> Self {
+        Box::new(H::build_with_executor(shapes, executor))
     }
 }

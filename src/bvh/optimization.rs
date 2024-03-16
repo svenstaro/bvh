@@ -6,33 +6,17 @@
 //! [`Bvh`]: struct.Bvh.html
 //!
 
-use crate::bounding_hierarchy::BHShape;
+use crate::bounding_hierarchy::{BHShape, BHValue};
 use crate::bvh::*;
 
 use log::info;
-use nalgebra::{ClosedAdd, ClosedDiv, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
-use num::{FromPrimitive, Signed, Zero};
 
 // TODO Consider: Instead of getting the scene's shapes passed, let leaf nodes store an `Aabb`
 // that is updated from the outside, perhaps by passing not only the indices of the changed
 // shapes, but also their new `Aabb`'s into update_shapes().
 // TODO Consider: Stop updating `Aabb`'s upwards the tree once an `Aabb` didn't get changed.
 
-impl<T, const D: usize> Bvh<T, D>
-where
-    T: Scalar
-        + Copy
-        + FromPrimitive
-        + ClosedSub
-        + ClosedMul
-        + ClosedAdd
-        + ClosedDiv
-        + Zero
-        + SimdPartialOrd
-        + PartialOrd
-        + Signed
-        + std::fmt::Display,
-{
+impl<T: BHValue, const D: usize> Bvh<T, D> {
     fn node_is_left_child(&self, node_index: usize) -> bool {
         // Get the index of the parent.
         let node_parent_index = self.nodes[node_index].parent();
@@ -425,7 +409,6 @@ mod tests {
         shapes[3].pos = TPoint3::new(-10.0, 10.0, -10.0);
         shapes[4].pos = TPoint3::new(11.0, 1.0, 2.0);
         shapes[5].pos = TPoint3::new(11.0, 2.0, 2.0);
-
         let refit_shape_indices: Vec<_> = (0..6).collect();
         bvh.update_shapes(&refit_shape_indices, &mut shapes);
         bvh.assert_consistent(&shapes);
