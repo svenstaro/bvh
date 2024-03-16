@@ -19,6 +19,8 @@ the BVH once in advance. This technique is especially useful in ray/path tracers
 use in a shader this module also exports a flattening procedure, which allows for
 iterative traversal of the BVH.
 
+It uses `rayon` by default to parallelize building the BVH.
+
 ## Example
 
 ```rust

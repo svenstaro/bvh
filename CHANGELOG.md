@@ -5,13 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## 0.9.0 - 2024-03-09
+## 0.9.0 - 2024-03-16
 
-- Added an API for allowing the BVH build process to be parallelized and provided an implementation using Rayon under the `rayon` feature flag
+- Added an API for allowing the BVH build process to be parallelized and provided an implementation using Rayon under the `rayon` feature flag [#103](https://github.com/svenstaro/bvh/pull/103) (thanks @dbenson24)
 - Another round of performance optimizations for the Build operation. Single threaded builds are 4-5x faster and large BVHs with parallelization
-are able to build 4-5x faster. There was an almost 15x speedup for building a 120k triangle BVH.
-- Trait bounds were consolidated to the BHShape trait instead of being spread across various functions, should have no major implications.
-
+are able to build 4-5x faster. There was an almost 15x speedup for building a 120k triangle BVH. [#103](https://github.com/svenstaro/bvh/pull/103) (thanks @dbenson24)
+- Trait bounds were consolidated to the BHShape trait instead of being spread across various functions, should have no major implications. [#103](https://github.com/svenstaro/bvh/pull/103) (thanks @dbenson24)
 
 ## 0.8.0 - 2024-02-17
 
