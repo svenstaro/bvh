@@ -176,7 +176,6 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
 #[cfg(test)]
 mod tests {
     use std::cmp;
-    use std::f32::INFINITY;
 
     use crate::testbase::{tuple_to_point, tuplevec_small_strategy, TAabb3, TRay3, TupleVec};
 
@@ -258,12 +257,12 @@ mod tests {
             // Either the intersection is in the back side (including the triangle-plane)
             if on_back_side {
                 // Intersection must be INFINITY, u and v are undefined
-                assert!(intersects.distance == INFINITY);
+                assert!(intersects.distance == f32::INFINITY);
             } else {
                 // Or it is on the front side
                 // Either the intersection is inside the triangle, which it should be
                 // for all u, v such that u+v <= 1.0
-                let intersection_inside = (0.0..=1.0).contains(&uv_sum) && intersects.distance < INFINITY;
+                let intersection_inside = (0.0..=1.0).contains(&uv_sum) && intersects.distance < f32::INFINITY;
 
                 // Or the input data was close to the border
                 let close_to_border =

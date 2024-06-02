@@ -1,5 +1,4 @@
 //! Common utilities shared by unit tests.
-#![cfg(test)]
 
 use crate::aabb::Bounded;
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
@@ -364,7 +363,6 @@ pub fn next_point3_raw(seed: &mut u64) -> (i32, i32, i32) {
 /// Generates a new [`Point3`], which will lie inside the given [`Aabb`]. Mutates the seed.
 pub fn next_point3(seed: &mut u64, aabb: &TAabb3) -> TPoint3 {
     let (a, b, c) = next_point3_raw(seed);
-    use std::i32;
     let float_vector = TVector3::new(
         (a as f32 / i32::MAX as f32) + 1.0,
         (b as f32 / i32::MAX as f32) + 1.0,
