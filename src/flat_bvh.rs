@@ -13,22 +13,22 @@ use num::Float;
 ///
 pub struct FlatNode<T: BHValue, const D: usize> {
     /// The [`Aabb`] of the [`Bvh`] node. Prior to testing the [`Aabb`] bounds,
-    /// the `entry_index` must be checked. In case the entry_index is [`u32::max_value()`],
+    /// the `entry_index` must be checked. In case the entry_index is [`u32::MAX`],
     /// the [`Aabb`] is undefined.
     ///
     /// [`Aabb`]: ../aabb/struct.Aabb.html
     /// [`Bvh`]: ../bvh/struct.Bvh.html
-    /// [`u32::max_value()`]: https://doc.rust-lang.org/std/u32/constant.MAX.html
+    /// [`u32::MAX`]: https://doc.rust-lang.org/std/u32/constant.MAX.html
     ///
     pub aabb: Aabb<T, D>,
 
     /// The index of the `FlatNode` to jump to, if the [`Aabb`] test is positive.
-    /// If this value is [`u32::max_value()`] then the current node is a leaf node.
+    /// If this value is [`u32::MAX`] then the current node is a leaf node.
     /// Leaf nodes contain a shape index and an exit index. In leaf nodes the
     /// [`Aabb`] is undefined.
     ///
     /// [`Aabb`]: ../aabb/struct.Aabb.html
-    /// [`u32::max_value()`]: https://doc.rust-lang.org/std/u32/constant.MAX.html
+    /// [`u32::MAX`]: https://doc.rust-lang.org/std/u32/constant.MAX.html
     ///
     pub entry_index: u32,
 
@@ -71,7 +71,7 @@ impl<T: BHValue + Float, const D: usize> BvhNode<T, D> {
             this_aabb,
             (next_free + 1) as u32,
             index_after_subtree as u32,
-            u32::max_value(),
+            u32::MAX,
         );
         vec[next_free] = navigator_node;
         index_after_subtree
@@ -120,7 +120,7 @@ impl<T: BHValue + Float, const D: usize> BvhNode<T, D> {
                 next_shape += 1;
                 let leaf_node = constructor(
                     &Aabb::empty(),
-                    u32::max_value(),
+                    u32::MAX,
                     next_shape as u32,
                     shape_index as u32,
                 );
@@ -389,7 +389,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
         while index < max_length {
             let node = &self[index];
 
-            if node.entry_index == u32::max_value() {
+            if node.entry_index == u32::MAX {
                 // If the entry_index is MAX_UINT32, then it's a leaf node.
                 let shape = &shapes[node.shape_index as usize];
                 if ray.intersects_aabb(&shape.aabb()) {
