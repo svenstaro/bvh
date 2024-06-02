@@ -25,6 +25,22 @@ jobs:
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: clippy
+      - run: cargo install cargo-tarpaulin
+      - run: cargo tarpaulin --out xml
+      - name: Upload coverage report to codecov.io
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
   build-and-test-no-simd:
     name: CI with ${{ matrix.rust }} on ${{ matrix.os }} [no SIMD]
     runs-on: ${{ matrix.os }}
@@ -44,13 +60,6 @@ jobs:
 
       - name: cargo test
         run: cargo test
-
-      - name: Upload coverage report to codecov.io
-        uses: codecov/codecov-action@v4
-        with:
-          fail_ci_if_error: true
-          token: ${{ secrets.CODECOV_TOKEN }}
-        if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
 
   build-and-test-simd:
     name: CI with nightly on ${{ matrix.os }} [SIMD]
