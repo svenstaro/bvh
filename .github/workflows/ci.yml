@@ -47,6 +47,9 @@ jobs:
 
       - name: Upload coverage report to codecov.io
         uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
         if: matrix.os == 'ubuntu-latest' && matrix.rust == 'stable'
 
   build-and-test-simd:
