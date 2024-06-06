@@ -147,10 +147,9 @@ impl<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>> Iterator
 // TODO: Once iterators are part of the BoundingHierarchy trait we can move all this to testbase.
 #[cfg(test)]
 mod tests {
-    use nalgebra::{OPoint, OVector};
-
     use crate::ray::Ray;
     use crate::testbase::{generate_aligned_boxes, TBvh3, TPoint3, TVector3, UnitBox};
+    use nalgebra::{OPoint, OVector};
     use std::collections::HashSet;
 
     /// Creates an empty [`Bvh`].
