@@ -4,6 +4,7 @@
 use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
 use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, ComplexField, Point, SVector, SimdPartialOrd};
 use num::{Float, One, Zero};
+use crate::utils::{fast_max, fast_min};
 
 use super::intersect_default::RayIntersection;
 
@@ -112,17 +113,7 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
     /// If there are no intersections, it returns negative one for both distances
     pub fn intersection_slice_for_aabb(&self, aabb: &Aabb<T, D>) -> (T, T)
     where
-        T: ClosedSub
-            + ClosedMul
-            + ClosedAdd
-            + Signed
-            + Zero
-            + PartialOrd
-            + SimdPartialOrd
-            + FromPrimitive
-            + Copy
-            + Scalar
-            + RealField,
+        T: BHValue,
     {
         // https://iquilezles.org/articles/intersectors/
         let mut n = self.origin.coords - aabb.center().coords;

@@ -455,8 +455,6 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     ///
     #[inline]
     pub fn half_size(&self) -> SVector<T, D>
-    where
-        T: Scalar + Copy + ClosedSub + ClosedAdd + ClosedMul + FromPrimitive + RealField,
     {
         self.size() * T::from_f32(0.5).unwrap()
     }

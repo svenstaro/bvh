@@ -1,6 +1,5 @@
-use nalgebra::{RealField, Scalar};
-
 use crate::aabb::Bounded;
+use crate::bounding_hierarchy::BHValue;
 use crate::bvh::{Bvh, BvhNode};
 use crate::ray::Ray;
 
@@ -16,7 +15,7 @@ enum RestChild {
 pub struct DistanceTraverseIterator<
     'bvh,
     'shape,
-    T: Scalar + Copy,
+    T: BHValue,
     const D: usize,
     Shape: Bounded<T, D>,
     const ASCENDING: bool,
@@ -40,7 +39,7 @@ pub struct DistanceTraverseIterator<
 impl<'bvh, 'shape, T, const D: usize, Shape: Bounded<T, D>, const ASCENDING: bool>
     DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, ASCENDING>
 where
-    T: Scalar + Copy + Scalar + RealField,
+    T: BHValue,
 {
     /// Creates a new [`DistanceTraverseIterator `]
     pub fn new(bvh: &'bvh Bvh<T, D>, ray: &'bvh Ray<T, D>, shapes: &'shape [Shape]) -> Self {
@@ -219,7 +218,7 @@ where
 impl<'bvh, 'shape, T, const D: usize, Shape: Bounded<T, D>, const ASCENDING: bool> Iterator
     for DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, ASCENDING>
 where
-    T: Scalar + Copy + RealField,
+    T: BHValue,
 {
     type Item = &'shape Shape;
 

@@ -12,7 +12,7 @@ use crate::utils::joint_aabb_of_shapes;
 
 use std::mem::MaybeUninit;
 
-use super::{BvhNode, BvhNodeBuildArgs, ShapeIndex, Shapes};
+use super::{BvhNode, BvhNodeBuildArgs, DistanceTraverseIterator, ShapeIndex, Shapes};
 
 /// The [`Bvh`] data structure. Contains the list of [`BvhNode`]s.
 ///
@@ -136,8 +136,6 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         ray: &'bvh Ray<T, D>,
         shapes: &'shape [Shape],
     ) -> DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, true>
-    where
-        T: RealField,
     {
         DistanceTraverseIterator::new(self, ray, shapes)
     }
@@ -154,8 +152,6 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         ray: &'bvh Ray<T, D>,
         shapes: &'shape [Shape],
     ) -> DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, false>
-    where
-        T: RealField,
     {
         DistanceTraverseIterator::new(self, ray, shapes)
     }
