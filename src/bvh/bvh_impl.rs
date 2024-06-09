@@ -135,8 +135,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         &'bvh self,
         ray: &'bvh Ray<T, D>,
         shapes: &'shape [Shape],
-    ) -> DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, true>
-    {
+    ) -> DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, true> {
         DistanceTraverseIterator::new(self, ray, shapes)
     }
 
@@ -151,8 +150,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         &'bvh self,
         ray: &'bvh Ray<T, D>,
         shapes: &'shape [Shape],
-    ) -> DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, false>
-    {
+    ) -> DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, false> {
         DistanceTraverseIterator::new(self, ray, shapes)
     }
 

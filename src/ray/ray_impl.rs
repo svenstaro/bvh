@@ -1,10 +1,10 @@
 //! This module defines a Ray structure and intersection algorithms
 //! for axis aligned bounding boxes and triangles.
 
+use crate::utils::{fast_max, fast_min};
 use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
 use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, ComplexField, Point, SVector, SimdPartialOrd};
 use num::{Float, One, Zero};
-use crate::utils::{fast_max, fast_min};
 
 use super::intersect_default::RayIntersection;
 

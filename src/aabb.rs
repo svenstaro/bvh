@@ -454,8 +454,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// [`Aabb`]: struct.Aabb.html
     ///
     #[inline]
-    pub fn half_size(&self) -> SVector<T, D>
-    {
+    pub fn half_size(&self) -> SVector<T, D> {
         self.size() * T::from_f32(0.5).unwrap()
     }
 
