@@ -92,7 +92,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 
     /// Traverses the [`Bvh`].
-    /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements were hit by `ray`.
+    /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     ///
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.Aabb.html
@@ -111,7 +111,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 
     /// Creates a [`BvhTraverseIterator`] to traverse the [`Bvh`].
-    /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements were hit by `ray`.
+    /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     ///
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.Aabb.html
@@ -122,6 +122,42 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         shapes: &'shape [Shape],
     ) -> BvhTraverseIterator<'bvh, 'shape, T, D, Shape> {
         BvhTraverseIterator::new(self, ray, shapes)
+    }
+
+    /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
+    /// Returns a subset of [`shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Return in order from nearest to farthest for ray.
+    ///
+    /// [`Bvh`]: struct.Bvh.html
+    /// [`Aabb`]: ../aabb/struct.AABB.html
+    ///
+    pub fn nearest_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
+        &'bvh self,
+        ray: &'bvh Ray<T, D>,
+        shapes: &'shape [Shape],
+    ) -> DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, true>
+    where
+        T: RealField,
+    {
+        DistanceTraverseIterator::new(self, ray, shapes)
+    }
+
+    /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
+    /// Returns a subset of [`Shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Return in order from nearest to farthest for ray.
+    ///
+    /// [`Bvh`]: struct.Bvh.html
+    /// [`Aabb`]: ../aabb/struct.AABB.html
+    ///
+    pub fn farthest_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
+        &'bvh self,
+        ray: &'bvh Ray<T, D>,
+        shapes: &'shape [Shape],
+    ) -> DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, false>
+    where
+        T: RealField,
+    {
+        DistanceTraverseIterator::new(self, ray, shapes)
     }
 
     /// Prints the [`Bvh`] in a tree-like visualization.
@@ -251,8 +287,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         let parent = node.parent();
         assert_eq!(
             expected_parent_index, parent,
-            "Wrong parent index. Expected: {}; Actual: {}",
-            expected_parent_index, parent
+            "Wrong parent index. Expected: {expected_parent_index}; Actual: {parent}"
         );
 
         match *node {
@@ -298,9 +333,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
                 let shape_aabb = shapes[shape_index].aabb();
                 assert!(
                     expected_outer_aabb.approx_contains_aabb_eps(&shape_aabb, T::epsilon()),
-                    "Shape's Aabb lies outside the expected bounds.\n\tBounds: {}\n\tShape: {}",
-                    expected_outer_aabb,
-                    shape_aabb
+                    "{}", "Shape's Aabb lies outside the expected bounds.\n\tBounds: {expected_outer_aabb}\n\tShape: {shape_aabb}"
                 );
             }
         }

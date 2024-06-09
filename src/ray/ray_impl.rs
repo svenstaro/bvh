@@ -104,6 +104,48 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
         self.ray_intersects_aabb(aabb)
     }
 
+    /// Intersect [`Aabb`] by [`Ray`]
+    /// Returns slice of intersections, two numbers `T`
+    /// where the first number is the distance from [`Ray`] to the nearest intersection point
+    /// and the second number is the distance from [`Ray`] to the farthest intersection point
+    ///
+    /// If there are no intersections, it returns negative one for both distances
+    pub fn intersection_slice_for_aabb(&self, aabb: &Aabb<T, D>) -> (T, T)
+    where
+        T: ClosedSub
+            + ClosedMul
+            + ClosedAdd
+            + Signed
+            + Zero
+            + PartialOrd
+            + SimdPartialOrd
+            + FromPrimitive
+            + Copy
+            + Scalar
+            + RealField,
+    {
+        // https://iquilezles.org/articles/intersectors/
+        let mut n = self.origin.coords - aabb.center().coords;
+        n.component_mul_assign(&self.inv_direction);
+
+        let k = self.inv_direction.abs().component_mul(&aabb.half_size());
+        let t1 = -n - k;
+        let t2 = -n + k;
+
+        let entry_distance = t1
+            .iter()
+            .skip(1)
+            .fold(t1[0], |acc, x| -> T { fast_max(*x, acc) });
+        let exit_distance = t2.iter().skip(1).fold(t2[0], |acc, x| fast_min(*x, acc));
+
+        // no intersection
+        if entry_distance > exit_distance || exit_distance < T::zero() {
+            return (T::from_f32(-1.0).unwrap(), T::from_f32(-1.0).unwrap());
+        }
+
+        (fast_max(entry_distance, T::zero()), exit_distance)
+    }
+
     /// Implementation of the
     /// [Möller-Trumbore triangle/ray intersection algorithm](https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm).
     /// Returns the distance to the intersection, as well as
