@@ -254,6 +254,40 @@ mod tests {
             assert!(!ray.intersects_aabb(&aabb) || aabb.contains(&ray.origin));
         }
 
+        // Test whether a `Ray` which points at the center of an `Aabb` takes intersection slice.
+        #[test]
+        fn test_ray_slice_at_aabb_center(data in (tuplevec_small_strategy(),
+                                                   tuplevec_small_strategy(),
+                                                   tuplevec_small_strategy())) {
+            let (ray, aabb) = gen_ray_to_aabb(data);
+            let (start_dist, end_dist) = ray.intersection_slice_for_aabb(&aabb);
+            assert!(start_dist < end_dist);
+            assert!(start_dist >= 0.0);
+        }
+
+        // Test whether a `Ray` which points away from the center of an `Aabb`
+        // cannot take intersection slice of it, unless its origin is inside the `Aabb`.
+        #[test]
+        fn test_ray_slice_from_aabb_center(data in (tuplevec_small_strategy(),
+                                                     tuplevec_small_strategy(),
+                                                     tuplevec_small_strategy())) {
+            let (mut ray, aabb) = gen_ray_to_aabb(data);
+
+            // Invert the direction of the ray
+            ray.direction = -ray.direction;
+            ray.inv_direction = -ray.inv_direction;
+
+            let (start_dist, end_dist) = ray.intersection_slice_for_aabb(&aabb);
+            if aabb.contains(&ray.origin) {
+                // ray inside of aabb
+                assert!(start_dist < end_dist);
+                assert!(start_dist >= 0.0);
+            } else {
+                // ray outside of aabb and doesn't intersect it
+                assert!((start_dist, end_dist) == (-1.0, -1.0));
+            }
+        }
+
         // Test whether a `Ray` which points at the center of a triangle
         // intersects it, unless it sees the back face, which is culled.
         #[test]
