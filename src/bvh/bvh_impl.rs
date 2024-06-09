@@ -329,7 +329,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
                 let shape_aabb = shapes[shape_index].aabb();
                 assert!(
                     expected_outer_aabb.approx_contains_aabb_eps(&shape_aabb, T::epsilon()),
-                    "{}", "Shape's Aabb lies outside the expected bounds.\n\tBounds: {expected_outer_aabb}\n\tShape: {shape_aabb}"
+                    "Shape's Aabb lies outside the expected bounds.\n\tBounds: {expected_outer_aabb}\n\tShape: {shape_aabb}"
                 );
             }
         }
