@@ -20,7 +20,7 @@ rand = "0.8"
 log = "0.4"
 serde = { optional = true, version = "1", features = ["derive"] }
 num = "0.4.0"
-nalgebra = { version = "0.32.2", features = ["default", "serde-serialize"] }
+nalgebra = { version = "0.33.0", features = ["default", "serde-serialize"] }
 rayon = {optional = true, version = "1.8.1" }
 
 [dev-dependencies]

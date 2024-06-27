@@ -1,6 +1,8 @@
 //! This module defines the [`BoundingHierarchy`] trait.
 
-use nalgebra::{ClosedAdd, ClosedDiv, ClosedMul, ClosedSub, Scalar, SimdPartialOrd};
+use nalgebra::{
+    ClosedAddAssign, ClosedDivAssign, ClosedMulAssign, ClosedSubAssign, Scalar, SimdPartialOrd,
+};
 use num::{Float, FromPrimitive, Signed};
 
 use crate::aabb::Bounded;
@@ -14,11 +16,11 @@ pub trait BHValue:
     Scalar
     + Copy
     + FromPrimitive
-    + ClosedSub
-    + ClosedAdd
+    + ClosedSubAssign
+    + ClosedAddAssign
     + SimdPartialOrd
-    + ClosedMul
-    + ClosedDiv
+    + ClosedMulAssign
+    + ClosedDivAssign
     + Float
     + Signed
     + std::fmt::Display
@@ -29,11 +31,11 @@ impl<T> BHValue for T where
     T: Scalar
         + Copy
         + FromPrimitive
-        + ClosedSub
-        + ClosedAdd
+        + ClosedSubAssign
+        + ClosedAddAssign
         + SimdPartialOrd
-        + ClosedMul
-        + ClosedDiv
+        + ClosedMulAssign
+        + ClosedDivAssign
         + Float
         + Signed
         + std::fmt::Display
