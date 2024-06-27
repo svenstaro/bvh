@@ -58,6 +58,7 @@ pub fn tuple_to_vector(tpl: &TupleVec) -> TVector3 {
 }
 
 /// Define some [`Bounded`] structure.
+#[derive(PartialEq)]
 pub struct UnitBox {
     pub id: i32,
     pub pos: TPoint3,
@@ -188,6 +189,48 @@ fn traverse_some_built_bh<BH: BoundingHierarchy<f32, 3>>(all_shapes: &[UnitBox],
         expected_shapes.insert(6);
         traverse_and_verify(origin, direction, all_shapes, &bh, &expected_shapes);
     }
+}
+
+/// Perform some fixed distance tests on [`BoundingHierarchy`] structures.
+pub fn nearest_candidates_some_bh<BH: BoundingHierarchy<f32, 3>>() {
+    let (all_shapes, bh) = build_some_bh::<BH>();
+
+    for point in [
+        TPoint3::new(0.0, 0.0, 0.0),
+        TPoint3::new(1.0, -0.5, 2.0),
+        TPoint3::new(2.0, 1.0, -1.3),
+        TPoint3::new(0.5, 0.0, -0.1),
+    ] {
+        nearest_candidates_and_verify(point, &all_shapes, &bh);
+    }
+}
+
+/// Given a query point, a bounding hierarchy, the complete list of shapes in the scene and a list of
+/// expected hits, verifies that nearest_candidates returns a list containing the correct answer.
+fn nearest_candidates_and_verify<BH: BoundingHierarchy<f32, 3>>(
+    query_point: TPoint3,
+    all_shapes: &[UnitBox],
+    bh: &BH,
+) {
+    let candidates = bh.nearest_candidates(&query_point, all_shapes);
+
+    let mut best = (&all_shapes[0], f32::MAX);
+    for shape in all_shapes {
+        let distance = (shape.pos - query_point).norm();
+        if distance < best.1 {
+            best = (shape, distance);
+        }
+    }
+
+    println!(
+        "Ratio {}",
+        candidates.len() as f32 / all_shapes.len() as f32
+    );
+    println!("Query point: {:?}", query_point);
+    println!("Best shape: {:?}", best.0.pos);
+    assert!(candidates.contains(&best.0));
+    // assert the function actually prunes.
+    assert!((candidates.len() as f32 / all_shapes.len() as f32) < 0.25);
 }
 
 /// A triangle struct. Instance of a more complex [`Bounded`] primitive.
