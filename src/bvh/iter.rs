@@ -33,7 +33,7 @@ impl<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>>
             stack: [0; 32],
             node_index: 0,
             stack_size: 0,
-            has_node: true,
+            has_node: !bvh.nodes.is_empty(),
         }
     }
 
@@ -149,7 +149,15 @@ impl<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>> Iterator
 mod tests {
     use crate::ray::Ray;
     use crate::testbase::{generate_aligned_boxes, TBvh3, TPoint3, TVector3, UnitBox};
+    use nalgebra::{OPoint, OVector};
     use std::collections::HashSet;
+
+    /// Creates an empty [`Bvh`].
+    pub fn build_empty_bvh() -> ([UnitBox; 0], TBvh3) {
+        let mut empty_array = [];
+        let bvh = TBvh3::build(&mut empty_array);
+        (empty_array, bvh)
+    }
 
     /// Creates a [`Bvh`] for a fixed scene structure.
     pub fn build_some_bvh() -> (Vec<UnitBox>, TBvh3) {
@@ -205,6 +213,18 @@ mod tests {
         traverse_and_verify_iterator(ray_origin, ray_direction, all_shapes, bvh, expected_shapes);
     }
 
+    /// Perform some fixed intersection tests on an empty BH structure.
+    pub fn traverse_empty_bvh() {
+        let (empty_array, bvh) = build_empty_bvh();
+        traverse_and_verify_base(
+            OPoint::origin(),
+            OVector::x(),
+            &empty_array,
+            &bvh,
+            &HashSet::new(),
+        );
+    }
+
     /// Perform some fixed intersection tests on BH structures.
     pub fn traverse_some_bvh() {
         let (all_shapes, bvh) = build_some_bvh();
@@ -250,6 +270,7 @@ mod tests {
     #[test]
     /// Runs some primitive tests for intersections of a ray with a fixed scene given as a Bvh.
     fn test_traverse_bvh() {
+        traverse_empty_bvh();
         traverse_some_bvh();
     }
 }

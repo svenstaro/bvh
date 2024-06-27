@@ -102,6 +102,10 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         ray: &Ray<T, D>,
         shapes: &'a [Shape],
     ) -> Vec<&Shape> {
+        if self.nodes.is_empty() {
+            // There won't be a 0th node_index.
+            return Vec::new();
+        }
         let mut indices = Vec::new();
         BvhNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
         indices
