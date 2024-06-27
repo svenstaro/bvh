@@ -1,3 +1,5 @@
+use nalgebra::Point;
+
 use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue};
 use crate::utils::{joint_aabb_of_shapes, Bucket};
@@ -320,6 +322,80 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
                 if node_index != 0 || query.intersects_aabb(&shapes[shape_index].aabb()) {
                     indices.push(shape_index);
                 }
+            }
+        }
+    }
+
+    /// Traverses the [`Bvh`] recursively and returns all shapes whose [`Aabb`] countains
+    /// a candidate shape for being the nearest to the given point.
+    ///
+    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Bvh`]: struct.Bvh.html
+    ///
+    pub fn nearest_candidates_recursive<Shape: Bounded<T, D>>(
+        nodes: &[BvhNode<T, D>],
+        node_index: usize,
+        origin: &Point<T, D>,
+        shapes: &[Shape],
+        indices: &mut Vec<(usize, T)>,
+        best_min_distance: &mut T,
+        best_max_distance: &mut T,
+    ) {
+        match nodes[node_index] {
+            BvhNode::Node {
+                ref child_l_aabb,
+                child_l_index,
+                ref child_r_aabb,
+                child_r_index,
+                ..
+            } => {
+                // Compute min/max dists for both children
+                let [child_l_dists, child_r_dists] =
+                    [child_l_aabb, child_r_aabb].map(|aabb| aabb.get_min_max_distances(origin));
+
+                // Update best max distance before traversing children to avoid unnecessary traversals
+                // where right node prunes left node.
+                *best_max_distance = best_max_distance.min(child_l_dists.1.min(child_r_dists.1));
+
+                // Traverse children
+                for ((dist_min, dist_max), index) in [
+                    (child_l_dists, child_l_index),
+                    (child_r_dists, child_r_index),
+                ] {
+                    // Node is better by a margin.
+                    if dist_max <= *best_min_distance {
+                        indices.clear();
+                    }
+
+                    // Node might contain a candidate
+                    if dist_min <= *best_max_distance {
+                        Self::nearest_candidates_recursive(
+                            nodes,
+                            index,
+                            origin,
+                            shapes,
+                            indices,
+                            best_min_distance,
+                            best_max_distance,
+                        );
+                    }
+                }
+            }
+            BvhNode::Leaf { shape_index, .. } => {
+                let aabb = shapes[shape_index].aabb();
+                let (min_dist, max_dist) = aabb.get_min_max_distances(origin);
+
+                if !indices.is_empty() && max_dist < *best_min_distance {
+                    // Node is better by a margin
+                    indices.clear();
+                }
+
+                // Also update min_dist here since we have a credible (small) bounding box.
+                *best_min_distance = best_min_distance.min(min_dist);
+                *best_max_distance = best_max_distance.min(max_dist);
+
+                // we reached a leaf, we add it to the list of indices since it is a potential candidate
+                indices.push((shape_index, min_dist));
             }
         }
     }
