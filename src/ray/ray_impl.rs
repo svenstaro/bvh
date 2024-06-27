@@ -2,7 +2,9 @@
 //! for axis aligned bounding boxes and triangles.
 
 use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
-use nalgebra::{ClosedAdd, ClosedMul, ClosedSub, ComplexField, Point, SVector, SimdPartialOrd};
+use nalgebra::{
+    ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, ComplexField, Point, SVector, SimdPartialOrd,
+};
 use num::{Float, One, Zero};
 
 use super::intersect_default::RayIntersection;
@@ -99,7 +101,7 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
     ///
     pub fn intersects_aabb(&self, aabb: &Aabb<T, D>) -> bool
     where
-        T: ClosedSub + ClosedMul + Zero + PartialOrd + SimdPartialOrd,
+        T: ClosedSubAssign + ClosedMulAssign + Zero + PartialOrd + SimdPartialOrd,
     {
         self.ray_intersects_aabb(aabb)
     }
@@ -118,7 +120,7 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
         c: &Point<T, D>,
     ) -> Intersection<T>
     where
-        T: ClosedAdd + ClosedSub + ClosedMul + Zero + One + Float,
+        T: ClosedAddAssign + ClosedSubAssign + ClosedMulAssign + Zero + One + Float,
     {
         let a_to_b = *b - *a;
         let a_to_c = *c - *a;
