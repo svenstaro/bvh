@@ -1,6 +1,7 @@
 //! This module defines a Ray structure and intersection algorithms
 //! for axis aligned bounding boxes and triangles.
 
+use crate::utils::{fast_max, fast_min};
 use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
 use nalgebra::{
     ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, ComplexField, Point, SVector, SimdPartialOrd,
@@ -104,6 +105,38 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
         T: ClosedSubAssign + ClosedMulAssign + Zero + PartialOrd + SimdPartialOrd,
     {
         self.ray_intersects_aabb(aabb)
+    }
+
+    /// Intersect [`Aabb`] by [`Ray`]
+    /// Returns slice of intersections, two numbers `T`
+    /// where the first number is the distance from [`Ray`] to the nearest intersection point
+    /// and the second number is the distance from [`Ray`] to the farthest intersection point
+    ///
+    /// If there are no intersections, it returns negative one for both distances
+    pub fn intersection_slice_for_aabb(&self, aabb: &Aabb<T, D>) -> (T, T)
+    where
+        T: BHValue,
+    {
+        // https://iquilezles.org/articles/intersectors/
+        let mut n = self.origin.coords - aabb.center().coords;
+        n.component_mul_assign(&self.inv_direction);
+
+        let k = self.inv_direction.abs().component_mul(&aabb.half_size());
+        let t1 = -n - k;
+        let t2 = -n + k;
+
+        let entry_distance = t1
+            .iter()
+            .skip(1)
+            .fold(t1[0], |acc, x| -> T { fast_max(*x, acc) });
+        let exit_distance = t2.iter().skip(1).fold(t2[0], |acc, x| fast_min(*x, acc));
+
+        // no intersection
+        if entry_distance > exit_distance || exit_distance < T::zero() {
+            return (T::from_f32(-1.0).unwrap(), T::from_f32(-1.0).unwrap());
+        }
+
+        (fast_max(entry_distance, T::zero()), exit_distance)
     }
 
     /// Implementation of the
@@ -221,6 +254,40 @@ mod tests {
             ray.direction = -ray.direction;
             ray.inv_direction = -ray.inv_direction;
             assert!(!ray.intersects_aabb(&aabb) || aabb.contains(&ray.origin));
+        }
+
+        // Test whether a `Ray` which points at the center of an `Aabb` takes intersection slice.
+        #[test]
+        fn test_ray_slice_at_aabb_center(data in (tuplevec_small_strategy(),
+                                                   tuplevec_small_strategy(),
+                                                   tuplevec_small_strategy())) {
+            let (ray, aabb) = gen_ray_to_aabb(data);
+            let (start_dist, end_dist) = ray.intersection_slice_for_aabb(&aabb);
+            assert!(start_dist < end_dist);
+            assert!(start_dist >= 0.0);
+        }
+
+        // Test whether a `Ray` which points away from the center of an `Aabb`
+        // cannot take intersection slice of it, unless its origin is inside the `Aabb`.
+        #[test]
+        fn test_ray_slice_from_aabb_center(data in (tuplevec_small_strategy(),
+                                                     tuplevec_small_strategy(),
+                                                     tuplevec_small_strategy())) {
+            let (mut ray, aabb) = gen_ray_to_aabb(data);
+
+            // Invert the direction of the ray
+            ray.direction = -ray.direction;
+            ray.inv_direction = -ray.inv_direction;
+
+            let (start_dist, end_dist) = ray.intersection_slice_for_aabb(&aabb);
+            if aabb.contains(&ray.origin) {
+                // ray inside of aabb
+                assert!(start_dist < end_dist);
+                assert!(start_dist >= 0.0);
+            } else {
+                // ray outside of aabb and doesn't intersect it
+                assert!((start_dist, end_dist) == (-1.0, -1.0));
+            }
         }
 
         // Test whether a `Ray` which points at the center of a triangle
