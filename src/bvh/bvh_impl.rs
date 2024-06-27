@@ -4,6 +4,8 @@
 //! [`BvhNode`]: struct.BvhNode.html
 //!
 
+use nalgebra::Point;
+
 use crate::aabb::{Aabb, Bounded};
 use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
 use crate::bvh::iter::BvhTraverseIterator;
@@ -157,6 +159,43 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     ) -> DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, false> {
         DistanceTraverseIterator::new(self, ray, shapes)
     }
+
+    /// Traverses the [`Bvh`].
+    /// Returns a subset of `shapes` which are candidates for being the closest to `point`.
+    ///
+    ///
+    /// [`Bvh`]: struct.Bvh.html
+    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    ///
+    pub fn nearest_candidates<'a, Shape: Bounded<T, D>>(
+        &self,
+        origin: &Point<T, D>,
+        shapes: &'a [Shape],
+    ) -> Vec<&'a Shape>
+    where
+        Self: std::marker::Sized,
+    {
+        let mut indices = Vec::new();
+        let mut best_min_distance = T::max_value();
+        let mut best_max_distance = T::max_value();
+        BvhNode::nearest_candidates_recursive(
+            &self.nodes,
+            0,
+            origin,
+            shapes,
+            &mut indices,
+            &mut best_min_distance,
+            &mut best_max_distance,
+        );
+
+        indices
+            .into_iter()
+            // Filter out shapes that are too far but couldn't be pruned before.
+            .filter(|(_, node_min)| *node_min <= best_max_distance)
+            .map(|(i, _)| &shapes[i])
+            .collect()
+    }
+
 
     /// Prints the [`Bvh`] in a tree-like visualization.
     ///
@@ -403,6 +442,14 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
         self.traverse(ray, shapes)
     }
 
+    fn nearest_candidates<'a, Shape: BHShape<T, D>>(
+        &'a self,
+        query: &Point<T, D>,
+        shapes: &'a [Shape],
+    ) -> Vec<&Shape> {
+        self.nearest_candidates(query, shapes)
+    }
+
     fn pretty_print(&self) {
         self.pretty_print();
     }
@@ -440,7 +487,9 @@ pub fn rayon_executor<S, T: Send + BHValue, const D: usize>(
 
 #[cfg(test)]
 mod tests {
-    use crate::testbase::{build_some_bh, traverse_some_bh, TBvh3, TBvhNode3};
+    use crate::testbase::{
+        build_some_bh, nearest_candidates_some_bh, traverse_some_bh, TBvh3, TBvhNode3,
+    };
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -452,6 +501,12 @@ mod tests {
     /// Runs some primitive tests for intersections of a ray with a fixed scene given as a [`Bvh`].
     fn test_traverse_bvh() {
         traverse_some_bh::<TBvh3>();
+    }
+
+    #[test]
+    /// Runs some primitive tests for distance query of a point with a fixed scene given as a [`Bvh`].
+    fn test_nearest_candidate_bvh() {
+        nearest_candidates_some_bh::<TBvh3>();
     }
 
     #[test]

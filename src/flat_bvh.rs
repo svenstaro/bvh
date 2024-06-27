@@ -4,6 +4,7 @@ use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
 use crate::bvh::{Bvh, BvhNode};
 use crate::ray::Ray;
 
+use nalgebra::Point;
 use num::Float;
 
 /// A structure of a node of a flat [`Bvh`]. The structure of the nodes allows for an
@@ -410,6 +411,81 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
         }
 
         hit_shapes
+    }
+
+    /// Traverses a [`FlatBvh`] structure iteratively.
+    /// Returns a subset of `shapes` which are candidates for being the closest to the query point.
+    ///
+    ///
+    /// [`FlatBvh`]: struct.FlatBvh.html
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bvh::aabb::{Aabb, Bounded};
+    /// use bvh::bounding_hierarchy::BoundingHierarchy;
+    /// use bvh::flat_bvh::FlatBvh;
+    /// use nalgebra::{Point3, Vector3};
+    /// use bvh::ray::Ray;
+    /// # use bvh::bounding_hierarchy::BHShape;
+    /// # pub struct UnitBox {
+    /// #     pub id: i32,
+    /// #     pub pos: Point3<f32>,
+    /// #     node_index: usize,
+    /// # }
+    /// #
+    /// # impl UnitBox {
+    /// #     pub fn new(id: i32, pos: Point3<f32>) -> UnitBox {
+    /// #         UnitBox {
+    /// #             id: id,
+    /// #             pos: pos,
+    /// #             node_index: 0,
+    /// #         }
+    /// #     }
+    /// # }
+    /// #
+    /// # impl Bounded<f32,3> for UnitBox {
+    /// #     fn aabb(&self) -> Aabb<f32,3> {
+    /// #         let min = self.pos + Vector3::new(-0.5, -0.5, -0.5);
+    /// #         let max = self.pos + Vector3::new(0.5, 0.5, 0.5);
+    /// #         Aabb::with_bounds(min, max)
+    /// #     }
+    /// # }
+    /// #
+    /// # impl BHShape<f32,3> for UnitBox {
+    /// #     fn set_bh_node_index(&mut self, index: usize) {
+    /// #         self.node_index = index;
+    /// #     }
+    /// #
+    /// #     fn bh_node_index(&self) -> usize {
+    /// #         self.node_index
+    /// #     }
+    /// # }
+    /// #
+    /// # fn create_bhshapes() -> Vec<UnitBox> {
+    /// #     let mut shapes = Vec::new();
+    /// #     for i in 0..1000 {
+    /// #         let position = Point3::new(i as f32, i as f32, i as f32);
+    /// #         shapes.push(UnitBox::new(i, position));
+    /// #     }
+    /// #     shapes
+    /// # }
+    ///
+    /// let point = Point3::new(0.0,0.0,0.0);
+    /// let mut shapes = create_bhshapes();
+    /// let flat_bvh = FlatBvh::build(&mut shapes);
+    /// let candidates = flat_bvh.nearest_candidates(&point, &shapes);
+    /// ```
+    ///
+    /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
+    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    ///
+    fn nearest_candidates<'a, Shape: BHShape<T, D>>(
+        &'a self,
+        _query: &Point<T, D>,
+        _shapes: &'a [Shape],
+    ) -> Vec<&Shape> {
+        todo!("Pre-order tree traversal with no recursion nor stack requires a parent index in the nodes.")
     }
 
     /// Prints a textual representation of a [`FlatBvh`].
