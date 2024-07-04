@@ -596,7 +596,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     ///
     pub fn get_min_max_distances(&self, point: &Point<T, D>) -> (T, T) {
         let half_size = self.size() * T::from_f32(0.5).unwrap();
-        let center = self.center();
+        let center = self.min + half_size;
 
         let delta = point - center;
 
@@ -608,9 +608,8 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
         // The signum helps to determine the furthest point
         let signum = delta
             // Invert the signum to get the furthest vertex
-            .map(|x| -x.signum())
-            // Make sure we're always on a vertex and not on a face if the point is aligned with the box
-            .map(|x| if x != T::zero() { x } else { T::one() });
+            // signum never returns 0.0 so we're sure to be on a vertex.
+            .map(|x| -x.signum());
 
         let furthest = center + signum.component_mul(&half_size);
         let furthest_delta = point - furthest;

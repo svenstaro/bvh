@@ -505,7 +505,7 @@ mod tests {
 
     #[test]
     /// Runs some primitive tests for distance query of a point with a fixed scene given as a [`Bvh`].
-    fn test_nearest_candidate_bvh() {
+    fn test_nearest_candidates_bvh() {
         nearest_candidates_some_bh::<TBvh3>();
     }
 
@@ -594,7 +594,9 @@ mod bench {
     use crate::testbase::{
         build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh,
         intersect_1200_triangles_bh, intersect_120k_triangles_bh, intersect_12k_triangles_bh,
-        intersect_bh, load_sponza_scene, TBvh3,
+        intersect_bh, load_sponza_scene, nearest_candidates_1200_triangles_bh,
+        nearest_candidates_120k_triangles_bh, nearest_candidates_12k_triangles_bh,
+        nearest_candidates_bh, TBvh3,
     };
     #[cfg(feature = "rayon")]
     use crate::testbase::{
@@ -682,5 +684,31 @@ mod bench {
         let (mut triangles, bounds) = load_sponza_scene();
         let bvh = TBvh3::build(&mut triangles);
         intersect_bh(&bvh, &triangles, &bounds, b)
+    }
+
+    #[bench]
+    /// Benchmark nearest candidates on 1,200 triangles using the recursive [`Bvh`].
+    fn bench_nearest_candidates_1200_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_candidates_1200_triangles_bh::<TBvh3>(b);
+    }
+
+    #[bench]
+    /// Benchmark nearest candidates on 12,000 triangles using the recursive [`Bvh`].
+    fn bench_nearest_candidates_12k_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_candidates_12k_triangles_bh::<TBvh3>(b);
+    }
+
+    #[bench]
+    /// Benchmark nearest candidates on 120,000 triangles using the recursive [`Bvh`].
+    fn bench_nearest_candidates_120k_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_candidates_120k_triangles_bh::<TBvh3>(b);
+    }
+
+    #[bench]
+    /// Benchmark nearest candidates on a [`Bvh`] with the Sponza scene.
+    fn bench_nearest_candidates_sponza_bvh(b: &mut ::test::Bencher) {
+        let (mut triangles, bounds) = load_sponza_scene();
+        let bvh = TBvh3::build(&mut triangles);
+        nearest_candidates_bh(&bvh, &triangles, &bounds, b)
     }
 }
