@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## 0.10.0 - 2024-06-27
 - Don't panic when traversing empty BVH [#106](https://github.com/svenstaro/bvh/pull/106) (thanks @finnbear)
+- Implement ordered traverse [#98](https://github.com/svenstaro/bvh/pull/98) (thanks @dashedman)
 
 ## 0.9.0 - 2024-03-16
 - Added an API for allowing the BVH build process to be parallelized and provided an implementation using Rayon under the `rayon` feature flag [#103](https://github.com/svenstaro/bvh/pull/103) (thanks @dbenson24)
