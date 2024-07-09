@@ -1,7 +1,8 @@
 //! This module defines the [`BoundingHierarchy`] trait.
 
 use nalgebra::{
-    ClosedAddAssign, ClosedDivAssign, ClosedMulAssign, ClosedSubAssign, Scalar, SimdPartialOrd,
+    ClosedAddAssign, ClosedDivAssign, ClosedMulAssign, ClosedSubAssign, Point, Scalar,
+    SimdPartialOrd,
 };
 use num::{Float, FromPrimitive, Signed};
 
@@ -246,6 +247,78 @@ pub trait BoundingHierarchy<T: BHValue, const D: usize> {
         shapes: &'a [Shape],
     ) -> Vec<&Shape>;
 
+    /// Traverses the [`BoundingHierarchy`].
+    /// Returns a subset of `shapes` which are candidates for being the closest to the query point.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bvh::aabb::{Aabb, Bounded};
+    /// use bvh::bounding_hierarchy::BoundingHierarchy;
+    /// use bvh::bvh::Bvh;
+    /// use nalgebra::{Point3, Vector3};
+    /// use bvh::ray::Ray;
+    /// # use bvh::bounding_hierarchy::BHShape;
+    /// # pub struct UnitBox {
+    /// #     pub id: i32,
+    /// #     pub pos: Point3<f32>,
+    /// #     node_index: usize,
+    /// # }
+    /// #
+    /// # impl UnitBox {
+    /// #     pub fn new(id: i32, pos: Point3<f32>) -> UnitBox {
+    /// #         UnitBox {
+    /// #             id: id,
+    /// #             pos: pos,
+    /// #             node_index: 0,
+    /// #         }
+    /// #     }
+    /// # }
+    /// #
+    /// # impl Bounded<f32,3> for UnitBox {
+    /// #     fn aabb(&self) -> Aabb<f32,3> {
+    /// #         let min = self.pos + Vector3::new(-0.5, -0.5, -0.5);
+    /// #         let max = self.pos + Vector3::new(0.5, 0.5, 0.5);
+    /// #         Aabb::with_bounds(min, max)
+    /// #     }
+    /// # }
+    /// #
+    /// # impl BHShape<f32,3> for UnitBox {
+    /// #     fn set_bh_node_index(&mut self, index: usize) {
+    /// #         self.node_index = index;
+    /// #     }
+    /// #
+    /// #     fn bh_node_index(&self) -> usize {
+    /// #         self.node_index
+    /// #     }
+    /// # }
+    /// #
+    /// # fn create_bvh() -> (Bvh<f32,3>, Vec<UnitBox>) {
+    /// #     let mut shapes = Vec::new();
+    /// #     for i in 0..1000 {
+    /// #         let position = Point3::new(i as f32, i as f32, i as f32);
+    /// #         shapes.push(UnitBox::new(i, position));
+    /// #     }
+    /// #     let bvh = Bvh::build(&mut shapes);
+    /// #     (bvh, shapes)
+    /// # }
+    ///
+    /// let (bvh, shapes) = create_bvh();
+    ///
+    /// let query = Point3::new(5.0, 0.0, 2.0);
+    /// let direction = Vector3::new(1.0, 0.0, 0.0);
+    /// let hit_shapes = bvh.nearest_candidates(&query, &shapes);
+    /// ```
+    ///
+    /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
+    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    ///
+    fn nearest_candidates<'a, Shape: BHShape<T, D>>(
+        &'a self,
+        query: &Point<T, D>,
+        shapes: &'a [Shape],
+    ) -> Vec<&Shape>;
+
     /// Prints the [`BoundingHierarchy`] in a tree-like visualization.
     ///
     /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
@@ -264,6 +337,14 @@ impl<T: BHValue, const D: usize, H: BoundingHierarchy<T, D>> BoundingHierarchy<T
         shapes: &'a [Shape],
     ) -> Vec<&Shape> {
         H::traverse(self, ray, shapes)
+    }
+
+    fn nearest_candidates<'a, Shape: BHShape<T, D>>(
+        &'a self,
+        query: &Point<T, D>,
+        shapes: &'a [Shape],
+    ) -> Vec<&Shape> {
+        H::nearest_candidates(self, query, shapes)
     }
 
     fn build_with_executor<
