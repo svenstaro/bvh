@@ -595,7 +595,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// [`Aabb`]: struct.Aabb.html
     ///
     pub fn get_min_max_distances(&self, point: &Point<T, D>) -> (T, T) {
-        let half_size = self.size() * T::from_f32(0.5).unwrap();
+        let half_size = self.half_size();
         let center = self.min + half_size;
 
         let delta = point - center;
