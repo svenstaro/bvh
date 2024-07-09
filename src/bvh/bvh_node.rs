@@ -354,15 +354,10 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
                 *best_max_distance = best_max_distance.min(child_l_dists.1.min(child_r_dists.1));
 
                 // Traverse children
-                for ((dist_min, dist_max), index) in [
+                for ((dist_min, _), index) in [
                     (child_l_dists, child_l_index),
                     (child_r_dists, child_r_index),
                 ] {
-                    // Node is better by a margin.
-                    if dist_max <= *best_min_distance {
-                        indices.clear();
-                    }
-
                     // Node might contain a candidate
                     if dist_min <= *best_max_distance {
                         Self::nearest_candidates_recursive(

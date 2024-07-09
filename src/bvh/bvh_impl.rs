@@ -196,7 +196,6 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
             .collect()
     }
 
-
     /// Prints the [`Bvh`] in a tree-like visualization.
     ///
     /// [`Bvh`]: struct.Bvh.html

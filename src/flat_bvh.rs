@@ -503,9 +503,13 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
                 let shape = &shapes[node.shape_index as usize];
                 let (min_dist, max_dist) = shape.aabb().get_min_max_distances(query);
 
-                if max_dist < best_max_distance {
-                    candidates.push((shape, min_dist));
+                if !candidates.is_empty() && max_dist < best_min_distance {
+                    // Node is better by a margin
+                    candidates.clear();
                 }
+
+                // we reached a leaf, we add it to the list of indices since it is a potential candidate
+                candidates.push((shape, min_dist));
 
                 // Update both distances here since we have a credible (small) bounding box.
                 best_max_distance = best_max_distance.min(max_dist);
