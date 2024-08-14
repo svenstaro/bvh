@@ -147,7 +147,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
 
     /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
     /// Returns a subset of [`Shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
-    /// Return in order from nearest to farthest for ray.
+    /// Return in order from farthest to nearest for ray.
     ///
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.AABB.html
