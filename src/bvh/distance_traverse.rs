@@ -50,7 +50,7 @@ where
             stack: [(0, RestChild::None); 32],
             node_index: 0,
             stack_size: 0,
-            has_node: true,
+            has_node: !bvh.nodes.is_empty(),
         }
     }
 
