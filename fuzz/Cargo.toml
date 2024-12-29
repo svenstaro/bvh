@@ -1,0 +1,28 @@
+[package]
+name = "bvh-fuzz"
+version = "0.0.0"
+authors = ["Automatically generated"]
+publish = false
+edition = "2018"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+arbitrary = { version = "1.4.1", features = ["derive"] }
+libfuzzer-sys = "0.4"
+nalgebra = "0.33"
+ordered-float = { version = "4.6.0", features = ["arbitrary"] }
+
+[dependencies.bvh]
+path = ".."
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "fuzz"
+path = "fuzz_targets/fuzz.rs"
+test = false
+doc = false
