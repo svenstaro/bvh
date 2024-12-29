@@ -80,7 +80,7 @@ jobs:
         run: cargo test --features simd
   
   fuzz:
-    name: Run fuzzer
+    name: fuzz
     runs-on: ubuntu-latest
 
     steps:
@@ -99,6 +99,6 @@ jobs:
           crate: cargo-fuzz
           locked: false
 
-      - name: Run fuzzer for a limited time
+      - name: Fuzz for a limited time
         run: |
           RUST_BACKTRACE=1 cargo fuzz run fuzz -- -max_total_time=300
