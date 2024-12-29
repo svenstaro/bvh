@@ -245,7 +245,7 @@ pub trait BoundingHierarchy<T: BHValue, const D: usize> {
         &'a self,
         ray: &Ray<T, D>,
         shapes: &'a [Shape],
-    ) -> Vec<&Shape>;
+    ) -> Vec<&'a Shape>;
 
     /// Traverses the [`BoundingHierarchy`].
     /// Returns a subset of `shapes` which are candidates for being the closest to the query point.
@@ -335,7 +335,7 @@ impl<T: BHValue, const D: usize, H: BoundingHierarchy<T, D>> BoundingHierarchy<T
         &'a self,
         ray: &Ray<T, D>,
         shapes: &'a [Shape],
-    ) -> Vec<&Shape> {
+    ) -> Vec<&'a Shape> {
         H::traverse(self, ray, shapes)
     }
 

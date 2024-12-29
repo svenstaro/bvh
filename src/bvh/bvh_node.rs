@@ -463,7 +463,7 @@ pub struct BvhNodeBuildArgs<'a, S, T: BHValue, const D: usize> {
     pub(crate) centroid_bounds: Aabb<T, D>,
 }
 
-impl<'a, S, T: BHValue, const D: usize> BvhNodeBuildArgs<'a, S, T, D> {
+impl<S, T: BHValue, const D: usize> BvhNodeBuildArgs<'_, S, T, D> {
     /// Finish building this portion of the bvh.
     pub fn build(self)
     where
