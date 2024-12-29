@@ -78,3 +78,27 @@ jobs:
 
       - name: cargo test
         run: cargo test --features simd
+  
+  fuzz:
+    name: Run fuzzer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install nightly toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rust-src
+
+      - name: Install cargo-fuzz
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-fuzz
+          locked: false
+
+      - name: Run fuzzer for a limited time
+        run: |
+          RUST_BACKTRACE=1 cargo fuzz run fuzz -- -max_total_time=300
