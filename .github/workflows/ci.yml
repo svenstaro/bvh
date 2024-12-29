@@ -41,6 +41,30 @@ jobs:
           fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  fuzz:
+    name: fuzz
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install nightly toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: rust-src
+
+      - name: Install cargo-fuzz
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-fuzz
+          locked: false
+
+      - name: Fuzz for a limited time
+        run: |
+          RUST_BACKTRACE=1 cargo fuzz run fuzz -- -max_total_time=300
+
   build-and-test-no-simd:
     name: CI with ${{ matrix.rust }} on ${{ matrix.os }} [no SIMD]
     runs-on: ${{ matrix.os }}
@@ -78,27 +102,3 @@ jobs:
 
       - name: cargo test
         run: cargo test --features simd
-  
-  fuzz:
-    name: fuzz
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-
-      - name: Install nightly toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly
-          components: rust-src
-
-      - name: Install cargo-fuzz
-        uses: baptiste0928/cargo-install@v3
-        with:
-          crate: cargo-fuzz
-          locked: false
-
-      - name: Fuzz for a limited time
-        run: |
-          RUST_BACKTRACE=1 cargo fuzz run fuzz -- -max_total_time=300
