@@ -11,7 +11,8 @@
 //! Next, all applicable API's of the BVH are exercised to ensure they don't panic and
 //! simple properties are tested.
 //!
-//! Finally, if there is a mutation left, it is applied, and the API's are tested again.
+//! Finally, if there are any mutations left, one is applied, and the API's are tested
+//! again.
 
 use std::collections::HashSet;
 use std::fmt::{self, Debug, Formatter};
