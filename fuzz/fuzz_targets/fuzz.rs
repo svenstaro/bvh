@@ -181,11 +181,12 @@ enum Mode {
     /// AABB's may have mostly arbitrary bounds, and ray may have mostly arbitrary
     /// origin and direction.
     Chaos,
-    /// AABB's are unit cubes, and must have unique integer coordinates. Ray must
-    /// have an origin consisting of integer coordinates and a direction that is
-    /// parallel to one of the axes.
+    /// AABB's are unit cubes, and must have integer coordinates. Ray must have an
+    /// origin consisting of integer coordinates and a direction that is parallel to
+    /// one of the axes.
     ///
-    /// In this mode, all types of traversal are expected to yield the same results.
+    /// In this mode, all types of traversal are expected to yield the same results,
+    /// except when bugs exist that have yet to be fixed.
     Grid,
 }
 
