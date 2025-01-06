@@ -244,7 +244,7 @@ pub trait BoundingHierarchy<T: BHValue, const D: usize> {
         &'a self,
         ray: &Ray<T, D>,
         shapes: &'a [Shape],
-    ) -> Vec<&Shape>;
+    ) -> Vec<&'a Shape>;
 
     /// Prints the [`BoundingHierarchy`] in a tree-like visualization.
     ///
@@ -262,7 +262,7 @@ impl<T: BHValue, const D: usize, H: BoundingHierarchy<T, D>> BoundingHierarchy<T
         &'a self,
         ray: &Ray<T, D>,
         shapes: &'a [Shape],
-    ) -> Vec<&Shape> {
+    ) -> Vec<&'a Shape> {
         H::traverse(self, ray, shapes)
     }
 

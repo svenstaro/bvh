@@ -101,7 +101,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         &'a self,
         ray: &Ray<T, D>,
         shapes: &'a [Shape],
-    ) -> Vec<&Shape> {
+    ) -> Vec<&'a Shape> {
         if self.nodes.is_empty() {
             // There won't be a 0th node_index.
             return Vec::new();
@@ -399,7 +399,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
         &'a self,
         ray: &Ray<T, D>,
         shapes: &'a [Shape],
-    ) -> Vec<&Shape> {
+    ) -> Vec<&'a Shape> {
         self.traverse(ray, shapes)
     }
 
