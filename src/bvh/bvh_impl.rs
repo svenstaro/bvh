@@ -101,7 +101,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         &'a self,
         ray: &Ray<T, D>,
         shapes: &'a [Shape],
-    ) -> Vec<&Shape> {
+    ) -> Vec<&'a Shape> {
         if self.nodes.is_empty() {
             // There won't be a 0th node_index.
             return Vec::new();
@@ -145,7 +145,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
 
     /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
     /// Returns a subset of [`Shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
-    /// Return in order from nearest to farthest for ray.
+    /// Return in order from farthest to nearest for ray.
     ///
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.AABB.html
@@ -399,7 +399,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
         &'a self,
         ray: &Ray<T, D>,
         shapes: &'a [Shape],
-    ) -> Vec<&Shape> {
+    ) -> Vec<&'a Shape> {
         self.traverse(ray, shapes)
     }
 
