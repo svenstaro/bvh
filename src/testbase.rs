@@ -120,6 +120,13 @@ pub fn build_some_bh_rayon<BH: BoundingHierarchy<f32, 3>>() -> (Vec<UnitBox>, BH
     (boxes, bh)
 }
 
+/// Creates a [`BoundingHierarchy`] for an empty scene structure.
+pub fn build_empty_bh<BH: BoundingHierarchy<f32, 3>>() -> (Vec<UnitBox>, BH) {
+    let mut boxes = Vec::new();
+    let bh = BH::build(&mut boxes);
+    (boxes, bh)
+}
+
 /// Given a ray, a bounding hierarchy, the complete list of shapes in the scene and a list of
 /// expected hits, verifies, whether the ray hits only the expected shapes.
 fn traverse_and_verify<BH: BoundingHierarchy<f32, 3>>(

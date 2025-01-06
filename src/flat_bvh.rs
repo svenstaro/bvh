@@ -383,7 +383,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     /// let flat_bvh = FlatBvh::build(&mut shapes);
     /// let hit_shapes = flat_bvh.traverse(&ray, &shapes);
     /// ```
-    fn traverse<'a, B: Bounded<T, D>>(&'a self, ray: &Ray<T, D>, shapes: &'a [B]) -> Vec<&B> {
+    fn traverse<'a, B: Bounded<T, D>>(&'a self, ray: &Ray<T, D>, shapes: &'a [B]) -> Vec<&'a B> {
         let mut hit_shapes = Vec::new();
         let mut index = 0;
 
@@ -488,7 +488,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
         &'a self,
         query: &Point<T, D>,
         shapes: &'a [Shape],
-    ) -> Vec<&Shape> {
+    ) -> Vec<&'a Shape> {
         let mut best_min_distance = T::max_value();
         let mut best_max_distance = T::max_value();
 
@@ -572,7 +572,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
 
 #[cfg(test)]
 mod tests {
-    use crate::testbase::{build_some_bh, nearest_candidates_some_bh, traverse_some_bh, TFlatBvh3};
+    use crate::testbase::{build_empty_bh, build_some_bh, nearest_candidates_some_bh, traverse_some_bh, TBvh3, TFlatBvh3};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -591,6 +591,13 @@ mod tests {
     /// Runs some primitive tests for distance query of a point with a fixed scene given as a [`Bvh`].
     fn test_nearest_candidates_flat_bvh() {
         nearest_candidates_some_bh::<TFlatBvh3>();
+    }
+
+    #[test]
+    fn test_flatten_empty_bvh() {
+        let (_, bvh) = build_empty_bh::<TBvh3>();
+        let flat = bvh.flatten();
+        assert!(flat.is_empty());
     }
 }
 
