@@ -257,7 +257,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     pub fn is_consistent<Shape: BHShape<T, D>>(&self, shapes: &[Shape]) -> bool {
         if self.nodes.is_empty() {
             // There is no node_index=0.
-            return vec;
+            return true;
         }
 
         // The root node of the bvh is not bounded by anything.
@@ -349,7 +349,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     {
         if self.nodes.is_empty() {
             // There is no node_index=0.
-            return vec;
+            return;
         }
 
         // The root node of the bvh is not bounded by anything.
@@ -388,7 +388,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     pub fn assert_tight(&self) {
         if self.nodes.is_empty() {
             // There is no node_index=0.
-            return vec;
+            return;
         }
         // When starting to check whether the `Bvh` is tight, we cannot provide a minimum
         // outer `Aabb`, therefore we compute the correct one in this instance.
@@ -454,12 +454,25 @@ pub fn rayon_executor<S, T: Send + BHValue, const D: usize>(
 
 #[cfg(test)]
 mod tests {
-    use crate::testbase::{build_some_bh, traverse_some_bh, TBvh3, TBvhNode3};
+    use crate::testbase::{build_empty_bh, build_some_bh, traverse_some_bh, TBvh3, TBvhNode3};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
     fn test_build_bvh() {
         build_some_bh::<TBvh3>();
+    }
+
+    #[test]
+    fn test_empty_bvh_is_consistent() {
+        let (shapes, bvh) = build_empty_bh::<TBvh3>();
+        bvh.assert_consistent(&shapes);
+        assert!(bvh.is_consistent(&shapes));
+    }
+
+    #[test]
+    fn test_empty_bvh_is_tight() {
+        let (_, bvh) = build_empty_bh::<TBvh3>();
+        bvh.assert_tight();
     }
 
     #[test]

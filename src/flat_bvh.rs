@@ -446,7 +446,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
 
 #[cfg(test)]
 mod tests {
-    use crate::testbase::{build_some_bh, traverse_some_bh, TFlatBvh3};
+    use crate::testbase::{build_empty_bh, build_some_bh, traverse_some_bh, TBvh3, TFlatBvh3};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -459,6 +459,13 @@ mod tests {
     /// as a `FlatBvh`.
     fn test_traverse_flat_bvh() {
         traverse_some_bh::<TFlatBvh3>();
+    }
+
+    #[test]
+    fn test_flatten_empty_bvh() {
+        let (_, bvh) = build_empty_bh::<TBvh3>();
+        let flat = bvh.flatten();
+        assert!(flat.is_empty());
     }
 }
 
