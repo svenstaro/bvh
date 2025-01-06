@@ -262,7 +262,7 @@ are expected to add tests for all new functionality.
 
 This project uses [`proptest`](https://altsysrq.github.io/proptest-book/) as a second
 line of defense against bugs, allowing random instances of certain tests to be tested.
-These tests run along-side unit-tests.
+These tests run alongside unit-tests.
 
 ### Fuzzer
 
