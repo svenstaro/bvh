@@ -207,7 +207,9 @@ impl<const D: usize> Workload<D> {
                     ArbitraryMutation::Remove(index) => {
                         // TODO: remove `false &&` once this no longer causes a panic:
                         // "Circular node that wasn't root parent=0 node=2"
-                        if false /* index < self.shapes.len() */ {
+                        if false
+                        /* index < self.shapes.len() */
+                        {
                             bvh.remove_shape(&mut self.shapes, index, true);
                             self.shapes.pop().unwrap();
                         }
