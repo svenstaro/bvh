@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## 0.11.0 - 2025-??-??
 - Fix panic on empty `DistanceTraverseIterator` [#117](https://github.com/svenstaro/bvh/pull/117) (thanks @finnbear)
+- Fix center() for very large AABBs [#118](https://github.com/svenstaro/bvh/pull/118) (thanks @finnbear)
 
 ## 0.10.0 - 2024-07-06
 - Don't panic when traversing empty BVH [#106](https://github.com/svenstaro/bvh/pull/106) (thanks @finnbear)
