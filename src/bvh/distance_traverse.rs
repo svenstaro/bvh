@@ -50,7 +50,7 @@ where
             stack: [(0, RestChild::None); 32],
             node_index: 0,
             stack_size: 0,
-            has_node: true,
+            has_node: !bvh.nodes.is_empty(),
         }
     }
 
@@ -274,6 +274,13 @@ mod tests {
         (boxes, bvh)
     }
 
+    /// Create a `Bvh` for an empty scene structure.
+    pub fn build_empty_bvh() -> (Vec<UnitBox>, TBvh3) {
+        let mut boxes = Vec::new();
+        let bvh = Bvh::build(&mut boxes);
+        (boxes, bvh)
+    }
+
     fn traverse_distance_and_verify_order(
         ray_origin: TPoint3,
         ray_direction: TVector3,
@@ -352,5 +359,19 @@ mod tests {
     /// Runs some primitive tests for intersections of a ray with a fixed scene given as a Bvh.
     fn test_traverse_bvh() {
         traverse_some_bvh();
+    }
+
+    #[test]
+    fn test_traverse_empty_bvh() {
+        let (shapes, bvh) = build_empty_bvh();
+
+        // Define an arbitrary ray.
+        let origin = TPoint3::new(0.0, 0.0, 0.0);
+        let direction = TVector3::new(1.0, 0.0, 0.0);
+        let ray = Ray::new(origin, direction);
+
+        // Ensure distance traversal doesn't panic.
+        assert_eq!(bvh.nearest_traverse_iterator(&ray, &shapes).count(), 0);
+        assert_eq!(bvh.farthest_traverse_iterator(&ray, &shapes).count(), 0);
     }
 }
