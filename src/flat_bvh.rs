@@ -382,7 +382,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     /// let flat_bvh = FlatBvh::build(&mut shapes);
     /// let hit_shapes = flat_bvh.traverse(&ray, &shapes);
     /// ```
-    fn traverse<'a, B: Bounded<T, D>>(&'a self, ray: &Ray<T, D>, shapes: &'a [B]) -> Vec<&B> {
+    fn traverse<'a, B: Bounded<T, D>>(&'a self, ray: &Ray<T, D>, shapes: &'a [B]) -> Vec<&'a B> {
         let mut hit_shapes = Vec::new();
         let mut index = 0;
 
