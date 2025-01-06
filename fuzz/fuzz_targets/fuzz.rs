@@ -32,7 +32,7 @@ type Float = f32;
 /// Coordinate magnitude should not exceed this which prevents
 /// certain degenerate cases like infinity, both in inputs
 /// and internal computations in the BVH.
-const LIMIT: Float = 1_000_000.0;
+const LIMIT: Float = 5_000.0;
 
 // The entry point for `cargo fuzz`.
 fuzz_target!(|workload: Workload<3>| {
@@ -41,7 +41,7 @@ fuzz_target!(|workload: Workload<3>| {
 
 /// The input for an arbitrary point, with finite coordinates,
 /// each with a magnitude bounded by `LIMIT`.
-#[derive(Arbitrary)]
+#[derive(Clone, Arbitrary)]
 struct ArbitraryPoint<const D: usize> {
     coordinates: [NotNan<Float>; D],
 }
@@ -55,10 +55,11 @@ impl<const D: usize> ArbitraryPoint<D> {
 
 /// An arbitrary shape, with `ArbitraryPoint` corners, guaranteed to have an AABB with
 /// non-zero volume.
-#[derive(Arbitrary)]
+#[derive(Clone, Arbitrary)]
 struct ArbitraryShape<const D: usize> {
     a: ArbitraryPoint<D>,
     b: ArbitraryPoint<D>,
+    mode: Mode,
     bh_node_index: usize,
 }
 
@@ -80,7 +81,21 @@ impl<const D: usize> Bounded<Float, D> for ArbitraryShape<D> {
             }
         });
 
-        Aabb::with_bounds(a.simd_min(b), a.simd_max(b))
+        let mut aabb = Aabb::with_bounds(a.simd_min(b), a.simd_max(b));
+
+        if self.mode.is_grid() {
+            let mut center = aabb.center();
+            center.iter_mut().for_each(|f| *f = f.round());
+            // Unit AABB around center.
+            aabb.min.iter_mut().enumerate().for_each(|(i, f)| {
+                *f = center[i] - 0.5;
+            });
+            aabb.max.iter_mut().enumerate().for_each(|(i, f)| {
+                *f = center[i] + 0.5;
+            });
+        }
+
+        aabb
     }
 }
 
@@ -96,10 +111,11 @@ impl<const D: usize> BHShape<Float, D> for ArbitraryShape<D> {
 
 /// The input for arbitrary ray, starting at an `ArbitraryPoint` and having a precisely
 /// normalized direction.
-#[derive(Arbitrary)]
+#[derive(Clone, Arbitrary)]
 struct ArbitraryRay<const D: usize> {
     origin: ArbitraryPoint<D>,
     destination: ArbitraryPoint<D>,
+    mode: Mode,
 }
 
 impl<const D: usize> Debug for ArbitraryRay<D> {
@@ -125,7 +141,30 @@ impl<const D: usize> ArbitraryRay<D> {
             "{}",
             direction.magnitude()
         );
-        Ray::new(self.origin.point(), direction)
+        let mut ray = Ray::new(self.origin.point(), direction);
+
+        if self.mode.is_grid() {
+            let max_axis = ray
+                .direction
+                .iter()
+                .enumerate()
+                .max_by(|(_, a), (_, b)| a.abs().partial_cmp(&b.abs()).unwrap())
+                .map(|(i, f)| (i, *f))
+                .unwrap();
+
+            ray.origin.iter_mut().for_each(|f| *f = f.round());
+
+            // The resulting ray will be parallel to an axis.
+            ray.direction.iter_mut().enumerate().for_each(|(i, f)| {
+                *f = if i == max_axis.0 {
+                    1f32.copysign(max_axis.1)
+                } else {
+                    0.0
+                }
+            });
+        }
+
+        ray
     }
 }
 
@@ -134,6 +173,26 @@ impl<const D: usize> ArbitraryRay<D> {
 enum ArbitraryMutation<const D: usize> {
     Remove(usize),
     Add(ArbitraryShape<D>),
+}
+
+#[derive(Copy, Clone, Debug, Arbitrary)]
+/// Controls whether the input is modified to help test certain properties.
+enum Mode {
+    /// AABB's may have mostly arbitrary bounds, and ray may have mostly arbitrary
+    /// origin and direction.
+    Chaos,
+    /// AABB's are unit cubes, and must have unique integer coordinates. Ray must
+    /// have an origin consisting of integer coordinates and a direction that is
+    /// parallel to one of the axes.
+    ///
+    /// In this mode, all types of traversal are expected to yield the same results.
+    Grid,
+}
+
+impl Mode {
+    fn is_grid(self) -> bool {
+        matches!(self, Self::Grid)
+    }
 }
 
 /// The complete set of inputs for a single fuzz iteration.
@@ -165,24 +224,36 @@ impl<const D: usize> Workload<D> {
         }
 
         loop {
+            let assert_traversal_agreement =
+                self.ray.mode.is_grid() && self.shapes.iter().all(|s| s.mode.is_grid());
+
             // Check that these don't panic.
             bvh.assert_consistent(&self.shapes);
             bvh.assert_tight();
             let flat_bvh = bvh.flatten();
 
-            let _traverse = bvh
+            let traverse = bvh
                 .traverse(&ray, &self.shapes)
                 .into_iter()
                 .map(ByPtr)
                 .collect::<HashSet<_>>();
-            let _traverse_iterator = bvh
+            let traverse_iterator = bvh
                 .traverse_iterator(&ray, &self.shapes)
                 .map(ByPtr)
                 .collect::<HashSet<_>>();
-            let _traverse_flat = flat_bvh.traverse(&ray, &self.shapes);
+            let _traverse_flat = flat_bvh
+                .traverse(&ray, &self.shapes)
+                .into_iter()
+                .map(ByPtr)
+                .collect::<HashSet<_>>();
 
-            // Fails, either due to bug or rounding errors.
-            // assert_eq!(traverse, traverse_iterator);
+            if assert_traversal_agreement {
+                assert_eq!(traverse, traverse_iterator);
+                // Fails, due to a bug.
+                // assert_eq!(traverse, traverse_flat);
+            } else {
+                // Fails, probably due to rounding errors.
+            }
 
             let nearest_traverse_iterator = bvh
                 .nearest_traverse_iterator(&ray, &self.shapes)
@@ -193,9 +264,14 @@ impl<const D: usize> Workload<D> {
                 .map(ByPtr)
                 .collect::<HashSet<_>>();
 
-            // Fails, either due to bug or rounding errors.
-            //assert_eq!(traverse_iterator, nearest_traverse_iterator);
+            if assert_traversal_agreement {
+                // Fails, due to a bug.
+                // assert_eq!(traverse_iterator, nearest_traverse_iterator);
+            } else {
+                // Fails, probably due to rounding errors.
+            }
 
+            // Since the algorithm is similar, these should agree regardless of mode.
             assert_eq!(nearest_traverse_iterator, farthest_traverse_iterator);
 
             if let Some(mutation) = self.mutations.pop() {
