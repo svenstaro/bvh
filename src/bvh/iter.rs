@@ -107,9 +107,8 @@ impl<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>>
     }
 }
 
-#[allow(clippy::needless_lifetimes)]
-impl<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>> Iterator
-    for BvhTraverseIterator<'bvh, 'shape, T, D, Shape>
+impl<'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>> Iterator
+    for BvhTraverseIterator<'_, 'shape, T, D, Shape>
 {
     type Item = &'shape Shape;
 

@@ -215,9 +215,8 @@ where
     }
 }
 
-#[allow(clippy::needless_lifetimes)]
-impl<'bvh, 'shape, T, const D: usize, Shape: Bounded<T, D>, const ASCENDING: bool> Iterator
-    for DistanceTraverseIterator<'bvh, 'shape, T, D, Shape, ASCENDING>
+impl<'shape, T, const D: usize, Shape: Bounded<T, D>, const ASCENDING: bool> Iterator
+    for DistanceTraverseIterator<'_, 'shape, T, D, Shape, ASCENDING>
 where
     T: BHValue,
 {
