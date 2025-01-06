@@ -477,7 +477,8 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// [`Point3`]: nalgebra::Point3
     ///
     pub fn center(&self) -> Point<T, D> {
-        (self.min.coords + (self.size() * T::from_f32(0.5).unwrap())).into()
+        (self.min.coords * T::from_f32(0.5).unwrap() + self.max.coords * T::from_f32(0.5).unwrap())
+            .into()
     }
 
     /// An empty [`Aabb`] is an [`Aabb`] where the lower bound is greater than
@@ -714,6 +715,25 @@ mod tests {
 
     use float_eq::assert_float_eq;
     use proptest::prelude::*;
+
+    #[test]
+    fn test_overflowing_aabb_center() {
+        // Define two points which will be the corners of the overflowing `Aabb`
+        let p1 = tuple_to_point(&(-3.288583e38, 0.0, 0.0));
+        let p2 = tuple_to_point(&(5.4196525e37, 0.0, 0.0));
+
+        // Span the `Aabb`
+        let aabb = TAabb3::empty().grow(&p1).join_bounded(&p2);
+
+        // Make sure the size actually overflows.
+        assert!(aabb.size()[0].is_infinite());
+
+        // Make sure the center does not overflow.
+        assert!(aabb.center()[0].is_finite());
+
+        // Its center should inside the `Aabb`
+        assert!(aabb.contains(&aabb.center()));
+    }
 
     proptest! {
         // Test whether an empty `Aabb` does not contains anything.
