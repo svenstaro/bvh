@@ -231,6 +231,10 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         F: Fn(&Aabb<T, D>, u32, u32, u32) -> FNodeType,
     {
         let mut vec = Vec::new();
+        if self.nodes.is_empty() {
+            // There is no node_index=0.
+            return vec;
+        }
         self.nodes[0].flatten_custom(&self.nodes, &mut vec, 0, constructor);
         vec
     }
@@ -378,7 +382,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     /// let flat_bvh = FlatBvh::build(&mut shapes);
     /// let hit_shapes = flat_bvh.traverse(&ray, &shapes);
     /// ```
-    fn traverse<'a, B: Bounded<T, D>>(&'a self, ray: &Ray<T, D>, shapes: &'a [B]) -> Vec<&'a B> {
+    fn traverse<'a, B: Bounded<T, D>>(&'a self, ray: &Ray<T, D>, shapes: &'a [B]) -> Vec<&B> {
         let mut hit_shapes = Vec::new();
         let mut index = 0;
 
