@@ -249,3 +249,25 @@ BVH requiring a check, thus leading to a higher intersection duration.
 
 The benchmark suite uses features from the [test crate](https://doc.rust-lang.org/unstable-book/library-features/test.html) and therefore cannot be run on stable rust.
 Using a nightly toolchain, run `cargo bench --features bench`.
+
+## Testing
+
+### Unit tests
+
+This project aspires to be fully tested, and that starts with a unit test suite. Use
+`cargo test` to run all the tests. The tests automatically run in CI, too. Contributors
+are expected to add tests for all new functionality.
+
+### Proptest
+
+This project uses [`proptest`](https://altsysrq.github.io/proptest-book/) as a second
+line of defense against bugs, allowing random instances of certain tests to be tested.
+These tests run along-side unit-tests.
+
+### Fuzzer
+
+This project uses [`cargo fuzz`](https://rust-fuzz.github.io/book/cargo-fuzz.html) as
+a third line of defense against bugs, meaning that the `fuzz/` directory was generated
+using `cargo fuzz init`. At the moment, there is a single fuzz target, and running
+`cargo fuzz run fuzz` will fuzz until an assertion is violated. The fuzzer automatically
+runs in CI, too.
