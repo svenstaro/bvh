@@ -231,6 +231,10 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         F: Fn(&Aabb<T, D>, u32, u32, u32) -> FNodeType,
     {
         let mut vec = Vec::new();
+        if self.nodes.is_empty() {
+            // There is no node_index=0.
+            return vec;
+        }
         self.nodes[0].flatten_custom(&self.nodes, &mut vec, 0, constructor);
         vec
     }
@@ -442,7 +446,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
 
 #[cfg(test)]
 mod tests {
-    use crate::testbase::{build_some_bh, traverse_some_bh, TFlatBvh3};
+    use crate::testbase::{build_empty_bh, build_some_bh, traverse_some_bh, TBvh3, TFlatBvh3};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -455,6 +459,13 @@ mod tests {
     /// as a `FlatBvh`.
     fn test_traverse_flat_bvh() {
         traverse_some_bh::<TFlatBvh3>();
+    }
+
+    #[test]
+    fn test_flatten_empty_bvh() {
+        let (_, bvh) = build_empty_bh::<TBvh3>();
+        let flat = bvh.flatten();
+        assert!(flat.is_empty());
     }
 }
 

@@ -255,6 +255,11 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Checks if all children of a node have the correct parent index, and that there is no
     /// detached subtree. Also checks if the `Aabb` hierarchy is consistent.
     pub fn is_consistent<Shape: BHShape<T, D>>(&self, shapes: &[Shape]) -> bool {
+        if self.nodes.is_empty() {
+            // There is no node_index=0.
+            return true;
+        }
+
         // The root node of the bvh is not bounded by anything.
         let space = Aabb::infinite();
 
@@ -342,6 +347,11 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     where
         T: std::fmt::Display,
     {
+        if self.nodes.is_empty() {
+            // There is no node_index=0.
+            return;
+        }
+
         // The root node of the bvh is not bounded by anything.
         let space = Aabb::infinite();
 
@@ -376,6 +386,10 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Check that the `Aabb`s in the `Bvh` are tight, which means, that parent `Aabb`s are not
     /// larger than they should be.
     pub fn assert_tight(&self) {
+        if self.nodes.is_empty() {
+            // There is no node_index=0.
+            return;
+        }
         // When starting to check whether the `Bvh` is tight, we cannot provide a minimum
         // outer `Aabb`, therefore we compute the correct one in this instance.
         if let BvhNode::Node {
@@ -440,12 +454,25 @@ pub fn rayon_executor<S, T: Send + BHValue, const D: usize>(
 
 #[cfg(test)]
 mod tests {
-    use crate::testbase::{build_some_bh, traverse_some_bh, TBvh3, TBvhNode3};
+    use crate::testbase::{build_empty_bh, build_some_bh, traverse_some_bh, TBvh3, TBvhNode3};
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
     fn test_build_bvh() {
         build_some_bh::<TBvh3>();
+    }
+
+    #[test]
+    fn test_empty_bvh_is_consistent() {
+        let (shapes, bvh) = build_empty_bh::<TBvh3>();
+        bvh.assert_consistent(&shapes);
+        assert!(bvh.is_consistent(&shapes));
+    }
+
+    #[test]
+    fn test_empty_bvh_is_tight() {
+        let (_, bvh) = build_empty_bh::<TBvh3>();
+        bvh.assert_tight();
     }
 
     #[test]
