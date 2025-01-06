@@ -369,6 +369,8 @@ mod tests {
         let origin = TPoint3::new(0.0, 0.0, 0.0);
         let direction = TVector3::new(1.0, 0.0, 0.0);
         let ray = Ray::new(origin, direction);
+
+        // Ensure distance traversal doesn't panic.
         assert_eq!(bvh.nearest_traverse_iterator(&ray, &shapes).count(), 0);
         assert_eq!(bvh.farthest_traverse_iterator(&ray, &shapes).count(), 0);
     }
