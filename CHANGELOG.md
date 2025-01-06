@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.11.0 - 2025-??-??
+- Fix panic on empty `DistanceTraverseIterator` [#117](https://github.com/svenstaro/bvh/pull/117) (thanks @finnbear)
+
 ## 0.10.0 - 2024-07-06
 - Don't panic when traversing empty BVH [#106](https://github.com/svenstaro/bvh/pull/106) (thanks @finnbear)
 - Implement ordered traverse [#98](https://github.com/svenstaro/bvh/pull/98) (thanks @dashedman)
