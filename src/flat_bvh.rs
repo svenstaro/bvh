@@ -1,8 +1,7 @@
 //! This module exports methods to flatten the [`Bvh`] into a [`FlatBvh`] and traverse it iteratively.
-use crate::aabb::{Aabb, Bounded};
+use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
 use crate::bvh::{Bvh, BvhNode};
-use crate::ray::Ray;
 
 use num::Float;
 
@@ -382,7 +381,11 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     /// let flat_bvh = FlatBvh::build(&mut shapes);
     /// let hit_shapes = flat_bvh.traverse(&ray, &shapes);
     /// ```
-    fn traverse<'a, B: Bounded<T, D>>(&'a self, ray: &Ray<T, D>, shapes: &'a [B]) -> Vec<&'a B> {
+    fn traverse<'a, Q: IntersectsAabb<T, D>, B: Bounded<T, D>>(
+        &'a self,
+        query: &Q,
+        shapes: &'a [B],
+    ) -> Vec<&'a B> {
         let mut hit_shapes = Vec::new();
         let mut index = 0;
 
@@ -396,13 +399,13 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
             if node.entry_index == u32::MAX {
                 // If the entry_index is MAX_UINT32, then it's a leaf node.
                 let shape = &shapes[node.shape_index as usize];
-                if ray.intersects_aabb(&shape.aabb()) {
+                if query.intersects_aabb(&shape.aabb()) {
                     hit_shapes.push(shape);
                 }
 
                 // Exit the current node.
                 index = node.exit_index as usize;
-            } else if ray.intersects_aabb(&node.aabb) {
+            } else if query.intersects_aabb(&node.aabb) {
                 // If entry_index is not MAX_UINT32 and the Aabb test passes, then
                 // proceed to the node in entry_index (which goes down the bvh branch).
                 index = node.entry_index as usize;

@@ -5,11 +5,10 @@ use nalgebra::{
 };
 use num::{Float, FromPrimitive, Signed};
 
-use crate::aabb::Bounded;
+use crate::aabb::{Bounded, IntersectsAabb};
 #[cfg(feature = "rayon")]
 use crate::bvh::rayon_executor;
 use crate::bvh::BvhNodeBuildArgs;
-use crate::ray::Ray;
 
 /// Encapsulates the required traits for the value type used in the Bvh.
 pub trait BHValue:
@@ -240,9 +239,9 @@ pub trait BoundingHierarchy<T: BHValue, const D: usize> {
     /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
     /// [`Aabb`]: ../aabb/struct.Aabb.html
     ///
-    fn traverse<'a, Shape: BHShape<T, D>>(
+    fn traverse<'a, Query: IntersectsAabb<T, D>, Shape: BHShape<T, D>>(
         &'a self,
-        ray: &Ray<T, D>,
+        query: &Query,
         shapes: &'a [Shape],
     ) -> Vec<&'a Shape>;
 
@@ -258,12 +257,12 @@ impl<T: BHValue, const D: usize, H: BoundingHierarchy<T, D>> BoundingHierarchy<T
         Box::new(H::build(shapes))
     }
 
-    fn traverse<'a, Shape: BHShape<T, D>>(
+    fn traverse<'a, Query: IntersectsAabb<T, D>, Shape: BHShape<T, D>>(
         &'a self,
-        ray: &Ray<T, D>,
+        query: &Query,
         shapes: &'a [Shape],
     ) -> Vec<&'a Shape> {
-        H::traverse(self, ray, shapes)
+        H::traverse(self, query, shapes)
     }
 
     fn build_with_executor<

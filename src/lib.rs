@@ -84,6 +84,7 @@
 extern crate test;
 
 pub mod aabb;
+pub mod ball;
 pub mod bounding_hierarchy;
 pub mod bvh;
 pub mod flat_bvh;

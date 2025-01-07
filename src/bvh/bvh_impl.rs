@@ -4,7 +4,7 @@
 //! [`BvhNode`]: struct.BvhNode.html
 //!
 
-use crate::aabb::{Aabb, Bounded};
+use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
 use crate::bvh::iter::BvhTraverseIterator;
 use crate::ray::Ray;
@@ -97,9 +97,9 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.Aabb.html
     ///
-    pub fn traverse<'a, Shape: Bounded<T, D>>(
+    pub fn traverse<'a, Query: IntersectsAabb<T, D>, Shape: Bounded<T, D>>(
         &'a self,
-        ray: &Ray<T, D>,
+        query: &Query,
         shapes: &'a [Shape],
     ) -> Vec<&'a Shape> {
         if self.nodes.is_empty() {
@@ -107,7 +107,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
             return Vec::new();
         }
         let mut indices = Vec::new();
-        BvhNode::traverse_recursive(&self.nodes, 0, shapes, ray, &mut indices);
+        BvhNode::traverse_recursive(&self.nodes, 0, shapes, query, &mut indices);
         indices
             .iter()
             .map(|index| &shapes[*index])
@@ -115,17 +115,18 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 
     /// Creates a [`BvhTraverseIterator`] to traverse the [`Bvh`].
-    /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements for which
+    /// [`IntersectsAabb::intersects_aabb`] returns `true`.
     ///
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.Aabb.html
     ///
-    pub fn traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
+    pub fn traverse_iterator<'bvh, 'shape, Query: IntersectsAabb<T, D>, Shape: Bounded<T, D>>(
         &'bvh self,
-        ray: &'bvh Ray<T, D>,
+        query: &'bvh Query,
         shapes: &'shape [Shape],
-    ) -> BvhTraverseIterator<'bvh, 'shape, T, D, Shape> {
-        BvhTraverseIterator::new(self, ray, shapes)
+    ) -> BvhTraverseIterator<'bvh, 'shape, T, D, Query, Shape> {
+        BvhTraverseIterator::new(self, query, shapes)
     }
 
     /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
@@ -412,12 +413,12 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
         Bvh::build(shapes)
     }
 
-    fn traverse<'a, Shape: Bounded<T, D>>(
+    fn traverse<'a, Query: IntersectsAabb<T, D>, Shape: Bounded<T, D>>(
         &'a self,
-        ray: &Ray<T, D>,
+        query: &Query,
         shapes: &'a [Shape],
     ) -> Vec<&'a Shape> {
-        self.traverse(ray, shapes)
+        self.traverse(query, shapes)
     }
 
     fn pretty_print(&self) {

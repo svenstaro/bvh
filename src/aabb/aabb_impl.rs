@@ -1,5 +1,3 @@
-//! Axis Aligned Bounding Boxes.
-
 use nalgebra::{Point, SVector};
 use std::fmt;
 use std::ops::Index;
