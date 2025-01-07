@@ -132,8 +132,9 @@ impl<const D: usize> ArbitraryRay<D> {
         // is bounded.
         let mut direction = self.destination.point() - self.origin.point();
 
-        // All components are zero. Replace with a different vector since this is invalid.
-        if direction.norm() == 0.0 {
+        // All components are zero or close to zero. Replace with a
+        // different vector so that `Ray::new` is able to normalize.
+        if direction.normalize().iter().any(|f| !f.is_finite()) {
             direction[0] = 1.0;
         }
 
@@ -300,15 +301,14 @@ impl<const D: usize> Workload<D> {
                         self.shapes.push(shape);
                         bvh.add_shape(&mut self.shapes, new_shape_index);
                     }
-                    ArbitraryMutation::Remove(index) => {
-                        // TODO: remove `false &&` once this no longer causes a panic:
-                        // "Circular node that wasn't root parent=0 node=2"
-                        if false
-                        /* index < self.shapes.len() */
-                        {
+                    ArbitraryMutation::Remove(_index) => {
+                        // TODO: Fails, due to bug(s) e.g. https://github.com/svenstaro/bvh/issues/124.
+                        /*
+                        if index < self.shapes.len() {
                             bvh.remove_shape(&mut self.shapes, index, true);
                             self.shapes.pop().unwrap();
                         }
+                        */
                     }
                 }
             } else {
