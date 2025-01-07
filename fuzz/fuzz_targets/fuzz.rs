@@ -134,17 +134,12 @@ impl<const D: usize> ArbitraryRay<D> {
 
         // All components are zero or close to zero. Replace with a
         // different vector so that `Ray::new` is able to normalize.
-        if direction.normalize().iter().any(|f| !f.is_finite()) {
+        //
+        // Uses !(a < b) instead of a >= b so that NaN results in true.
+        if !(direction.normalize().magnitude() - 1.0 < 0.1) {
             direction[0] = 1.0;
         }
 
-        // Make sure `Ray::new`'s normalization will succeed because, if it doesn't we would be fuzzing on
-        // invalid input.
-        assert!(
-            direction.normalize().magnitude() - 1.0 < 0.1,
-            "direction {} could not be normalized",
-            direction
-        );
         let mut ray = Ray::new(self.origin.point(), direction);
 
         if self.mode.is_grid() {
