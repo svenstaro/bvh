@@ -14,6 +14,7 @@
 //! Finally, if there are any mutations left, one is applied, and the API's are tested
 //! again.
 
+use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
@@ -132,11 +133,10 @@ impl<const D: usize> ArbitraryRay<D> {
         // is bounded.
         let mut direction = self.destination.point() - self.origin.point();
 
-        // All components are zero or close to zero. Replace with a
+        // All components are zero or close to zero, resulting in
+        // either NaN or a near-zero normalized vector. Replace with a
         // different vector so that `Ray::new` is able to normalize.
-        //
-        // Uses !(a < b) instead of a >= b so that NaN results in true.
-        if !(direction.normalize().magnitude() - 1.0 < 0.1) {
+        if (direction.normalize().magnitude() - 1.0).partial_cmp(&0.1) != Some(Ordering::Less) {
             direction[0] = 1.0;
         }
 
