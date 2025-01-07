@@ -6,7 +6,14 @@ use crate::{
 };
 use nalgebra::Point;
 
-/// In 2D, a circle. In 3D, a sphere. This can be used for traversing BVH's.
+/// A circle, which can be used for traversing 2D BVHs.
+pub type Circle<T> = Ball<T, 2>;
+
+/// A sphere, which can be used for traversing 3D BVHs.
+pub type Sphere<T> = Ball<T, 3>;
+
+/// In 2D, a circle. In 3D, a sphere. This can be used for traversing BVHs.
+#[derive(Debug, Clone, Copy)]
 pub struct Ball<T: BHValue, const D: usize> {
     /// The center of the ball.
     pub center: Point<T, D>,

@@ -5,7 +5,9 @@ use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
 /// A trait implemented by things that may or may not intersect an AABB and, by extension,
 /// things that can be used to traverse a BVH.
 pub trait IntersectsAabb<T: BHValue, const D: usize> {
-    /// Returns whether this object intersects an [`Aabb`].
+    /// Returns whether this object intersects an [`Aabb`]. For the purpose of intersection,
+    /// the [`Aabb`] is a solid with area/volume. As a result, intersecting an [`Aabb`]
+    /// implies intersecting any [`Aabb`] that contains that [`Aabb`].
     ///
     /// # Examples
     /// ```
