@@ -252,10 +252,11 @@ impl<const D: usize> Workload<D> {
                 self.ray.mode.is_grid() && self.shapes.iter().all(|s| s.mode.is_grid());
 
             // Check that these don't panic.
+            let flat_bvh = bvh.flatten();
             bvh.assert_consistent(&self.shapes);
             bvh.assert_tight();
             bvh.nearest_candidates(&self.point.point(), &self.shapes);
-            let flat_bvh = bvh.flatten();
+            flat_bvh.nearest_candidates(&self.point.point(), &self.shapes);
 
             let traverse = bvh
                 .traverse(&ray, &self.shapes)
