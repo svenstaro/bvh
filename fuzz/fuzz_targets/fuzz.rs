@@ -53,6 +53,12 @@ impl<const D: usize> ArbitraryPoint<D> {
     }
 }
 
+impl<const D: usize> Debug for ArbitraryPoint<D> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Debug::fmt(&self.point(), f)
+    }
+}
+
 /// An arbitrary shape, with `ArbitraryPoint` corners, guaranteed to have an AABB with
 /// non-zero volume.
 #[derive(Clone, Arbitrary)]
@@ -210,7 +216,10 @@ impl Mode {
 #[derive(Debug, Arbitrary)]
 struct Workload<const D: usize> {
     shapes: Vec<ArbitraryShape<D>>,
+    /// For traversal.
     ray: ArbitraryRay<D>,
+    /// For nearest candidates.
+    point: ArbitraryPoint<D>,
     mutations: Vec<ArbitraryMutation<D>>,
 }
 
@@ -249,6 +258,7 @@ impl<const D: usize> Workload<D> {
             // Check that these don't panic.
             bvh.assert_consistent(&self.shapes);
             bvh.assert_tight();
+            bvh.nearest_candidates(&self.point.point(), &self.shapes);
             let flat_bvh = bvh.flatten();
 
             let traverse = bvh

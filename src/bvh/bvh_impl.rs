@@ -178,15 +178,18 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         let mut indices = Vec::new();
         let mut best_min_distance = T::max_value();
         let mut best_max_distance = T::max_value();
-        BvhNode::nearest_candidates_recursive(
-            &self.nodes,
-            0,
-            origin,
-            shapes,
-            &mut indices,
-            &mut best_min_distance,
-            &mut best_max_distance,
-        );
+
+        if !self.nodes.is_empty() {
+            BvhNode::nearest_candidates_recursive(
+                &self.nodes,
+                0,
+                origin,
+                shapes,
+                &mut indices,
+                &mut best_min_distance,
+                &mut best_max_distance,
+            );
+        }
 
         indices
             .into_iter()
