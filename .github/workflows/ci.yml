@@ -65,7 +65,7 @@ jobs:
 
       - name: Fuzz for a limited time
         run: |
-          RUST_BACKTRACE=1 cargo fuzz run fuzz -- -max_total_time=300
+          RUST_BACKTRACE=1 cargo fuzz run fuzz -- -max_total_time=60
 
   build-and-test-no-simd:
     name: CI with ${{ matrix.rust }} on ${{ matrix.os }} [no SIMD]

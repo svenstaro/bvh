@@ -127,37 +127,47 @@ impl<const D: usize> Debug for ArbitraryRay<D> {
 impl<const D: usize> ArbitraryRay<D> {
     /// Produces the corresponding ray from the input.
     fn ray(&self) -> Ray<Float, D> {
-        // Double normalize helps when the first one encounters precision issues.
-        let mut direction = (self.destination.point() - self.origin.point())
-            .normalize()
-            .normalize();
-        // Ensure no degenerate direction.
-        if direction.magnitude() < 0.5 || direction.iter().any(|f| f.is_nan() || f.abs() > 1.5) {
-            direction.iter_mut().for_each(|f| *f = 1.0);
-            direction = direction.normalize();
+        // Note that this eventually gets normalized in `Ray::new`. We don't expect precision issues
+        // becaues `LIMIT` limits the magnitude of each point's coordinates, so the length of `direction`
+        // is bounded.
+        let mut direction = self.destination.point() - self.origin.point();
+
+        // All components are zero. Replace with a different vector since this is invalid.
+        if direction.norm() == 0.0 {
+            direction[0] = 1.0;
         }
+
+        // Make sure `Ray::new`'s normalization will succeed because, if it doesn't we would be fuzzing on
+        // invalid input.
         assert!(
-            direction.magnitude() - 1.0 < 0.1,
-            "{}",
-            direction.magnitude()
+            direction.normalize().magnitude() - 1.0 < 0.1,
+            "direction {} could not be normalized",
+            direction
         );
         let mut ray = Ray::new(self.origin.point(), direction);
 
         if self.mode.is_grid() {
-            let max_axis = ray
+            ray.origin.iter_mut().for_each(|f| *f = f.round());
+
+            // Algorithm to find the closest unit-vector parallel to one of the axes. For fuzzing purposes,
+            // we just want all 6 unit-vectors parallel to an axis (in the 3D case) to be *possible*.
+            //
+            // See: https://stackoverflow.com/a/25825980/3064544
+            let (axis_number, axis_direction) = ray
                 .direction
                 .iter()
                 .enumerate()
                 .max_by(|(_, a), (_, b)| a.abs().partial_cmp(&b.abs()).unwrap())
-                .map(|(i, f)| (i, *f))
+                .map(|(i, f)| (i, 1f32.copysign(*f)))
                 .unwrap();
 
-            ray.origin.iter_mut().for_each(|f| *f = f.round());
-
-            // The resulting ray will be parallel to an axis.
+            // The resulting ray will be parallel to the axis numbered `axis_number`.
+            //
+            // `axis_direction` will be -1 or 1, indicating whether the vector points
+            // in the negative or positive direction on that axis.
             ray.direction.iter_mut().enumerate().for_each(|(i, f)| {
-                *f = if i == max_axis.0 {
-                    1f32.copysign(max_axis.1)
+                *f = if i == axis_number {
+                    axis_direction
                 } else {
                     0.0
                 }
@@ -207,6 +217,8 @@ struct Workload<const D: usize> {
 impl<const D: usize> Workload<D> {
     /// Called directly from the `cargo fuzz` entry point. Code in this function is
     /// easier for `rust-analyzer`` than code in that macro.
+    ///
+    /// The contents are explained in the module-level comment up above.
     fn fuzz(mut self) {
         let mut bvh = Bvh::build(&mut self.shapes);
         let ray = self.ray.ray();
@@ -225,6 +237,12 @@ impl<const D: usize> Workload<D> {
         }
 
         loop {
+            // Under these circumstances, the ray either definitively hits an AABB or it definitively
+            // doesn't. The lack of near hits and near misses prevents rounding errors that could cause
+            // different traversal algorithms to disagree.
+            //
+            // This relates to the current state of the BVH. It may change after each mutation is applied
+            // e.g. we could add the first non-grid shape or remove the last non-grid shape.
             let assert_traversal_agreement =
                 self.ray.mode.is_grid() && self.shapes.iter().all(|s| s.mode.is_grid());
 
@@ -250,10 +268,10 @@ impl<const D: usize> Workload<D> {
 
             if assert_traversal_agreement {
                 assert_eq!(traverse, traverse_iterator);
-                // Fails, due to a bug.
+                // TODO: Fails, due to bug(s) e.g. https://github.com/svenstaro/bvh/issues/120.
                 // assert_eq!(traverse, traverse_flat);
             } else {
-                // Fails, probably due to rounding errors.
+                // Fails, probably due to normal rounding errors.
             }
 
             let nearest_traverse_iterator = bvh
@@ -266,10 +284,10 @@ impl<const D: usize> Workload<D> {
                 .collect::<HashSet<_>>();
 
             if assert_traversal_agreement {
-                // Fails, due to a bug.
-                // assert_eq!(traverse_iterator, nearest_traverse_iterator);
+                // TODO: Fails, due to bug(s) e.g. https://github.com/svenstaro/bvh/issues/119
+                //assert_eq!(traverse_iterator, nearest_traverse_iterator);
             } else {
-                // Fails, probably due to rounding errors.
+                // Fails, probably due to normal rounding errors.
             }
 
             // Since the algorithm is similar, these should agree regardless of mode.
