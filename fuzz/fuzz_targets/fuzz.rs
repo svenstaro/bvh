@@ -14,6 +14,7 @@
 //! Finally, if there are any mutations left, one is applied, and the API's are tested
 //! again.
 
+use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
@@ -132,18 +133,13 @@ impl<const D: usize> ArbitraryRay<D> {
         // is bounded.
         let mut direction = self.destination.point() - self.origin.point();
 
-        // All components are zero. Replace with a different vector since this is invalid.
-        if direction.norm() == 0.0 {
+        // All components are zero or close to zero, resulting in
+        // either NaN or a near-zero normalized vector. Replace with a
+        // different vector so that `Ray::new` is able to normalize.
+        if (direction.normalize().magnitude() - 1.0).partial_cmp(&0.1) != Some(Ordering::Less) {
             direction[0] = 1.0;
         }
 
-        // Make sure `Ray::new`'s normalization will succeed because, if it doesn't we would be fuzzing on
-        // invalid input.
-        assert!(
-            direction.normalize().magnitude() - 1.0 < 0.1,
-            "direction {} could not be normalized",
-            direction
-        );
         let mut ray = Ray::new(self.origin.point(), direction);
 
         if self.mode.is_grid() {
@@ -300,15 +296,14 @@ impl<const D: usize> Workload<D> {
                         self.shapes.push(shape);
                         bvh.add_shape(&mut self.shapes, new_shape_index);
                     }
-                    ArbitraryMutation::Remove(index) => {
-                        // TODO: remove `false &&` once this no longer causes a panic:
-                        // "Circular node that wasn't root parent=0 node=2"
-                        if false
-                        /* index < self.shapes.len() */
-                        {
+                    ArbitraryMutation::Remove(_index) => {
+                        // TODO: Fails, due to bug(s) e.g. https://github.com/svenstaro/bvh/issues/124.
+                        /*
+                        if index < self.shapes.len() {
                             bvh.remove_shape(&mut self.shapes, index, true);
                             self.shapes.pop().unwrap();
                         }
+                        */
                     }
                 }
             } else {
