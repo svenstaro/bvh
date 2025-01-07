@@ -34,12 +34,7 @@ pub trait IntersectsAabb<T: BHValue, const D: usize> {
 
 impl<T: BHValue, const D: usize> IntersectsAabb<T, D> for Aabb<T, D> {
     fn intersects_aabb(&self, aabb: &Aabb<T, D>) -> bool {
-        for i in 0..D {
-            if self.max[i] < aabb.min[i] || aabb.max[i] < self.min[i] {
-                return false;
-            }
-        }
-        true
+        self.intersects_aabb(aabb)
     }
 }
 
