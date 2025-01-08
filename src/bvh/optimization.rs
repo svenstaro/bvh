@@ -25,6 +25,14 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         child_l_index == node_index
     }
 
+    fn node_is_right_child(&self, node_index: usize) -> bool {
+        // Get the index of the parent.
+        let node_parent_index = self.nodes[node_index].parent();
+        // Get the index of te right child of the parent.
+        let child_r_index = self.nodes[node_parent_index].child_r();
+        child_r_index == node_index
+    }
+
     fn connect_nodes<Shape: BHShape<T, D>>(
         &mut self,
         child_index: usize,
@@ -225,11 +233,12 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         let dead_node_index = bad_shape.bh_node_index();
 
         if self.nodes.len() == 1 {
-            if dead_node_index == 0 {
-                self.nodes.clear();
-            }
+            assert_eq!(dead_node_index, 0);
+            assert!(self.nodes[0].is_leaf());
+            self.nodes.clear();
         } else {
             let dead_node = self.nodes[dead_node_index];
+            assert!(dead_node.is_leaf());
 
             let parent_index = dead_node.parent();
             let gp_index = self.nodes[parent_index].parent();
@@ -237,6 +246,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
             let sibling_index = if self.node_is_left_child(dead_node_index) {
                 self.nodes[parent_index].child_r()
             } else {
+                assert!(self.node_is_right_child(dead_node_index));
                 self.nodes[parent_index].child_l()
             };
 
@@ -246,12 +256,11 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
             if parent_index == gp_index {
                 // We are removing one of the children of the root node
                 // The other child needs to become the root node
-                // The old root node and the dead child then have to be moved
-                assert!(
-                    parent_index != 0,
+                // The old root node and the dead child then have to be removed
+                assert_eq!(
+                    parent_index, 0,
                     "Circular node that wasn't root parent={} node={}",
-                    parent_index,
-                    dead_node_index
+                    parent_index, dead_node_index
                 );
 
                 match self.nodes[sibling_index] {
@@ -270,6 +279,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
                     }
                 }
 
+                // Remove in decreasing order of index.
                 self.swap_and_remove_index(shapes, sibling_index.max(dead_node_index));
                 self.swap_and_remove_index(shapes, sibling_index.min(dead_node_index));
             } else {
@@ -288,9 +298,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
             if deleted_shape_index < end_shape {
                 shapes.swap(deleted_shape_index, end_shape);
                 let node_index = shapes[deleted_shape_index].bh_node_index();
-                if let Some(index) = self.nodes[node_index].shape_index_mut() {
-                    *index = deleted_shape_index
-                }
+                *self.nodes[node_index].shape_index_mut().unwrap() = deleted_shape_index;
             }
         }
     }
@@ -324,12 +332,13 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
                     let l_aabb = self.nodes[child_l_index].get_node_aabb(shapes);
                     let r_aabb = self.nodes[child_r_index].get_node_aabb(shapes);
                     let mut stop = true;
-                    let epsilon = T::from_f32(0.00001).unwrap_or(T::zero());
-                    if !l_aabb.relative_eq(&child_l_aabb, epsilon) {
+                    // Avoid `relative_eq`, because rounding errors can accumulate and
+                    // eventually the BVH won't necessarily be tight.
+                    if l_aabb != child_l_aabb {
                         stop = false;
                         *self.nodes[parent].child_l_aabb_mut() = l_aabb;
                     }
-                    if !r_aabb.relative_eq(&child_r_aabb, epsilon) {
+                    if r_aabb != child_r_aabb {
                         stop = false;
                         *self.nodes[parent].child_r_aabb_mut() = r_aabb;
                     }
@@ -354,19 +363,13 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
             self.nodes[node_index] = self.nodes[end];
             let parent_index = self.nodes[node_index].parent();
 
-            if let BvhNode::Leaf { .. } = self.nodes[parent_index] {
-                self.nodes.truncate(end);
-                return;
-            }
             let parent = self.nodes[parent_index];
+            assert!(!parent.is_leaf());
             let moved_left = parent.child_l() == end;
-            if !moved_left && parent.child_r() != end {
-                self.nodes.truncate(end);
-                return;
-            }
             let ref_to_change = if moved_left {
                 self.nodes[parent_index].child_l_mut()
             } else {
+                assert_eq!(parent.child_r(), end);
                 self.nodes[parent_index].child_r_mut()
             };
             *ref_to_change = node_index;

@@ -7,7 +7,7 @@ use std::ops::Index;
 use crate::bounding_hierarchy::BHValue;
 
 /// [`Aabb`] struct.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Aabb<T: BHValue, const D: usize> {
     /// Minimum coordinates
