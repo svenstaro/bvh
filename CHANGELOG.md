@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fix more cases where an empty BVH would panic [#116](https://github.com/svenstaro/bvh/pull/116) (thanks @finnbear)
 - Add fuzzing suite [#113](https://github.com/svenstaro/bvh/pull/113) (thanks @finnbear)
 - Fix some assertions [#129](https://github.com/svenstaro/bvh/pull/129) (thanks @finnbear)
+- Fix traversal in case of single-node BVH [#130](https://github.com/svenstaro/bvh/pull/130) (thanks @finnbear)
 
 ## 0.10.0 - 2024-07-06
 - Don't panic when traversing empty BVH [#106](https://github.com/svenstaro/bvh/pull/106) (thanks @finnbear)
