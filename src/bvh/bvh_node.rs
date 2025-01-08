@@ -591,4 +591,9 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
             _ => None,
         }
     }
+
+    /// Returns `true` if the node is a leaf node.
+    pub fn is_leaf(&self) -> bool {
+        matches!(self, Self::Leaf { .. })
+    }
 }

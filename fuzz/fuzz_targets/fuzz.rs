@@ -296,14 +296,11 @@ impl<const D: usize> Workload<D> {
                         self.shapes.push(shape);
                         bvh.add_shape(&mut self.shapes, new_shape_index);
                     }
-                    ArbitraryMutation::Remove(_index) => {
-                        // TODO: Fails, due to bug(s) e.g. https://github.com/svenstaro/bvh/issues/124.
-                        /*
+                    ArbitraryMutation::Remove(index) => {
                         if index < self.shapes.len() {
                             bvh.remove_shape(&mut self.shapes, index, true);
                             self.shapes.pop().unwrap();
                         }
-                        */
                     }
                 }
             } else {

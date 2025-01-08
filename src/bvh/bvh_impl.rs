@@ -377,7 +377,10 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         } = self.nodes[node_index]
         {
             let joint_aabb = child_l_aabb.join(&child_r_aabb);
-            assert!(joint_aabb.relative_eq(outer_aabb, T::epsilon()));
+            // Aabb's are joined by selecting the min/max of coordinates on each axis,
+            // which doesn't involve rounding errors. This is equally true here and
+            // inside the BVH implementation. Therefore, we can assert exact equality.
+            assert_eq!(&joint_aabb, outer_aabb);
             self.assert_tight_subtree(child_l_index, &child_l_aabb);
             self.assert_tight_subtree(child_r_index, &child_r_aabb);
         }
