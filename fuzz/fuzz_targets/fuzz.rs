@@ -256,7 +256,7 @@ impl<const D: usize> Workload<D> {
                 .traverse_iterator(&ray, &self.shapes)
                 .map(ByPtr)
                 .collect::<HashSet<_>>();
-            let _traverse_flat = flat_bvh
+            let traverse_flat = flat_bvh
                 .traverse(&ray, &self.shapes)
                 .into_iter()
                 .map(ByPtr)
@@ -264,8 +264,7 @@ impl<const D: usize> Workload<D> {
 
             if assert_traversal_agreement {
                 assert_eq!(traverse, traverse_iterator);
-                // TODO: Fails, due to bug(s) e.g. https://github.com/svenstaro/bvh/issues/120.
-                // assert_eq!(traverse, traverse_flat);
+                assert_eq!(traverse, traverse_flat);
             } else {
                 // Fails, probably due to normal rounding errors.
             }

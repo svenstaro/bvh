@@ -33,7 +33,7 @@ impl<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>>
             stack: [0; 32],
             node_index: 0,
             stack_size: 0,
-            has_node: !bvh.nodes.is_empty(),
+            has_node: iter_initially_has_node(bvh, ray, shapes),
         }
     }
 
@@ -140,6 +140,33 @@ impl<'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>> Iterator
             }
         }
         None
+    }
+}
+
+/// This computation is common to all `Bvh` traversal iterators.
+///
+/// It is designed to handle two extraordinary cases:
+/// 1. Empty BVH. This case requires an empty iterator. This is accomplished by setting `has_node`
+///    to `false` to indicate the absence of any nodes.
+/// 2. Single-node BVH, in which the root node is a leaf node. This case requires returning the
+///    root shape, if and only if its AABB is intersected by the ray. This is accomplished by
+///    setting `has_node` based on manually checking intersection.
+///
+/// Finally, if the root is an interior node, that is the normal case. We set `has_node` to true so
+/// the iterator can visit the root node and decide what to do next based on the root node's child
+/// AABB's.
+pub(crate) fn iter_initially_has_node<T: BHValue, const D: usize, Shape: Bounded<T, D>>(
+    bvh: &Bvh<T, D>,
+    ray: &Ray<T, D>,
+    shapes: &[Shape],
+) -> bool {
+    match bvh.nodes.first() {
+        // Only process the root leaf node if the shape's AABB is intersected.
+        Some(BvhNode::Leaf { shape_index, .. }) => {
+            ray.intersects_aabb(&shapes[*shape_index].aabb())
+        }
+        Some(_) => true,
+        None => false,
     }
 }
 
