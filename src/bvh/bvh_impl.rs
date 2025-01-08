@@ -107,7 +107,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
             return Vec::new();
         }
         let mut indices = Vec::new();
-        BvhNode::traverse_recursive(&self.nodes, 0, ray, &mut indices);
+        BvhNode::traverse_recursive(&self.nodes, 0, shapes, ray, &mut indices);
         indices
             .iter()
             .map(|index| &shapes[*index])
@@ -457,7 +457,13 @@ pub fn rayon_executor<S, T: Send + BHValue, const D: usize>(
 
 #[cfg(test)]
 mod tests {
-    use crate::testbase::{build_empty_bh, build_some_bh, traverse_some_bh, TBvh3, TBvhNode3};
+    use crate::{
+        bounding_hierarchy::BoundingHierarchy,
+        testbase::{
+            build_empty_bh, build_some_bh, traverse_some_bh, TBvh3, TBvhNode3, TPoint3, TRay3,
+            TVector3, UnitBox,
+        },
+    };
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -559,6 +565,33 @@ mod tests {
         }
 
         assert_eq!(expected_shapes, found_shapes);
+    }
+
+    /// A single-node BVH is special, since the root node is a leaf node. Make sure
+    /// the root node isn't unconditionally returned when it isn't intersected.
+    #[test]
+    fn test_traverse_one_node_bvh_no_intersection() {
+        let mut boxes = vec![UnitBox::new(0, TPoint3::new(0.0, 1.0, 2.0))];
+        let ray = TRay3::new(TPoint3::new(0.0, 0.0, 0.0), TVector3::new(1.0, 0.0, 0.0));
+        let bvh = TBvh3::build(&mut boxes);
+
+        assert!(bvh.traverse(&ray, &boxes).is_empty());
+        assert!(bvh.traverse_iterator(&ray, &boxes).next().is_none());
+        assert!(bvh.nearest_traverse_iterator(&ray, &boxes).next().is_none());
+        assert!(bvh.flatten().traverse(&ray, &boxes).is_empty())
+    }
+
+    /// Make sure the root node can be returned when it is intersected.
+    #[test]
+    fn test_traverse_one_node_bvh_intersection() {
+        let mut boxes = vec![UnitBox::new(0, TPoint3::new(10.0, 0.0, 0.0))];
+        let ray = TRay3::new(TPoint3::new(0.0, 0.0, 0.0), TVector3::new(1.0, 0.0, 0.0));
+        let bvh = TBvh3::build(&mut boxes);
+
+        assert_eq!(bvh.traverse(&ray, &boxes).len(), 1);
+        assert_eq!(bvh.traverse_iterator(&ray, &boxes).count(), 1);
+        assert_eq!(bvh.nearest_traverse_iterator(&ray, &boxes).count(), 1);
+        assert_eq!(bvh.flatten().traverse(&ray, &boxes).len(), 1)
     }
 }
 

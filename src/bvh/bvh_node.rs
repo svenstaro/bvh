@@ -1,4 +1,4 @@
-use crate::aabb::Aabb;
+use crate::aabb::{Aabb, Bounded};
 use crate::bounding_hierarchy::{BHShape, BHValue};
 
 use crate::ray::Ray;
@@ -293,9 +293,10 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
     /// [`Bvh`]: struct.Bvh.html
     /// [`Ray`]: ../ray/struct.Ray.html
     ///
-    pub fn traverse_recursive(
+    pub(crate) fn traverse_recursive<Shape: Bounded<T, D>>(
         nodes: &[BvhNode<T, D>],
         node_index: usize,
+        shapes: &[Shape],
         ray: &Ray<T, D>,
         indices: &mut Vec<usize>,
     ) {
@@ -308,14 +309,19 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
                 ..
             } => {
                 if ray.intersects_aabb(child_l_aabb) {
-                    BvhNode::traverse_recursive(nodes, child_l_index, ray, indices);
+                    BvhNode::traverse_recursive(nodes, child_l_index, shapes, ray, indices);
                 }
                 if ray.intersects_aabb(child_r_aabb) {
-                    BvhNode::traverse_recursive(nodes, child_r_index, ray, indices);
+                    BvhNode::traverse_recursive(nodes, child_r_index, shapes, ray, indices);
                 }
             }
             BvhNode::Leaf { shape_index, .. } => {
-                indices.push(shape_index);
+                // Either we got to a non-root node recursively, in which case the caller
+                // checked our AABB, or we are processing the root node, in which case we
+                // need to check the AABB.
+                if node_index != 0 || ray.intersects_aabb(&shapes[shape_index].aabb()) {
+                    indices.push(shape_index);
+                }
             }
         }
     }

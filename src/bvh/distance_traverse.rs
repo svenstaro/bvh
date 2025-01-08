@@ -1,6 +1,6 @@
 use crate::aabb::Bounded;
 use crate::bounding_hierarchy::BHValue;
-use crate::bvh::{Bvh, BvhNode};
+use crate::bvh::{iter_initially_has_node, Bvh, BvhNode};
 use crate::ray::Ray;
 
 #[derive(Debug, Clone, Copy)]
@@ -50,7 +50,7 @@ where
             stack: [(0, RestChild::None); 32],
             node_index: 0,
             stack_size: 0,
-            has_node: !bvh.nodes.is_empty(),
+            has_node: iter_initially_has_node(bvh, ray, shapes),
         }
     }
 
