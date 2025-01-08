@@ -298,7 +298,9 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
             if deleted_shape_index < end_shape {
                 shapes.swap(deleted_shape_index, end_shape);
                 let node_index = shapes[deleted_shape_index].bh_node_index();
-                *self.nodes[node_index].shape_index_mut().unwrap() = deleted_shape_index;
+                *self.nodes[node_index]
+                    .shape_index_mut()
+                    .expect("bh_node_index() must be a leaf node") = deleted_shape_index;
             }
         }
     }
