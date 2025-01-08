@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Add fuzzing suite [#113](https://github.com/svenstaro/bvh/pull/113) (thanks @finnbear)
 - Fix some assertions [#129](https://github.com/svenstaro/bvh/pull/129) (thanks @finnbear)
 - Fix traversal in case of single-node BVH [#130](https://github.com/svenstaro/bvh/pull/130) (thanks @finnbear)
+- **Breaking change:** BVH traversal now accepts a `Query: IntersectsAabb` rather than a `Ray`,
+  allowing points, AABB's, and circles/spheres to be tested, too. Most use-cases involving `Ray` 
+  will continue to compile as-is. If you previously wrote `BvhTraverseIterator<T, D, S>`, you'll
+  need to change it to `BvhTraverseIterator<T, D, Ray, S>`. [#128](https://github.com/svenstaro/bvh/pull/128) (thanks @finnbear)
 
 ## 0.10.0 - 2024-07-06
 - Don't panic when traversing empty BVH [#106](https://github.com/svenstaro/bvh/pull/106) (thanks @finnbear)
