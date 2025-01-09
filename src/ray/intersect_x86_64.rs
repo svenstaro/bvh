@@ -89,7 +89,7 @@ fn ray_intersects_aabb_m128(
         let tmin = max_elem_m128(inf);
         let tmax = min_elem_m128(sup);
 
-        tmax > fast_max(tmin, 0.0)
+        tmax >= fast_max(tmin, 0.0)
     }
 }
 
@@ -182,7 +182,7 @@ fn ray_intersects_aabb_m128d(
         let tmin = max_elem_m128d(inf);
         let tmax = min_elem_m128d(sup);
 
-        tmax > fast_max(tmin, 0.0)
+        tmax >= fast_max(tmin, 0.0)
     }
 }
 
@@ -263,7 +263,7 @@ fn ray_intersects_aabb_m256d(
         let tmin = max_elem_m256d(inf);
         let tmax = min_elem_m256d(sup);
 
-        tmax > fast_max(tmin, 0.0)
+        tmax >= fast_max(tmin, 0.0)
     }
 }
 

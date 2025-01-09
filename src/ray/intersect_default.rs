@@ -20,7 +20,7 @@ impl<T: BHValue, const D: usize> RayIntersection<T, D> for Ray<T, D> {
         let tmin = inf.max();
         let tmax = sup.min();
 
-        tmax > fast_max(tmin, T::zero())
+        tmax >= fast_max(tmin, T::zero())
     }
 }
 
@@ -35,6 +35,6 @@ impl<T: BHValue, const D: usize> RayIntersection<T, D> for Ray<T, D> {
         let tmin = inf.max();
         let tmax = sup.min();
 
-        tmax > fast_max(tmin, T::zero())
+        tmax >= fast_max(tmin, T::zero())
     }
 }
