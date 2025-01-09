@@ -1,6 +1,7 @@
 //! Common utilities shared by unit tests.
 
-use crate::aabb::Bounded;
+use crate::aabb::{Aabb, Bounded, IntersectsAabb};
+use crate::ball::Sphere;
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
 
 use num::{FromPrimitive, Integer};
@@ -129,18 +130,20 @@ pub fn build_empty_bh<BH: BoundingHierarchy<f32, 3>>() -> (Vec<UnitBox>, BH) {
 /// Given a ray, a bounding hierarchy, the complete list of shapes in the scene and a list of
 /// expected hits, verifies, whether the ray hits only the expected shapes.
 fn traverse_and_verify<BH: BoundingHierarchy<f32, 3>>(
-    ray_origin: TPoint3,
-    ray_direction: TVector3,
+    query: &impl IntersectsAabb<f32, 3>,
     all_shapes: &[UnitBox],
     bh: &BH,
     expected_shapes: &HashSet<i32>,
 ) {
-    let ray = TRay3::new(ray_origin, ray_direction);
-    let hit_shapes = bh.traverse(&ray, all_shapes);
+    let hit_shapes = bh.traverse(query, all_shapes);
 
     assert_eq!(expected_shapes.len(), hit_shapes.len());
     for shape in hit_shapes {
-        assert!(expected_shapes.contains(&shape.id));
+        assert!(
+            expected_shapes.contains(&shape.id),
+            "unexpected shape {}",
+            shape.id
+        );
     }
 }
 
@@ -169,7 +172,12 @@ fn traverse_some_built_bh<BH: BoundingHierarchy<f32, 3>>(all_shapes: &[UnitBox],
         for id in -10..11 {
             expected_shapes.insert(id);
         }
-        traverse_and_verify(origin, direction, all_shapes, &bh, &expected_shapes);
+        traverse_and_verify(
+            &TRay3::new(origin, direction),
+            all_shapes,
+            &bh,
+            &expected_shapes,
+        );
     }
 
     {
@@ -180,7 +188,12 @@ fn traverse_some_built_bh<BH: BoundingHierarchy<f32, 3>>(all_shapes: &[UnitBox],
         // It should hit only one box.
         let mut expected_shapes = HashSet::new();
         expected_shapes.insert(0);
-        traverse_and_verify(origin, direction, all_shapes, &bh, &expected_shapes);
+        traverse_and_verify(
+            &TRay3::new(origin, direction),
+            all_shapes,
+            &bh,
+            &expected_shapes,
+        );
     }
 
     {
@@ -193,7 +206,53 @@ fn traverse_some_built_bh<BH: BoundingHierarchy<f32, 3>>(all_shapes: &[UnitBox],
         expected_shapes.insert(4);
         expected_shapes.insert(5);
         expected_shapes.insert(6);
-        traverse_and_verify(origin, direction, all_shapes, &bh, &expected_shapes);
+        traverse_and_verify(
+            &TRay3::new(origin, direction),
+            all_shapes,
+            &bh,
+            &expected_shapes,
+        );
+    }
+
+    {
+        // Define a point at the origin.
+        let point = TPoint3::new(0.0, 0.0, 0.0);
+
+        // It should be contained by the middle box.
+        let mut expected_shapes = HashSet::new();
+        expected_shapes.insert(0);
+        traverse_and_verify(&point, all_shapes, &bh, &expected_shapes);
+    }
+
+    {
+        // Define a point far away.
+        let point = TPoint3::new(0.0, 1000.0, 0.0);
+
+        // It shouldn't be contained by any boxes.
+        let expected_shapes = HashSet::new();
+        traverse_and_verify(&point, all_shapes, &bh, &expected_shapes);
+    }
+
+    {
+        // Define an AABB intersecting with some boxes.
+        let aabb = Aabb::with_bounds(TPoint3::new(5.1, -1.0, -1.0), TPoint3::new(9.9, 1.0, 1.0));
+
+        let mut expected_shapes = HashSet::new();
+        for x in 5..=10 {
+            expected_shapes.insert(x);
+        }
+        traverse_and_verify(&aabb, all_shapes, &bh, &expected_shapes);
+    }
+
+    {
+        // Define a sphere intersecting with some boxes.
+        let sphere = Sphere::new(TPoint3::new(5.0, -1.0, -1.0), 1.4);
+
+        let mut expected_shapes = HashSet::new();
+        for x in 4..=6 {
+            expected_shapes.insert(x);
+        }
+        traverse_and_verify(&sphere, all_shapes, &bh, &expected_shapes);
     }
 }
 

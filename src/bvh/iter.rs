@@ -1,14 +1,20 @@
-use crate::aabb::Bounded;
+use crate::aabb::{Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::BHValue;
 use crate::bvh::{Bvh, BvhNode};
-use crate::ray::Ray;
 
 /// Iterator to traverse a [`Bvh`] without memory allocations
-pub struct BvhTraverseIterator<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>> {
+pub struct BvhTraverseIterator<
+    'bvh,
+    'shape,
+    T: BHValue,
+    const D: usize,
+    Query: IntersectsAabb<T, D>,
+    Shape: Bounded<T, D>,
+> {
     /// Reference to the [`Bvh`] to traverse
     bvh: &'bvh Bvh<T, D>,
-    /// Reference to the input ray
-    ray: &'bvh Ray<T, D>,
+    /// Reference to the input query
+    query: &'bvh Query,
     /// Reference to the input shapes array
     shapes: &'shape [Shape],
     /// Traversal stack. 4 billion items seems enough?
@@ -21,19 +27,25 @@ pub struct BvhTraverseIterator<'bvh, 'shape, T: BHValue, const D: usize, Shape: 
     has_node: bool,
 }
 
-impl<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>>
-    BvhTraverseIterator<'bvh, 'shape, T, D, Shape>
+impl<
+        'bvh,
+        'shape,
+        T: BHValue,
+        const D: usize,
+        Query: IntersectsAabb<T, D>,
+        Shape: Bounded<T, D>,
+    > BvhTraverseIterator<'bvh, 'shape, T, D, Query, Shape>
 {
     /// Creates a new [`BvhTraverseIterator`]
-    pub fn new(bvh: &'bvh Bvh<T, D>, ray: &'bvh Ray<T, D>, shapes: &'shape [Shape]) -> Self {
+    pub fn new(bvh: &'bvh Bvh<T, D>, query: &'bvh Query, shapes: &'shape [Shape]) -> Self {
         BvhTraverseIterator {
             bvh,
-            ray,
+            query,
             shapes,
             stack: [0; 32],
             node_index: 0,
             stack_size: 0,
-            has_node: iter_initially_has_node(bvh, ray, shapes),
+            has_node: iter_initially_has_node(bvh, query, shapes),
         }
     }
 
@@ -71,7 +83,7 @@ impl<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>>
                 ref child_l_aabb,
                 ..
             } => {
-                if self.ray.intersects_aabb(child_l_aabb) {
+                if self.query.intersects_aabb(child_l_aabb) {
                     self.node_index = child_l_index;
                     self.has_node = true;
                 } else {
@@ -93,7 +105,7 @@ impl<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>>
                 ref child_r_aabb,
                 ..
             } => {
-                if self.ray.intersects_aabb(child_r_aabb) {
+                if self.query.intersects_aabb(child_r_aabb) {
                     self.node_index = child_r_index;
                     self.has_node = true;
                 } else {
@@ -107,8 +119,8 @@ impl<'bvh, 'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>>
     }
 }
 
-impl<'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>> Iterator
-    for BvhTraverseIterator<'_, 'shape, T, D, Shape>
+impl<'shape, T: BHValue, const D: usize, Query: IntersectsAabb<T, D>, Shape: Bounded<T, D>> Iterator
+    for BvhTraverseIterator<'_, 'shape, T, D, Query, Shape>
 {
     type Item = &'shape Shape;
 
@@ -155,15 +167,20 @@ impl<'shape, T: BHValue, const D: usize, Shape: Bounded<T, D>> Iterator
 /// Finally, if the root is an interior node, that is the normal case. We set `has_node` to true so
 /// the iterator can visit the root node and decide what to do next based on the root node's child
 /// AABB's.
-pub(crate) fn iter_initially_has_node<T: BHValue, const D: usize, Shape: Bounded<T, D>>(
+pub(crate) fn iter_initially_has_node<
+    T: BHValue,
+    const D: usize,
+    Query: IntersectsAabb<T, D>,
+    Shape: Bounded<T, D>,
+>(
     bvh: &Bvh<T, D>,
-    ray: &Ray<T, D>,
+    query: &Query,
     shapes: &[Shape],
 ) -> bool {
     match bvh.nodes.first() {
         // Only process the root leaf node if the shape's AABB is intersected.
         Some(BvhNode::Leaf { shape_index, .. }) => {
-            ray.intersects_aabb(&shapes[*shape_index].aabb())
+            query.intersects_aabb(&shapes[*shape_index].aabb())
         }
         Some(_) => true,
         None => false,

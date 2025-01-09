@@ -20,9 +20,11 @@ use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
 
 use arbitrary::Arbitrary;
-use bvh::aabb::{Aabb, Bounded};
+use bvh::aabb::{Aabb, Bounded, IntersectsAabb};
+use bvh::ball::Ball;
 use bvh::bounding_hierarchy::{BHShape, BoundingHierarchy};
 use bvh::bvh::Bvh;
+use bvh::flat_bvh::FlatBvh;
 use bvh::ray::Ray;
 use libfuzzer_sys::fuzz_target;
 use nalgebra::{Point, SimdPartialOrd};
@@ -32,7 +34,8 @@ type Float = f32;
 
 /// Coordinate magnitude should not exceed this which prevents
 /// certain degenerate cases like infinity, both in inputs
-/// and internal computations in the BVH.
+/// and internal computations in the BVH. For `Mode::Grid`,
+/// offsets of 1/3 should be representable.
 const LIMIT: Float = 5_000.0;
 
 // The entry point for `cargo fuzz`.
@@ -45,12 +48,33 @@ fuzz_target!(|workload: Workload<3>| {
 #[derive(Clone, Arbitrary)]
 struct ArbitraryPoint<const D: usize> {
     coordinates: [NotNan<Float>; D],
+    mode: Mode,
+}
+
+impl<const D: usize> Debug for ArbitraryPoint<D> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        Debug::fmt(&self.point(), f)
+    }
 }
 
 impl<const D: usize> ArbitraryPoint<D> {
     /// Produces the corresponding point from the input.
     fn point(&self) -> Point<Float, D> {
-        Point::<_, D>::from_slice(&self.coordinates).map(|f| f.into_inner().clamp(-LIMIT, LIMIT))
+        Point::<_, D>::from_slice(&self.coordinates).map(|f| {
+            // Float may be large or infinite, but is guaranteed to not be NaN due
+            // to the `NotNan` wrapper.
+            //
+            // Clamp it to a smaller range so that offsets of 1/3 are easily representable,
+            // which helps `Mode::Grid`.
+            let ret = f.into_inner().clamp(-LIMIT, LIMIT);
+
+            if self.mode.is_grid() {
+                // Round each coordinate to an integer, as per `Mode::Grid` docs.
+                ret.round()
+            } else {
+                ret
+            }
+        })
     }
 }
 
@@ -60,7 +84,7 @@ impl<const D: usize> ArbitraryPoint<D> {
 struct ArbitraryShape<const D: usize> {
     a: ArbitraryPoint<D>,
     b: ArbitraryPoint<D>,
-    mode: Mode,
+    /// This will end up being mutated, but initializing it arbitrarily could catch bugs.
     bh_node_index: usize,
 }
 
@@ -84,15 +108,19 @@ impl<const D: usize> Bounded<Float, D> for ArbitraryShape<D> {
 
         let mut aabb = Aabb::with_bounds(a.simd_min(b), a.simd_max(b));
 
-        if self.mode.is_grid() {
-            let mut center = aabb.center();
-            center.iter_mut().for_each(|f| *f = f.round());
-            // Unit AABB around center.
-            aabb.min.iter_mut().enumerate().for_each(|(i, f)| {
-                *f = center[i] - 0.5;
-            });
+        if self.mode_is_grid() {
+            let min = aabb.min;
             aabb.max.iter_mut().enumerate().for_each(|(i, f)| {
-                *f = center[i] + 0.5;
+                // Coordinate should already be an integer, because `max` is in grid mode.
+                //
+                // Use `max` to ensure the AABB has volume, and add a margin described by `Mode::Grid`.
+                *f = f.max(min[i]) + 1.0 / 3.0;
+            });
+            aabb.min.iter_mut().for_each(|f| {
+                // Coordinate should already be an integer, because `min` is in grid mode.
+                //
+                // Add a margin described by `Mode::Grid`.
+                *f -= 1.0 / 3.0;
             });
         }
 
@@ -110,13 +138,18 @@ impl<const D: usize> BHShape<Float, D> for ArbitraryShape<D> {
     }
 }
 
+impl<const D: usize> ArbitraryShape<D> {
+    fn mode_is_grid(&self) -> bool {
+        self.a.mode.is_grid() && self.b.mode.is_grid()
+    }
+}
+
 /// The input for arbitrary ray, starting at an `ArbitraryPoint` and having a precisely
 /// normalized direction.
 #[derive(Clone, Arbitrary)]
 struct ArbitraryRay<const D: usize> {
     origin: ArbitraryPoint<D>,
     destination: ArbitraryPoint<D>,
-    mode: Mode,
 }
 
 impl<const D: usize> Debug for ArbitraryRay<D> {
@@ -126,6 +159,10 @@ impl<const D: usize> Debug for ArbitraryRay<D> {
 }
 
 impl<const D: usize> ArbitraryRay<D> {
+    fn mode_is_grid(&self) -> bool {
+        self.origin.mode.is_grid() && self.destination.mode.is_grid()
+    }
+
     /// Produces the corresponding ray from the input.
     fn ray(&self) -> Ray<Float, D> {
         // Note that this eventually gets normalized in `Ray::new`. We don't expect precision issues
@@ -142,9 +179,7 @@ impl<const D: usize> ArbitraryRay<D> {
 
         let mut ray = Ray::new(self.origin.point(), direction);
 
-        if self.mode.is_grid() {
-            ray.origin.iter_mut().for_each(|f| *f = f.round());
-
+        if self.mode_is_grid() {
             // Algorithm to find the closest unit-vector parallel to one of the axes. For fuzzing purposes,
             // we just want all 6 unit-vectors parallel to an axis (in the 3D case) to be *possible*.
             //
@@ -174,6 +209,29 @@ impl<const D: usize> ArbitraryRay<D> {
     }
 }
 
+/// The input for arbitrary ray, starting at an `ArbitraryPoint` and having a precisely
+/// normalized direction.
+#[derive(Clone, Arbitrary)]
+struct ArbitraryBall<const D: usize> {
+    center: ArbitraryPoint<D>,
+    radius: NotNan<f32>,
+}
+
+impl<const D: usize> Debug for ArbitraryBall<D> {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        Debug::fmt(&self.ball(), f)
+    }
+}
+
+impl<const D: usize> ArbitraryBall<D> {
+    fn ball(&self) -> Ball<Float, D> {
+        Ball {
+            center: self.center.point(),
+            radius: self.radius.into_inner().max(0.0),
+        }
+    }
+}
+
 /// An arbitrary mutation to apply to the BVH to fuzz BVH optimization.
 #[derive(Debug, Arbitrary)]
 enum ArbitraryMutation<const D: usize> {
@@ -187,12 +245,14 @@ enum Mode {
     /// AABB's may have mostly arbitrary bounds, and ray may have mostly arbitrary
     /// origin and direction.
     Chaos,
-    /// AABB's are unit cubes, and must have integer coordinates. Ray must have an
-    /// origin consisting of integer coordinates and a direction that is parallel to
-    /// one of the axes.
+    /// AABB's bound integer coordinates with a margin of 1/3. Twice the margin, 2/3,
+    /// is less than 1, so AABB's can either deeply intersect or will have a gap at
+    /// least 1/3 wide. Ray must have an origin consisting of integer coordinates and
+    /// a direction that is parallel to one of the axes. Point must have integer
+    /// coordinates.
     ///
-    /// In this mode, all types of traversal are expected to yield the same results,
-    /// except when bugs exist that have yet to be fixed.
+    /// In this mode, all types of ray, AABB, and point traversal are expected to
+    /// yield the same results, except when bugs exist that have yet to be fixed.
     Grid,
 }
 
@@ -206,11 +266,57 @@ impl Mode {
 #[derive(Debug, Arbitrary)]
 struct Workload<const D: usize> {
     shapes: Vec<ArbitraryShape<D>>,
+    /// Traverse by ray.
     ray: ArbitraryRay<D>,
+    /// Traverse by point.
+    point: ArbitraryPoint<D>,
+    /// Traverse by AABB.
+    aabb: ArbitraryShape<D>,
+    /// Traverse by ball.
+    ball: ArbitraryBall<D>,
     mutations: Vec<ArbitraryMutation<D>>,
 }
 
 impl<const D: usize> Workload<D> {
+    /// Compares normal, iterative, and flat-BVH traversal of the same query.
+    ///
+    /// Returns the result of normal traversal.
+    ///
+    /// # Panics
+    /// If `assert_agreement` is true, panics if the results differ in an
+    /// unexpected way.
+    fn fuzz_traversal<'a>(
+        &'a self,
+        bvh: &'a Bvh<Float, D>,
+        flat_bvh: &'a FlatBvh<Float, D>,
+        query: &impl IntersectsAabb<Float, D>,
+        assert_agreement: bool,
+    ) -> HashSet<ByPtr<'a, ArbitraryShape<D>>> {
+        let traverse = bvh
+            .traverse(query, &self.shapes)
+            .into_iter()
+            .map(ByPtr)
+            .collect::<HashSet<_>>();
+        let traverse_iterator = bvh
+            .traverse_iterator(query, &self.shapes)
+            .map(ByPtr)
+            .collect::<HashSet<_>>();
+        let traverse_flat = flat_bvh
+            .traverse(query, &self.shapes)
+            .into_iter()
+            .map(ByPtr)
+            .collect::<HashSet<_>>();
+
+        if assert_agreement {
+            assert_eq!(traverse, traverse_iterator);
+            assert_eq!(traverse, traverse_flat);
+        } else {
+            // Fails, probably due to normal rounding errors.
+        }
+
+        traverse
+    }
+
     /// Called directly from the `cargo fuzz` entry point. Code in this function is
     /// easier for `rust-analyzer`` than code in that macro.
     ///
@@ -233,41 +339,54 @@ impl<const D: usize> Workload<D> {
         }
 
         loop {
+            // `self.shapes` are all in grid mode.
+            let all_shapes_grid = self.shapes.iter().all(|s| s.mode_is_grid());
+
             // Under these circumstances, the ray either definitively hits an AABB or it definitively
             // doesn't. The lack of near hits and near misses prevents rounding errors that could cause
             // different traversal algorithms to disagree.
             //
             // This relates to the current state of the BVH. It may change after each mutation is applied
             // e.g. we could add the first non-grid shape or remove the last non-grid shape.
-            let assert_traversal_agreement =
-                self.ray.mode.is_grid() && self.shapes.iter().all(|s| s.mode.is_grid());
+            let assert_ray_traversal_agreement = self.ray.mode_is_grid() && all_shapes_grid;
+
+            // Under these circumstances, the `self.aabb` either definitively intersects with an AABB or
+            // it definitively doesn't.
+            //
+            // Similar meaning to `assert_ray_traversal_agreement`.
+            let assert_aabb_traversal_agreement = self.aabb.mode_is_grid() && all_shapes_grid;
+
+            // Under these circumstances, the `self.point` is either definitively contained by an AABB or
+            // definitively not contained.
+            //
+            // Similar meaning to `assert_ray_traversal_agreement`.
+            let assert_point_traversal_agreement = self.point.mode.is_grid() && all_shapes_grid;
 
             // Check that these don't panic.
             bvh.assert_consistent(&self.shapes);
             bvh.assert_tight();
             let flat_bvh = bvh.flatten();
 
-            let traverse = bvh
-                .traverse(&ray, &self.shapes)
-                .into_iter()
-                .map(ByPtr)
-                .collect::<HashSet<_>>();
-            let traverse_iterator = bvh
-                .traverse_iterator(&ray, &self.shapes)
-                .map(ByPtr)
-                .collect::<HashSet<_>>();
-            let traverse_flat = flat_bvh
-                .traverse(&ray, &self.shapes)
-                .into_iter()
-                .map(ByPtr)
-                .collect::<HashSet<_>>();
-
-            if assert_traversal_agreement {
-                assert_eq!(traverse, traverse_iterator);
-                assert_eq!(traverse, traverse_flat);
-            } else {
-                // Fails, probably due to normal rounding errors.
-            }
+            let _traverse_ray = self.fuzz_traversal(
+                &bvh,
+                &flat_bvh,
+                &self.ray.ray(),
+                assert_ray_traversal_agreement,
+            );
+            self.fuzz_traversal(
+                &bvh,
+                &flat_bvh,
+                &self.aabb.aabb(),
+                assert_aabb_traversal_agreement,
+            );
+            self.fuzz_traversal(
+                &bvh,
+                &flat_bvh,
+                &self.point.point(),
+                assert_point_traversal_agreement,
+            );
+            // Due to sphere geometry, `Mode::Grid` doesn't imply traversals will agree.
+            self.fuzz_traversal(&bvh, &flat_bvh, &self.ball.ball(), false);
 
             let nearest_traverse_iterator = bvh
                 .nearest_traverse_iterator(&ray, &self.shapes)
@@ -278,9 +397,9 @@ impl<const D: usize> Workload<D> {
                 .map(ByPtr)
                 .collect::<HashSet<_>>();
 
-            if assert_traversal_agreement {
+            if assert_ray_traversal_agreement {
                 // TODO: Fails, due to bug(s) e.g. https://github.com/svenstaro/bvh/issues/119
-                //assert_eq!(traverse_iterator, nearest_traverse_iterator);
+                //assert_eq!(_traverse_ray, nearest_traverse_iterator);
             } else {
                 // Fails, probably due to normal rounding errors.
             }

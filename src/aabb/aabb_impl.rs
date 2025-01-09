@@ -1,5 +1,3 @@
-//! Axis Aligned Bounding Boxes.
-
 use nalgebra::{Point, SVector};
 use std::fmt;
 use std::ops::Index;
@@ -223,6 +221,30 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     pub fn approx_contains_aabb_eps(&self, other: &Aabb<T, D>, epsilon: T) -> bool {
         self.approx_contains_eps(&other.min, epsilon)
             && self.approx_contains_eps(&other.max, epsilon)
+    }
+
+    /// Returns true if this [`Aabb`] touches the `other` [`Aabb`].
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::aabb::Aabb;
+    /// use nalgebra::Point3;
+    ///
+    /// let aabb1 = Aabb::with_bounds(Point3::new(-1.0, -1.0, -1.0), Point3::new(1.0, 1.0, 1.0));
+    /// let aabb2 = Aabb::with_bounds(Point3::new(0.5, -0.1, -0.1), Point3::new(1.5, 0.1, 0.1));
+    ///
+    /// assert!(aabb1.intersects_aabb(&aabb2));
+    /// ```
+    ///
+    /// [`Aabb`]: struct.Aabb.html
+    pub fn intersects_aabb(&self, aabb: &Aabb<T, D>) -> bool {
+        // TODO: Try adding a SIMD specialization.
+        for i in 0..D {
+            if self.max[i] < aabb.min[i] || aabb.max[i] < self.min[i] {
+                return false;
+            }
+        }
+        true
     }
 
     /// Returns true if the `other` [`Aabb`] is approximately equal to this [`Aabb`]
@@ -690,6 +712,32 @@ mod tests {
     }
 
     proptest! {
+        // Test properties of `Aabb` intersection.
+        #[test]
+        fn test_intersecting_aabbs(a: TupleVec, b: TupleVec, c: TupleVec, d: TupleVec, p: TupleVec) {
+            let a = tuple_to_point(&a);
+            let b = tuple_to_point(&b);
+            let c = tuple_to_point(&c);
+            let d = tuple_to_point(&d);
+            let aabb1 = TAabb3::empty().grow(&a).join_bounded(&b);
+            let aabb2 = TAabb3::empty().grow(&c).join_bounded(&d);
+            if aabb1.intersects_aabb(&aabb2) {
+                // For intersecting Aabb's, at least one point is shared.
+                let mut closest = aabb1.center();
+                for i in 0..3 {
+                    closest[i] = closest[i].clamp(aabb2.min[i], aabb2.max[i]);
+                }
+                assert!(aabb1.contains(&closest), "closest={closest:?}");
+                assert!(aabb2.contains(&closest), "closest={closest:?}");
+            } else {
+                // For non-intersecting Aabb's, no point can't be in both Aabb's.
+                let p = tuple_to_point(&p);
+                for point in [a, b, c, d, p] {
+                    assert!(!aabb1.contains(&point) || !aabb2.contains(&point));
+                }
+            }
+        }
+
         // Test whether an empty `Aabb` does not contains anything.
         #[test]
         fn test_empty_contains_nothing(tpl: TupleVec) {

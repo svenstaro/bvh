@@ -1,7 +1,5 @@
-use crate::aabb::{Aabb, Bounded};
+use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue};
-
-use crate::ray::Ray;
 use crate::utils::{joint_aabb_of_shapes, Bucket};
 use std::cell::RefCell;
 use std::marker::PhantomData;
@@ -293,11 +291,11 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
     /// [`Bvh`]: struct.Bvh.html
     /// [`Ray`]: ../ray/struct.Ray.html
     ///
-    pub(crate) fn traverse_recursive<Shape: Bounded<T, D>>(
+    pub(crate) fn traverse_recursive<Query: IntersectsAabb<T, D>, Shape: Bounded<T, D>>(
         nodes: &[BvhNode<T, D>],
         node_index: usize,
         shapes: &[Shape],
-        ray: &Ray<T, D>,
+        query: &Query,
         indices: &mut Vec<usize>,
     ) {
         match nodes[node_index] {
@@ -308,18 +306,18 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
                 child_r_index,
                 ..
             } => {
-                if ray.intersects_aabb(child_l_aabb) {
-                    BvhNode::traverse_recursive(nodes, child_l_index, shapes, ray, indices);
+                if query.intersects_aabb(child_l_aabb) {
+                    BvhNode::traverse_recursive(nodes, child_l_index, shapes, query, indices);
                 }
-                if ray.intersects_aabb(child_r_aabb) {
-                    BvhNode::traverse_recursive(nodes, child_r_index, shapes, ray, indices);
+                if query.intersects_aabb(child_r_aabb) {
+                    BvhNode::traverse_recursive(nodes, child_r_index, shapes, query, indices);
                 }
             }
             BvhNode::Leaf { shape_index, .. } => {
                 // Either we got to a non-root node recursively, in which case the caller
                 // checked our AABB, or we are processing the root node, in which case we
                 // need to check the AABB.
-                if node_index != 0 || ray.intersects_aabb(&shapes[shape_index].aabb()) {
+                if node_index != 0 || query.intersects_aabb(&shapes[shape_index].aabb()) {
                     indices.push(shape_index);
                 }
             }

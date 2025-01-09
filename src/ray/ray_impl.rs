@@ -1,6 +1,7 @@
 //! This module defines a Ray structure and intersection algorithms
 //! for axis aligned bounding boxes and triangles.
 
+use crate::aabb::IntersectsAabb;
 use crate::utils::{fast_max, fast_min};
 use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
 use nalgebra::{
@@ -350,6 +351,12 @@ mod tests {
                 assert!(intersection_inside || close_to_border);
             }
         }
+    }
+}
+
+impl<T: BHValue, const D: usize> IntersectsAabb<T, D> for Ray<T, D> {
+    fn intersects_aabb(&self, aabb: &Aabb<T, D>) -> bool {
+        self.intersects_aabb(aabb)
     }
 }
 
