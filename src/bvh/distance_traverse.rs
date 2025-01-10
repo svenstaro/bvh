@@ -11,7 +11,10 @@ enum RestChild {
 }
 
 /// Iterator to traverse a [`Bvh`] in order from nearest [`Aabb`] to farthest for [`Ray`],
-/// without memory allocations
+/// or vice versa, without memory allocations.
+///
+/// This is a best-effort iterator that orders interior parent nodes before ordering child
+/// nodes, so the output is not necessarily perfectly sorted.
 pub struct DistanceTraverseIterator<
     'bvh,
     'shape,
