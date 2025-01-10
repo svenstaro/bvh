@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fix some assertions [#129](https://github.com/svenstaro/bvh/pull/129) (thanks @finnbear)
 - Fix traversal in case of single-node BVH [#130](https://github.com/svenstaro/bvh/pull/130) (thanks @finnbear)
 - Fix intersection between rays and AABBs that lack depth. [#131](https://github.com/svenstaro/bvh/pull/131) (thanks @finnbear)
+- Document the limitations of distance traversal best-effort ordering. [#135](https://github.com/svenstaro/bvh/pull/135) (thanks @finnbear)
 
 ## 0.10.0 - 2024-07-06
 - Don't panic when traversing empty BVH [#106](https://github.com/svenstaro/bvh/pull/106) (thanks @finnbear)
