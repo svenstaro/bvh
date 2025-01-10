@@ -367,7 +367,7 @@ impl<const D: usize> Workload<D> {
             bvh.assert_tight();
             let flat_bvh = bvh.flatten();
 
-            let _traverse_ray = self.fuzz_traversal(
+            let traverse_ray = self.fuzz_traversal(
                 &bvh,
                 &flat_bvh,
                 &self.ray.ray(),
@@ -398,8 +398,7 @@ impl<const D: usize> Workload<D> {
                 .collect::<HashSet<_>>();
 
             if assert_ray_traversal_agreement {
-                // TODO: Fails, due to bug(s) e.g. https://github.com/svenstaro/bvh/issues/119
-                //assert_eq!(_traverse_ray, nearest_traverse_iterator);
+                assert_eq!(traverse_ray, nearest_traverse_iterator);
             } else {
                 // Fails, probably due to normal rounding errors.
             }

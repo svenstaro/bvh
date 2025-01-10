@@ -79,9 +79,10 @@ where
         self.stack[self.stack_size]
     }
 
-    /// Attempt to move to the child node that is closest to the ray, relative to the current node.
+    /// Attempt to move to the child node that is closest/furthest to the ray, depending on `ASCENDING`,
+    /// relative to the current node.
     /// If it is a leaf, or the [`Ray`] does not intersect the any node [`Aabb`], `has_node` will become `false`.
-    fn move_nearest(&mut self) -> (usize, RestChild) {
+    fn move_first_priority(&mut self) -> (usize, RestChild) {
         let current_node_index = self.node_index;
         match self.bvh.nodes[current_node_index] {
             BvhNode::Node {
@@ -91,93 +92,50 @@ where
                 ref child_r_aabb,
                 ..
             } => {
-                let (left_dist, _) = self.ray.intersection_slice_for_aabb(child_l_aabb);
-                let (right_dist, _) = self.ray.intersection_slice_for_aabb(child_r_aabb);
+                let left_dist = self
+                    .ray
+                    .intersection_slice_for_aabb(child_l_aabb)
+                    .map(|(d, _)| d);
+                let right_dist = self
+                    .ray
+                    .intersection_slice_for_aabb(child_r_aabb)
+                    .map(|(d, _)| d);
 
-                if left_dist < T::zero() {
-                    if right_dist < T::zero() {
+                match (left_dist, right_dist) {
+                    (None, None) => {
                         // no intersections with any children
                         self.has_node = false;
                         (current_node_index, RestChild::None)
-                    } else {
+                    }
+                    (Some(_), None) => {
+                        // has intersection only with left child
+                        self.has_node = true;
+                        self.node_index = child_l_index;
+                        let rest_child = RestChild::None;
+                        (current_node_index, rest_child)
+                    }
+                    (None, Some(_)) => {
                         // has intersection only with right child
                         self.has_node = true;
                         self.node_index = child_r_index;
                         let rest_child = RestChild::None;
                         (current_node_index, rest_child)
                     }
-                } else if right_dist < T::zero() {
-                    // has intersection only with left child
-                    self.has_node = true;
-                    self.node_index = child_l_index;
-                    let rest_child = RestChild::None;
-                    (current_node_index, rest_child)
-                } else if left_dist > right_dist {
-                    // right is closer than left
-                    self.has_node = true;
-                    self.node_index = child_r_index;
-                    let rest_child = RestChild::Left;
-                    return (current_node_index, rest_child);
-                } else {
-                    // left is closer than right
-                    self.has_node = true;
-                    self.node_index = child_l_index;
-                    let rest_child = RestChild::Right;
-                    return (current_node_index, rest_child);
-                }
-            }
-            BvhNode::Leaf { .. } => {
-                self.has_node = false;
-                (current_node_index, RestChild::None)
-            }
-        }
-    }
-
-    /// Attempt to move to the child node that is the farthest from the ray, relative to the current node.
-    /// If it is a leaf, or the [`Ray`] does not intersect the node [`Aabb`], `has_node` will become `false`.
-    fn move_furthest(&mut self) -> (usize, RestChild) {
-        let current_node_index = self.node_index;
-        match self.bvh.nodes[current_node_index] {
-            BvhNode::Node {
-                child_l_index,
-                ref child_l_aabb,
-                child_r_index,
-                ref child_r_aabb,
-                ..
-            } => {
-                let (_, left_dist) = self.ray.intersection_slice_for_aabb(child_l_aabb);
-                let (_, right_dist) = self.ray.intersection_slice_for_aabb(child_r_aabb);
-
-                if left_dist < T::zero() {
-                    if right_dist < T::zero() {
-                        // no intersections with any children
-                        self.has_node = false;
-                        (current_node_index, RestChild::None)
-                    } else {
-                        // has intersection only with right child
-                        self.has_node = true;
-                        self.node_index = child_r_index;
-                        let rest_child = RestChild::None;
-                        (current_node_index, rest_child)
+                    (Some(left_dist), Some(right_dist)) => {
+                        if (left_dist > right_dist) ^ !ASCENDING {
+                            // right is higher priority than left
+                            self.has_node = true;
+                            self.node_index = child_r_index;
+                            let rest_child = RestChild::Left;
+                            (current_node_index, rest_child)
+                        } else {
+                            // left is higher priority than right
+                            self.has_node = true;
+                            self.node_index = child_l_index;
+                            let rest_child = RestChild::Right;
+                            (current_node_index, rest_child)
+                        }
                     }
-                } else if right_dist < T::zero() {
-                    // has intersection only with left child
-                    self.has_node = true;
-                    self.node_index = child_l_index;
-                    let rest_child = RestChild::None;
-                    (current_node_index, rest_child)
-                } else if left_dist < right_dist {
-                    // right is farther than left
-                    self.has_node = true;
-                    self.node_index = child_r_index;
-                    let rest_child = RestChild::Left;
-                    return (current_node_index, rest_child);
-                } else {
-                    // left is farther than right
-                    self.has_node = true;
-                    self.node_index = child_l_index;
-                    let rest_child = RestChild::Right;
-                    return (current_node_index, rest_child);
                 }
             }
             BvhNode::Leaf { .. } => {
@@ -231,11 +189,7 @@ where
 
             if self.has_node {
                 // If we have any node, attempt to move to its nearest child.
-                let stack_info = if ASCENDING {
-                    self.move_nearest()
-                } else {
-                    self.move_furthest()
-                };
+                let stack_info = self.move_first_priority();
                 // Save current node and farthest child
                 self.stack_push(stack_info)
             } else {
@@ -297,8 +251,10 @@ mod tests {
         let mut prev_far_dist = f32::INFINITY;
 
         for (near_shape, far_shape) in near_it.zip(far_it) {
-            let (intersect_near_dist, _) = ray.intersection_slice_for_aabb(&near_shape.aabb());
-            let (intersect_far_dist, _) = ray.intersection_slice_for_aabb(&far_shape.aabb());
+            let (intersect_near_dist, _) =
+                ray.intersection_slice_for_aabb(&near_shape.aabb()).unwrap();
+            let (intersect_far_dist, _) =
+                ray.intersection_slice_for_aabb(&far_shape.aabb()).unwrap();
 
             assert!(expected_shapes.contains(&near_shape.id));
             assert!(expected_shapes.contains(&far_shape.id));
