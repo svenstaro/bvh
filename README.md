@@ -271,3 +271,12 @@ a third line of defense against bugs, meaning that the `fuzz/` directory was gen
 using `cargo fuzz init`. At the moment, there is a single fuzz target, and running
 `cargo fuzz run fuzz` will fuzz until an assertion is violated. The fuzzer automatically
 runs in CI, too.
+
+## Contributing
+
+We recommend you install the [`just`](https://github.com/casey/just) command runner, to
+run [commands](/justfile) including:
+- `just lint` - checks style, syntax, etc.
+- `just bench` - runs the benchmarks
+- `just test` - runs the unit tests and prop tests
+- `just fuzz` - runs the fuzzer
