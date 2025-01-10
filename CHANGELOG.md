@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   allowing points, AABB's, and circles/spheres to be tested, too. Most use-cases involving `Ray` 
   will continue to compile as-is. If you previously wrote `BvhTraverseIterator<T, D, S>`, you'll
   need to change it to `BvhTraverseIterator<T, D, Ray, S>`. [#128](https://github.com/svenstaro/bvh/pull/128) (thanks @finnbear)
+- Fix intersection between rays and AABBs that lack depth. [#131](https://github.com/svenstaro/bvh/pull/131) (thanks @finnbear)
 
 ## 0.10.0 - 2024-07-06
 - Don't panic when traversing empty BVH [#106](https://github.com/svenstaro/bvh/pull/106) (thanks @finnbear)

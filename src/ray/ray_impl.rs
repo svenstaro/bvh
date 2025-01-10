@@ -213,7 +213,9 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
 mod tests {
     use std::cmp;
 
-    use crate::testbase::{tuple_to_point, tuplevec_small_strategy, TAabb3, TRay3, TupleVec};
+    use crate::testbase::{
+        tuple_to_point, tuplevec_small_strategy, TAabb3, TPoint3, TRay3, TVector3, TupleVec,
+    };
 
     use proptest::prelude::*;
 
@@ -231,6 +233,18 @@ mod tests {
         let pos = tuple_to_point(&data.2);
         let ray = TRay3::new(pos, center - pos);
         (ray, aabb)
+    }
+
+    /// Make sure a ray can intersect an AABB with no depth.
+    #[test]
+    fn ray_hits_zero_depth_aabb() {
+        let origin = TPoint3::new(0.0, 0.0, 0.0);
+        let direction = TVector3::new(0.0, 0.0, 1.0);
+        let ray = TRay3::new(origin, direction);
+        let min = TPoint3::new(-1.0, -1.0, 1.0);
+        let max = TPoint3::new(1.0, 1.0, 1.0);
+        let aabb = TAabb3::with_bounds(min, max);
+        assert!(ray.intersects_aabb(&aabb));
     }
 
     proptest! {
