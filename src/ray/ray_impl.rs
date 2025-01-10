@@ -2,7 +2,7 @@
 //! for axis aligned bounding boxes and triangles.
 
 use crate::aabb::IntersectsAabb;
-use crate::utils::{fast_max, fast_min};
+use crate::utils::fast_max;
 use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
 use nalgebra::{
     ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, ComplexField, Point, SVector, SimdPartialOrd,
@@ -113,31 +113,26 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
     /// where the first number is the distance from [`Ray`] to the nearest intersection point
     /// and the second number is the distance from [`Ray`] to the farthest intersection point
     ///
-    /// If there are no intersections, it returns negative one for both distances
-    pub fn intersection_slice_for_aabb(&self, aabb: &Aabb<T, D>) -> (T, T)
+    /// If there are no intersections, it returns `None`.
+    pub fn intersection_slice_for_aabb(&self, aabb: &Aabb<T, D>) -> Option<(T, T)>
     where
         T: BHValue,
     {
-        // https://iquilezles.org/articles/intersectors/
-        let mut n = self.origin.coords - aabb.center().coords;
-        n.component_mul_assign(&self.inv_direction);
+        // Copied from the default `RayIntersection` implementation. TODO: abstract and add SIMD.
+        let lbr = (aabb[0].coords - self.origin.coords).component_mul(&self.inv_direction);
+        let rtr = (aabb[1].coords - self.origin.coords).component_mul(&self.inv_direction);
 
-        let k = self.inv_direction.abs().component_mul(&aabb.half_size());
-        let t1 = -n - k;
-        let t2 = -n + k;
+        let (inf, sup) = lbr.inf_sup(&rtr);
 
-        let entry_distance = t1
-            .iter()
-            .skip(1)
-            .fold(t1[0], |acc, x| -> T { fast_max(*x, acc) });
-        let exit_distance = t2.iter().skip(1).fold(t2[0], |acc, x| fast_min(*x, acc));
+        let tmin = inf.max();
+        let tmax = sup.min();
 
         // no intersection
-        if entry_distance > exit_distance || exit_distance < T::zero() {
-            return (T::from_f32(-1.0).unwrap(), T::from_f32(-1.0).unwrap());
+        if tmin > tmax || tmax < T::zero() {
+            return None;
         }
 
-        (fast_max(entry_distance, T::zero()), exit_distance)
+        Some((fast_max(tmin, T::zero()), tmax))
     }
 
     /// Implementation of the
@@ -213,8 +208,12 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
 mod tests {
     use std::cmp;
 
-    use crate::testbase::{
-        tuple_to_point, tuplevec_small_strategy, TAabb3, TPoint3, TRay3, TVector3, TupleVec,
+    use crate::{
+        aabb::Bounded,
+        testbase::{
+            tuple_to_point, tuplevec_small_strategy, TAabb3, TPoint3, TRay3, TVector3, TupleVec,
+            UnitBox,
+        },
     };
 
     use proptest::prelude::*;
@@ -247,6 +246,35 @@ mod tests {
         assert!(ray.intersects_aabb(&aabb));
     }
 
+    /// Ensure slice has correct min and max distance for a particular case.
+    #[test]
+    fn test_ray_slice_distance_accuracy() {
+        let aabb = TAabb3::empty()
+            .grow(&TPoint3::new(-3.0, -4.0, -5.0))
+            .grow(&TPoint3::new(-6.0, -8.0, 5.0));
+        let ray = TRay3::new(
+            TPoint3::new(2.0, 2.0, 2.0),
+            TVector3::new(-5.0, -8.66666, -3.666666),
+        );
+        let expected_min = 10.6562;
+        let expected_max = 12.3034;
+        let (min, max) = ray.intersection_slice_for_aabb(&aabb.aabb()).unwrap();
+        assert!((min - expected_min).abs() < 0.01);
+        assert!((max - expected_max).abs() < 0.01);
+    }
+
+    /// Ensure no slice is returned when the ray is parallel to AABB faces but
+    /// doesn't hit, which is a special case due to infinities in the computation.
+    #[test]
+    fn test_parallel_ray_slice() {
+        let aabb = UnitBox::new(0, TPoint3::new(-50.0, -50.0, -25.0));
+        let ray = TRay3::new(
+            TPoint3::new(-50.0, -50.0, -50.0),
+            TVector3::new(1.0, 0.0, 0.0),
+        );
+        assert!(ray.intersection_slice_for_aabb(&aabb.aabb()).is_none());
+    }
+
     proptest! {
         // Test whether a `Ray` which points at the center of an `Aabb` intersects it.
         #[test]
@@ -277,7 +305,7 @@ mod tests {
                                                    tuplevec_small_strategy(),
                                                    tuplevec_small_strategy())) {
             let (ray, aabb) = gen_ray_to_aabb(data);
-            let (start_dist, end_dist) = ray.intersection_slice_for_aabb(&aabb);
+            let (start_dist, end_dist) = ray.intersection_slice_for_aabb(&aabb).unwrap();
             assert!(start_dist < end_dist);
             assert!(start_dist >= 0.0);
         }
@@ -294,14 +322,15 @@ mod tests {
             ray.direction = -ray.direction;
             ray.inv_direction = -ray.inv_direction;
 
-            let (start_dist, end_dist) = ray.intersection_slice_for_aabb(&aabb);
+            let slice = ray.intersection_slice_for_aabb(&aabb);
             if aabb.contains(&ray.origin) {
+                let (start_dist, end_dist) = slice.unwrap();
                 // ray inside of aabb
                 assert!(start_dist < end_dist);
                 assert!(start_dist >= 0.0);
             } else {
                 // ray outside of aabb and doesn't intersect it
-                assert!((start_dist, end_dist) == (-1.0, -1.0));
+                assert!(slice.is_none());
             }
         }
 
