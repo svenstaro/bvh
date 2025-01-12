@@ -43,6 +43,14 @@ pub struct FlatNode<T: BHValue, const D: usize> {
     pub shape_index: u32,
 }
 
+impl<T: BHValue, const D: usize> FlatNode<T, D> {
+    /// Returns whether the node is a leaf node.
+    #[must_use]
+    pub fn is_leaf(&self) -> bool {
+        self.entry_index == u32::MAX
+    }
+}
+
 impl<T: BHValue + Float, const D: usize> BvhNode<T, D> {
     /// Creates a flat node from a `Bvh` inner node and its [`Aabb`]. Returns the next free index.
     /// TODO: change the algorithm which pushes `FlatNode`s to a vector to not use indices this
@@ -398,8 +406,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
         while index < max_length {
             let node = &self[index];
 
-            if node.entry_index == u32::MAX {
-                // If the entry_index is MAX_UINT32, then it's a leaf node.
+            if node.is_leaf() {
                 let shape = &shapes[node.shape_index as usize];
                 if query.intersects_aabb(&shape.aabb()) {
                     hit_shapes.push(shape);
@@ -422,7 +429,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     }
 
     /// Traverses a [`FlatBvh`] structure iteratively.
-    /// Returns the nearest shape from the query point and the distance to it.
+    /// Returns the nearest shape to the query point and the distance to it.
     ///
     /// Note: the flat bvh is not optimized for nearest queries. It is recommended to use
     /// a [`Bvh`] for nearest queries when possible.
@@ -476,7 +483,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     /// #
     /// # impl PointDistance<f32,3> for UnitBox {
     /// #     fn distance_squared(&self, query_point: Point3<f32>) -> f32 {
-    /// #         self.aabb().get_min_distance_2(query_point)
+    /// #         self.aabb().min_distance_squared(query_point)
     /// #    }
     /// # }
     /// #
@@ -489,16 +496,19 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     /// #     shapes
     /// # }
     ///
-    /// let point = Point3::new(0.0,0.0,0.0);
     /// let mut shapes = create_bhshapes();
     /// let flat_bvh = FlatBvh::build(&mut shapes);
-    /// let best_shape = flat_bvh.nearest_from(point, &shapes);
+    ///
+    /// let query = Point3::new(5.0, 5.7, 5.3);
+    /// let nearest_shape = flat_bvh.nearest_to(query, &shapes);
+    ///
+    /// # assert_eq!(nearest_shape.unwrap().0.id, 5);
     /// ```
     ///
     /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
     /// [`Aabb`]: ../aabb/struct.Aabb.html
     ///
-    fn nearest_from<'a, Shape: BHShape<T, D> + PointDistance<T, D>>(
+    fn nearest_to<'a, Shape: BHShape<T, D> + PointDistance<T, D>>(
         &'a self,
         query: Point<T, D>,
         shapes: &'a [Shape],
@@ -507,7 +517,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
             return None;
         }
 
-        let mut best_element = (&shapes[0], shapes[0].distance_squared(query));
+        let mut best_element = None;
 
         let mut index = 0;
 
@@ -518,21 +528,24 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
         while index < max_length {
             let node = &self[index];
 
-            if node.entry_index == u32::MAX {
-                // If the entry_index is MAX_UINT32, then it's a leaf node.
+            if node.is_leaf() {
                 let shape = &shapes[node.shape_index as usize];
                 let dist = shape.distance_squared(query);
 
-                if dist < best_element.1 {
-                    best_element = (shape, dist);
+                // TODO: to be replaced by `Option::is_none_or` after 2025-10 for 1 year MSRV.
+                #[allow(clippy::unnecessary_map_or)]
+                if best_element.map_or(true, |(_, best_dist)| dist < best_dist) {
+                    best_element = Some((shape, dist));
                 }
 
                 // Exit the current node.
                 index = node.exit_index as usize;
             } else {
-                let min_dist = node.aabb.get_min_distance_2(query);
+                let min_dist = node.aabb.min_distance_squared(query);
 
-                if min_dist < best_element.1 {
+                // TODO: to be replaced by `Option::is_none_or` after 2025-10 for 1 year MSRV.
+                #[allow(clippy::unnecessary_map_or)]
+                if best_element.map_or(true, |(_, best_dist)| min_dist < best_dist) {
                     // This node needs further traversal.
                     index = node.entry_index as usize;
                 } else {
@@ -543,7 +556,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
         }
 
         // Return the best shape and its distance. We had a distance squared previously.
-        Some((best_element.0, best_element.1.sqrt()))
+        best_element.map(|best| (best.0, best.1.sqrt()))
     }
 
     /// Prints a textual representation of a [`FlatBvh`].
@@ -577,7 +590,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
 #[cfg(test)]
 mod tests {
     use crate::testbase::{
-        build_empty_bh, build_some_bh, nearest_from_some_bh, traverse_some_bh, TBvh3, TFlatBvh3,
+        build_empty_bh, build_some_bh, nearest_to_some_bh, traverse_some_bh, TBvh3, TFlatBvh3,
     };
 
     #[test]
@@ -595,8 +608,8 @@ mod tests {
 
     #[test]
     /// Runs some primitive tests for distance query of a point with a fixed scene given as a [`Bvh`].
-    fn test_nearest_from_flat_bvh() {
-        nearest_from_some_bh::<TFlatBvh3>();
+    fn test_nearest_to_flat_bvh() {
+        nearest_to_some_bh::<TFlatBvh3>();
     }
     #[test]
     fn test_flatten_empty_bvh() {
@@ -611,8 +624,8 @@ mod bench {
     use crate::testbase::{
         build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh, create_n_cubes,
         default_bounds, intersect_1200_triangles_bh, intersect_120k_triangles_bh,
-        intersect_12k_triangles_bh, nearest_from_1200_triangles_bh, nearest_from_120k_triangles_bh,
-        nearest_from_12k_triangles_bh, TBvh3, TFlatBvh3,
+        intersect_12k_triangles_bh, nearest_to_1200_triangles_bh, nearest_to_120k_triangles_bh,
+        nearest_to_12k_triangles_bh, TBvh3, TFlatBvh3,
     };
 
     #[bench]
@@ -663,20 +676,20 @@ mod bench {
     }
 
     #[bench]
-    /// Benchmark nearest from on 1,200 triangles using the recursive [`FlatBvh`].
-    fn bench_nearest_from_1200_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_from_1200_triangles_bh::<TFlatBvh3>(b);
+    /// Benchmark nearest_to on 1,200 triangles using the recursive [`FlatBvh`].
+    fn bench_nearest_to_1200_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_to_1200_triangles_bh::<TFlatBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark nearest from on 12,000 triangles using the recursive [`FlatBvh`].
-    fn bench_nearest_from_12k_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_from_12k_triangles_bh::<TFlatBvh3>(b);
+    /// Benchmark nearest_to on 12,000 triangles using the recursive [`FlatBvh`].
+    fn bench_nearest_to_12k_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_to_12k_triangles_bh::<TFlatBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark nearest from on 120,000 triangles using the recursive [`FlatBvh`].
-    fn bench_nearest_from_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_from_120k_triangles_bh::<TFlatBvh3>(b);
+    /// Benchmark nearest_to on 120,000 triangles using the recursive [`FlatBvh`].
+    fn bench_nearest_to_120k_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_to_120k_triangles_bh::<TFlatBvh3>(b);
     }
 }

@@ -27,6 +27,7 @@ use bvh::ball::Ball;
 use bvh::bounding_hierarchy::{BHShape, BoundingHierarchy};
 use bvh::bvh::Bvh;
 use bvh::flat_bvh::FlatBvh;
+use bvh::point_query::PointDistance;
 use bvh::ray::Ray;
 use libfuzzer_sys::fuzz_target;
 use nalgebra::{Point, SimdPartialOrd};
@@ -143,6 +144,14 @@ impl<const D: usize> BHShape<Float, D> for ArbitraryShape<D> {
 impl<const D: usize> ArbitraryShape<D> {
     fn mode_is_grid(&self) -> bool {
         self.a.mode.is_grid() && self.b.mode.is_grid()
+    }
+}
+
+impl<const D: usize> PointDistance<Float, D> for ArbitraryShape<D> {
+    fn distance_squared(&self, query_point: Point<Float, D>) -> Float {
+        let center = self.aabb().center();
+        let offset = query_point - center;
+        offset.dot(&offset)
     }
 }
 
@@ -270,7 +279,7 @@ struct Workload<const D: usize> {
     shapes: Vec<ArbitraryShape<D>>,
     /// Traverse by ray.
     ray: ArbitraryRay<D>,
-    /// Traverse by point.
+    /// Traverse by point and for nearest_to query.
     point: ArbitraryPoint<D>,
     /// Traverse by AABB.
     aabb: ArbitraryShape<D>,
@@ -317,6 +326,51 @@ impl<const D: usize> Workload<D> {
         }
 
         traverse
+    }
+
+    /// Compares normal and flat-BVH nearest_to query.
+    ///
+    /// # Panics
+    /// Panics if the results differ in an unexpected way.
+    fn fuzz_nearest_to<'a>(
+        &'a self,
+        bvh: &'a Bvh<Float, D>,
+        flat_bvh: &'a FlatBvh<Float, D>,
+        query_point: Point<Float, D>,
+    ) {
+        let best = bvh.nearest_to(query_point, &self.shapes);
+        let flat_best = flat_bvh.nearest_to(query_point, &self.shapes);
+
+        // Assert we get None if and only if the bvh is empty.
+        assert_eq!(best.is_none(), self.shapes.is_empty());
+        assert_eq!(flat_best.is_none(), self.shapes.is_empty());
+
+        // Asserting equality between the two results return many false positives
+        // where two differents shapes give the same distance due to numerical approximations
+        // e.g.
+        // left: Some((ByPtr((Aabb { min: [-5000.0, 0.0, 0.0], max: [5000.0, 1.0, 1.0] }, [5000.0, 0.0, 0.0])), 5000.0))
+        // right: Some((ByPtr((Aabb { min: [5.418294e-39, -5000.0, 9.1834e-41], max: [5.418294e-39, -5000.0, 9.1834e-41] }, [-5000.0, 9.1834e-41, 0.0])), 5000.0))
+        // assert_eq!(best, flat_best);
+        // as such we only assert for distance equivalence if they are not None
+        if let Some((best, flat_best)) = best.zip(flat_best) {
+            approx::assert_abs_diff_eq!(best.1, flat_best.1);
+
+            // Brute force search for the ground truth, shapes is not empty since the results are not None.
+            let mut bruteforce = (
+                &self.shapes[0],
+                self.shapes[0].distance_squared(query_point),
+            );
+            for shape in &self.shapes[1..] {
+                let distance = shape.distance_squared(query_point);
+                if distance < bruteforce.1 {
+                    bruteforce = (shape, distance);
+                }
+            }
+            bruteforce = (bruteforce.0, bruteforce.1.sqrt());
+            // Again we only test for distances.
+            approx::assert_abs_diff_eq!(best.1, bruteforce.1);
+            approx::assert_abs_diff_eq!(flat_best.1, bruteforce.1);
+        }
     }
 
     /// Called directly from the `cargo fuzz` entry point. Code in this function is
@@ -474,6 +528,9 @@ impl<const D: usize> Workload<D> {
                 nearest_child_traverse_iterator,
                 farthest_child_traverse_iterator
             );
+
+            // Check that these don't panic and return the same value.
+            self.fuzz_nearest_to(&bvh, &flat_bvh, self.point.point());
 
             if let Some(mutation) = self.mutations.pop() {
                 match mutation {

@@ -211,13 +211,13 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 
     /// Traverses the [`Bvh`].
-    /// Returns the shape the closest to the query point and the distance to it.
+    /// Returns the nearest shape to the query point and the distance to it.
     ///
     ///
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.Aabb.html
     ///
-    pub fn nearest_from<'a, Shape: Bounded<T, D> + PointDistance<T, D>>(
+    pub fn nearest_to<'a, Shape: Bounded<T, D> + PointDistance<T, D>>(
         &self,
         origin: nalgebra::Point<T, D>,
         shapes: &'a [Shape],
@@ -225,15 +225,15 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     where
         Self: std::marker::Sized,
     {
-        if shapes.is_empty() {
+        if self.nodes.is_empty() {
             return None;
         }
 
-        let mut best_candidate = (&shapes[0], shapes[0].distance_squared(origin));
-        BvhNode::nearest_from_recursive(&self.nodes, 0, origin, shapes, &mut best_candidate);
+        let mut best_candidate = None;
+        BvhNode::nearest_to_recursive(&self.nodes, 0, origin, shapes, &mut best_candidate);
 
         // Return the best shape and its distance. We had a distance squared previously.
-        Some((best_candidate.0, best_candidate.1.sqrt()))
+        best_candidate.map(|best| (best.0, best.1.sqrt()))
     }
 
     /// Prints the [`Bvh`] in a tree-like visualization.
@@ -498,12 +498,12 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
         self.traverse(query, shapes)
     }
 
-    fn nearest_from<'a, Shape: BHShape<T, D> + PointDistance<T, D>>(
+    fn nearest_to<'a, Shape: BHShape<T, D> + PointDistance<T, D>>(
         &'a self,
         query: nalgebra::Point<T, D>,
         shapes: &'a [Shape],
     ) -> Option<(&'a Shape, T)> {
-        self.nearest_from(query, shapes)
+        self.nearest_to(query, shapes)
     }
 
     fn pretty_print(&self) {
@@ -546,8 +546,8 @@ mod tests {
     use crate::{
         bounding_hierarchy::BoundingHierarchy,
         testbase::{
-            build_empty_bh, build_some_bh, nearest_from_some_bh, traverse_some_bh, TBvh3,
-            TBvhNode3, TPoint3, TRay3, TVector3, UnitBox,
+            build_empty_bh, build_some_bh, nearest_to_some_bh, traverse_some_bh, TBvh3, TBvhNode3,
+            TPoint3, TRay3, TVector3, UnitBox,
         },
     };
 
@@ -578,8 +578,8 @@ mod tests {
 
     #[test]
     /// Runs some primitive tests for distance query of a point with a fixed scene given as a [`Bvh`].
-    fn test_nearest_from_bvh() {
-        nearest_from_some_bh::<TBvh3>();
+    fn test_nearest_to_bvh() {
+        nearest_to_some_bh::<TBvh3>();
     }
 
     #[test]
@@ -694,8 +694,8 @@ mod bench {
     use crate::testbase::{
         build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh,
         intersect_1200_triangles_bh, intersect_120k_triangles_bh, intersect_12k_triangles_bh,
-        intersect_bh, load_sponza_scene, nearest_from_1200_triangles_bh,
-        nearest_from_120k_triangles_bh, nearest_from_12k_triangles_bh, nearest_from_bh, TBvh3,
+        intersect_bh, load_sponza_scene, nearest_to_1200_triangles_bh,
+        nearest_to_120k_triangles_bh, nearest_to_12k_triangles_bh, nearest_to_bh, TBvh3,
     };
     #[cfg(feature = "rayon")]
     use crate::testbase::{
@@ -786,28 +786,28 @@ mod bench {
     }
 
     #[bench]
-    /// Benchmark nearest from on 1,200 triangles using the recursive [`Bvh`].
-    fn bench_nearest_from_1200_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_from_1200_triangles_bh::<TBvh3>(b);
+    /// Benchmark nearest_to on 1,200 triangles using the recursive [`Bvh`].
+    fn bench_nearest_to_1200_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_to_1200_triangles_bh::<TBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark nearest from on 12,000 triangles using the recursive [`Bvh`].
-    fn bench_nearest_from_12k_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_from_12k_triangles_bh::<TBvh3>(b);
+    /// Benchmark nearest_to on 12,000 triangles using the recursive [`Bvh`].
+    fn bench_nearest_to_12k_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_to_12k_triangles_bh::<TBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark nearest from on 120,000 triangles using the recursive [`Bvh`].
-    fn bench_nearest_from_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_from_120k_triangles_bh::<TBvh3>(b);
+    /// Benchmark nearest_to on 120,000 triangles using the recursive [`Bvh`].
+    fn bench_nearest_to_120k_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_to_120k_triangles_bh::<TBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark nearest from on a [`Bvh`] with the Sponza scene.
-    fn bench_nearest_from_sponza_bvh(b: &mut ::test::Bencher) {
+    /// Benchmark nearest_to on a [`Bvh`] with the Sponza scene.
+    fn bench_nearest_to_sponza_bvh(b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();
         let bvh = TBvh3::build(&mut triangles);
-        nearest_from_bh(&bvh, &triangles, &bounds, b)
+        nearest_to_bh(&bvh, &triangles, &bounds, b)
     }
 }

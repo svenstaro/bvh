@@ -609,13 +609,13 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     ///
     /// let aabb = Aabb::with_bounds(min, max);
     /// let query = Point3::new(20.0, 0.0, 0.0);
-    /// let min_dist = aabb.get_min_distance_2(query);
+    /// let min_dist = aabb.min_distance_squared(query);
     /// assert_eq!((min_dist as f32).sqrt(), 10.0);
     /// ```
     ///
     /// [`Aabb`]: struct.Aabb.html
     ///
-    pub fn get_min_distance_2(&self, point: Point<T, D>) -> T {
+    pub fn min_distance_squared(&self, point: Point<T, D>) -> T {
         let half_size = self.half_size();
         let center = self.min + half_size;
 

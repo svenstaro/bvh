@@ -296,7 +296,7 @@ pub trait BoundingHierarchy<T: BHValue, const D: usize> {
     /// #
     /// # impl PointDistance<f32,3> for UnitBox {
     /// #     fn distance_squared(&self, query_point: Point3<f32>) -> f32 {
-    /// #         self.aabb().get_min_distance_2(query_point)
+    /// #         self.aabb().min_distance_squared(query_point)
     /// #    }
     /// }
     /// # fn create_bvh() -> (Bvh<f32,3>, Vec<UnitBox>) {
@@ -311,14 +311,16 @@ pub trait BoundingHierarchy<T: BHValue, const D: usize> {
     ///
     /// let (bvh, shapes) = create_bvh();
     ///
-    /// let query = Point3::new(5.0, 0.0, 2.0);
-    /// let nearest_shape = bvh.nearest_from(query, &shapes);
+    /// let query = Point3::new(5.0, 5.7, 5.3);
+    /// let nearest_shape = bvh.nearest_to(query, &shapes);
+    ///
+    /// # assert_eq!(nearest_shape.unwrap().0.id, 5);
     /// ```
     ///
     /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
     /// [`Aabb`]: ../aabb/struct.Aabb.html
     ///
-    fn nearest_from<'a, Shape: BHShape<T, D> + PointDistance<T, D>>(
+    fn nearest_to<'a, Shape: BHShape<T, D> + PointDistance<T, D>>(
         &'a self,
         query: Point<T, D>,
         shapes: &'a [Shape],
@@ -344,12 +346,12 @@ impl<T: BHValue, const D: usize, H: BoundingHierarchy<T, D>> BoundingHierarchy<T
         H::traverse(self, query, shapes)
     }
 
-    fn nearest_from<'a, Shape: BHShape<T, D> + PointDistance<T, D>>(
+    fn nearest_to<'a, Shape: BHShape<T, D> + PointDistance<T, D>>(
         &'a self,
         query: Point<T, D>,
         shapes: &'a [Shape],
     ) -> Option<(&'a Shape, T)> {
-        H::nearest_from(self, query, shapes)
+        H::nearest_to(self, query, shapes)
     }
 
     fn build_with_executor<
