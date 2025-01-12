@@ -88,6 +88,7 @@ pub mod ball;
 pub mod bounding_hierarchy;
 pub mod bvh;
 pub mod flat_bvh;
+pub mod point_query;
 pub mod ray;
 mod utils;
 

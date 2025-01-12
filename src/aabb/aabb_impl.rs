@@ -595,10 +595,9 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
         self.size().imax()
     }
 
-    /// Returns the minimum and maximum distances to the [`Aabb`].
+    /// Returns the minimum distance squared to the [`Aabb`].
     /// The minimum distance is the distance to the closest point on the box,
-    /// 0 if the point is inside the box.
-    /// The maximum distance is the distance to the furthest point in the box.
+    /// or 0 if the point is inside the box.
     ///
     /// # Examples
     /// ```
@@ -610,15 +609,14 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     ///
     /// let aabb = Aabb::with_bounds(min, max);
     /// let query = Point3::new(20.0, 0.0, 0.0);
-    /// let (min_dist, max_dist) = aabb.get_min_max_distances(&query);
-    /// assert!(min_dist == 10.0);
-    /// assert!(max_dist == (10.0_f32*10.0 + 10.0*10.0 + 20.0*20.0).sqrt());
+    /// let min_dist = aabb.get_min_distance_2(query);
+    /// assert_eq!((min_dist as f32).sqrt(), 10.0);
     /// ```
     ///
     /// [`Aabb`]: struct.Aabb.html
     ///
-    pub fn get_min_max_distances(&self, point: &Point<T, D>) -> (T, T) {
-        let half_size = self.size() * T::from_f32(0.5).unwrap();
+    pub fn get_min_distance_2(&self, point: Point<T, D>) -> T {
+        let half_size = self.half_size();
         let center = self.min + half_size;
 
         let delta = point - center;
@@ -626,19 +624,8 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
         // See <https://iquilezles.org/articles/distfunctions/>
         let q = delta.abs() - half_size;
         let outside_vec = q.map(|x| x.max(T::zero()));
-        let min_dist = outside_vec.dot(&outside_vec).sqrt(); // norm without requiring ComplexField.
 
-        // The signum helps to determine the furthest point
-        let signum = delta
-            // Invert the signum to get the furthest vertex
-            // signum never returns 0.0 so we're sure to be on a vertex.
-            .map(|x| -x.signum());
-
-        let furthest = center + signum.component_mul(&half_size);
-        let furthest_delta = point - furthest;
-        let max_dist = furthest_delta.dot(&furthest_delta).sqrt();
-
-        (min_dist, max_dist)
+        outside_vec.dot(&outside_vec)
     }
 }
 

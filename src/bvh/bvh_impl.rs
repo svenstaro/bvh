@@ -3,12 +3,10 @@
 //! [`Bvh`]: struct.Bvh.html
 //! [`BvhNode`]: struct.BvhNode.html
 //!
-
-use nalgebra::Point;
-
 use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
 use crate::bvh::iter::BvhTraverseIterator;
+use crate::point_query::PointDistance;
 use crate::ray::Ray;
 use crate::utils::joint_aabb_of_shapes;
 
@@ -213,39 +211,29 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 
     /// Traverses the [`Bvh`].
-    /// Returns a subset of `shapes` which are candidates for being the closest to `point`.
+    /// Returns the shape the closest to the query point and the distance to it.
     ///
     ///
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.Aabb.html
     ///
-    pub fn nearest_candidates<'a, Shape: Bounded<T, D>>(
+    pub fn nearest_from<'a, Shape: Bounded<T, D> + PointDistance<T, D>>(
         &self,
-        origin: &Point<T, D>,
+        origin: nalgebra::Point<T, D>,
         shapes: &'a [Shape],
-    ) -> Vec<&'a Shape>
+    ) -> Option<(&'a Shape, T)>
     where
         Self: std::marker::Sized,
     {
-        let mut indices = Vec::new();
-        let mut best_min_distance = T::max_value();
-        let mut best_max_distance = T::max_value();
-        BvhNode::nearest_candidates_recursive(
-            &self.nodes,
-            0,
-            origin,
-            shapes,
-            &mut indices,
-            &mut best_min_distance,
-            &mut best_max_distance,
-        );
+        if shapes.is_empty() {
+            return None;
+        }
 
-        indices
-            .into_iter()
-            // Filter out shapes that are too far but couldn't be pruned before.
-            .filter(|(_, node_min)| *node_min <= best_max_distance)
-            .map(|(i, _)| &shapes[i])
-            .collect()
+        let mut best_candidate = (&shapes[0], shapes[0].distance_squared(origin));
+        BvhNode::nearest_from_recursive(&self.nodes, 0, origin, shapes, &mut best_candidate);
+
+        // Return the best shape and its distance. We had a distance squared previously.
+        Some((best_candidate.0, best_candidate.1.sqrt()))
     }
 
     /// Prints the [`Bvh`] in a tree-like visualization.
@@ -510,12 +498,12 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
         self.traverse(query, shapes)
     }
 
-    fn nearest_candidates<'a, Shape: BHShape<T, D>>(
+    fn nearest_from<'a, Shape: BHShape<T, D> + PointDistance<T, D>>(
         &'a self,
-        query: &Point<T, D>,
+        query: nalgebra::Point<T, D>,
         shapes: &'a [Shape],
-    ) -> Vec<&Shape> {
-        self.nearest_candidates(query, shapes)
+    ) -> Option<(&'a Shape, T)> {
+        self.nearest_from(query, shapes)
     }
 
     fn pretty_print(&self) {
@@ -558,7 +546,7 @@ mod tests {
     use crate::{
         bounding_hierarchy::BoundingHierarchy,
         testbase::{
-            build_empty_bh, build_some_bh, nearest_candidates_some_bh, traverse_some_bh, TBvh3,
+            build_empty_bh, build_some_bh, nearest_from_some_bh, traverse_some_bh, TBvh3,
             TBvhNode3, TPoint3, TRay3, TVector3, UnitBox,
         },
     };
@@ -590,8 +578,8 @@ mod tests {
 
     #[test]
     /// Runs some primitive tests for distance query of a point with a fixed scene given as a [`Bvh`].
-    fn test_nearest_candidates_bvh() {
-        nearest_candidates_some_bh::<TBvh3>();
+    fn test_nearest_from_bvh() {
+        nearest_from_some_bh::<TBvh3>();
     }
 
     #[test]
@@ -706,9 +694,8 @@ mod bench {
     use crate::testbase::{
         build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh,
         intersect_1200_triangles_bh, intersect_120k_triangles_bh, intersect_12k_triangles_bh,
-        intersect_bh, load_sponza_scene, nearest_candidates_1200_triangles_bh,
-        nearest_candidates_120k_triangles_bh, nearest_candidates_12k_triangles_bh,
-        nearest_candidates_bh, TBvh3,
+        intersect_bh, load_sponza_scene, nearest_from_1200_triangles_bh,
+        nearest_from_120k_triangles_bh, nearest_from_12k_triangles_bh, nearest_from_bh, TBvh3,
     };
     #[cfg(feature = "rayon")]
     use crate::testbase::{
@@ -799,28 +786,28 @@ mod bench {
     }
 
     #[bench]
-    /// Benchmark nearest candidates on 1,200 triangles using the recursive [`Bvh`].
-    fn bench_nearest_candidates_1200_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_candidates_1200_triangles_bh::<TBvh3>(b);
+    /// Benchmark nearest from on 1,200 triangles using the recursive [`Bvh`].
+    fn bench_nearest_from_1200_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_from_1200_triangles_bh::<TBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark nearest candidates on 12,000 triangles using the recursive [`Bvh`].
-    fn bench_nearest_candidates_12k_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_candidates_12k_triangles_bh::<TBvh3>(b);
+    /// Benchmark nearest from on 12,000 triangles using the recursive [`Bvh`].
+    fn bench_nearest_from_12k_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_from_12k_triangles_bh::<TBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark nearest candidates on 120,000 triangles using the recursive [`Bvh`].
-    fn bench_nearest_candidates_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_candidates_120k_triangles_bh::<TBvh3>(b);
+    /// Benchmark nearest from on 120,000 triangles using the recursive [`Bvh`].
+    fn bench_nearest_from_120k_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_from_120k_triangles_bh::<TBvh3>(b);
     }
 
     #[bench]
-    /// Benchmark nearest candidates on a [`Bvh`] with the Sponza scene.
-    fn bench_nearest_candidates_sponza_bvh(b: &mut ::test::Bencher) {
+    /// Benchmark nearest from on a [`Bvh`] with the Sponza scene.
+    fn bench_nearest_from_sponza_bvh(b: &mut ::test::Bencher) {
         let (mut triangles, bounds) = load_sponza_scene();
         let bvh = TBvh3::build(&mut triangles);
-        nearest_candidates_bh(&bvh, &triangles, &bounds, b)
+        nearest_from_bh(&bvh, &triangles, &bounds, b)
     }
 }

@@ -2,6 +2,7 @@
 use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
 use crate::bvh::{Bvh, BvhNode};
+use crate::point_query::PointDistance;
 
 use nalgebra::Point;
 use num::Float;
@@ -421,8 +422,11 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     }
 
     /// Traverses a [`FlatBvh`] structure iteratively.
-    /// Returns a subset of `shapes` which are candidates for being the closest to the query point.
+    /// Returns the nearest shape from the query point and the distance to it.
     ///
+    /// Note: the flat bvh is not optimized for nearest queries. It is recommended to use
+    /// a [`Bvh`] for nearest queries when possible.
+    /// The flat bvh will still be much faster than a linear search.
     ///
     /// [`FlatBvh`]: struct.FlatBvh.html
     ///
@@ -432,6 +436,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     /// use bvh::aabb::{Aabb, Bounded};
     /// use bvh::bounding_hierarchy::BoundingHierarchy;
     /// use bvh::flat_bvh::FlatBvh;
+    /// use bvh::point_query::PointDistance;
     /// use nalgebra::{Point3, Vector3};
     /// use bvh::ray::Ray;
     /// # use bvh::bounding_hierarchy::BHShape;
@@ -469,6 +474,12 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     /// #     }
     /// # }
     /// #
+    /// # impl PointDistance<f32,3> for UnitBox {
+    /// #     fn distance_squared(&self, query_point: Point3<f32>) -> f32 {
+    /// #         self.aabb().get_min_distance_2(query_point)
+    /// #    }
+    /// # }
+    /// #
     /// # fn create_bhshapes() -> Vec<UnitBox> {
     /// #     let mut shapes = Vec::new();
     /// #     for i in 0..1000 {
@@ -481,18 +492,58 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     /// let point = Point3::new(0.0,0.0,0.0);
     /// let mut shapes = create_bhshapes();
     /// let flat_bvh = FlatBvh::build(&mut shapes);
-    /// let candidates = flat_bvh.nearest_candidates(&point, &shapes);
+    /// let best_shape = flat_bvh.nearest_from(point, &shapes);
     /// ```
     ///
     /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
     /// [`Aabb`]: ../aabb/struct.Aabb.html
     ///
-    fn nearest_candidates<'a, Shape: BHShape<T, D>>(
+    fn nearest_from<'a, Shape: BHShape<T, D> + PointDistance<T, D>>(
         &'a self,
-        _query: &Point<T, D>,
-        _shapes: &'a [Shape],
-    ) -> Vec<&Shape> {
-        todo!("Pre-order tree traversal with no recursion nor stack requires a parent index in the nodes.")
+        query: Point<T, D>,
+        shapes: &'a [Shape],
+    ) -> Option<(&'a Shape, T)> {
+        if self.is_empty() {
+            return None;
+        }
+
+        let mut best_element = (&shapes[0], shapes[0].distance_squared(query));
+
+        let mut index = 0;
+
+        // The traversal loop should terminate when `max_length` is set as the next node index.
+        let max_length = self.len();
+
+        // Iterate while the node index is valid.
+        while index < max_length {
+            let node = &self[index];
+
+            if node.entry_index == u32::MAX {
+                // If the entry_index is MAX_UINT32, then it's a leaf node.
+                let shape = &shapes[node.shape_index as usize];
+                let dist = shape.distance_squared(query);
+
+                if dist < best_element.1 {
+                    best_element = (shape, dist);
+                }
+
+                // Exit the current node.
+                index = node.exit_index as usize;
+            } else {
+                let min_dist = node.aabb.get_min_distance_2(query);
+
+                if min_dist < best_element.1 {
+                    // This node needs further traversal.
+                    index = node.entry_index as usize;
+                } else {
+                    // This node can't contain a candidate shape.
+                    index = node.exit_index as usize;
+                }
+            }
+        }
+
+        // Return the best shape and its distance. We had a distance squared previously.
+        Some((best_element.0, best_element.1.sqrt()))
     }
 
     /// Prints a textual representation of a [`FlatBvh`].
@@ -525,7 +576,9 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
 
 #[cfg(test)]
 mod tests {
-    use crate::testbase::{build_empty_bh, build_some_bh, traverse_some_bh, TBvh3, TFlatBvh3};
+    use crate::testbase::{
+        build_empty_bh, build_some_bh, nearest_from_some_bh, traverse_some_bh, TBvh3, TFlatBvh3,
+    };
 
     #[test]
     /// Tests whether the building procedure succeeds in not failing.
@@ -541,6 +594,11 @@ mod tests {
     }
 
     #[test]
+    /// Runs some primitive tests for distance query of a point with a fixed scene given as a [`Bvh`].
+    fn test_nearest_from_flat_bvh() {
+        nearest_from_some_bh::<TFlatBvh3>();
+    }
+    #[test]
     fn test_flatten_empty_bvh() {
         let (_, bvh) = build_empty_bh::<TBvh3>();
         let flat = bvh.flatten();
@@ -553,7 +611,8 @@ mod bench {
     use crate::testbase::{
         build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh, create_n_cubes,
         default_bounds, intersect_1200_triangles_bh, intersect_120k_triangles_bh,
-        intersect_12k_triangles_bh, TBvh3, TFlatBvh3,
+        intersect_12k_triangles_bh, nearest_from_1200_triangles_bh, nearest_from_120k_triangles_bh,
+        nearest_from_12k_triangles_bh, TBvh3, TFlatBvh3,
     };
 
     #[bench]
@@ -601,5 +660,23 @@ mod bench {
     /// Benchmark intersecting 120,000 triangles using the recursive [`FlatBvh`].
     fn bench_intersect_120k_triangles_flat_bvh(b: &mut ::test::Bencher) {
         intersect_120k_triangles_bh::<TFlatBvh3>(b);
+    }
+
+    #[bench]
+    /// Benchmark nearest from on 1,200 triangles using the recursive [`FlatBvh`].
+    fn bench_nearest_from_1200_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_from_1200_triangles_bh::<TFlatBvh3>(b);
+    }
+
+    #[bench]
+    /// Benchmark nearest from on 12,000 triangles using the recursive [`FlatBvh`].
+    fn bench_nearest_from_12k_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_from_12k_triangles_bh::<TFlatBvh3>(b);
+    }
+
+    #[bench]
+    /// Benchmark nearest from on 120,000 triangles using the recursive [`FlatBvh`].
+    fn bench_nearest_from_120k_triangles_bvh(b: &mut ::test::Bencher) {
+        nearest_from_120k_triangles_bh::<TFlatBvh3>(b);
     }
 }
