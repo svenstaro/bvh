@@ -133,6 +133,9 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Returns a subset of [`shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
     /// Return in order from nearest to farthest for ray.
     ///
+    /// This is a best-effort function that orders interior parent nodes before ordering child
+    /// nodes, so the output is not necessarily perfectly sorted.
+    ///
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.AABB.html
     ///
@@ -147,6 +150,9 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
     /// Returns a subset of [`Shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
     /// Return in order from farthest to nearest for ray.
+    ///
+    /// This is a best-effort function that orders interior parent nodes before ordering child
+    /// nodes, so the output is not necessarily perfectly sorted.
     ///
     /// [`Bvh`]: struct.Bvh.html
     /// [`Aabb`]: ../aabb/struct.AABB.html
