@@ -218,10 +218,13 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::aabb::Bounded;
+    use crate::aabb::{Aabb, Bounded};
+    use crate::bounding_hierarchy::{BHShape, BHValue};
     use crate::bvh::Bvh;
     use crate::ray::Ray;
-    use crate::testbase::{generate_aligned_boxes, TBvh3, TPoint3, TVector3, UnitBox};
+    use crate::testbase::{
+        generate_aligned_boxes, TAabb3, TBvh3, TPoint3, TRay3, TVector3, UnitBox,
+    };
     use std::collections::HashSet;
 
     /// Create a `Bvh` for a fixed scene structure.
@@ -332,5 +335,48 @@ mod tests {
         // Ensure distance traversal doesn't panic.
         assert_eq!(bvh.nearest_traverse_iterator(&ray, &shapes).count(), 0);
         assert_eq!(bvh.farthest_traverse_iterator(&ray, &shapes).count(), 0);
+    }
+
+    #[test]
+    fn test_incorrect_order() {
+        // TODONT: don't merge this PR.
+        #[allow(non_local_definitions)]
+        impl<T: BHValue, const D: usize> BHShape<T, D> for Aabb<T, D> {
+            fn bh_node_index(&self) -> usize {
+                unimplemented!();
+            }
+
+            fn set_bh_node_index(&mut self, _: usize) {
+                // No-op.
+            }
+        }
+
+        let mut aabbs = [
+            TAabb3 {
+                min: TPoint3::new(-0.33333334, -5000.3335, -5000.3335),
+                max: TPoint3::new(1.3333334, 0.33333334, 0.33333334),
+            },
+            TAabb3 {
+                min: TPoint3::new(-5000.3335, -5000.3335, -5000.3335),
+                max: TPoint3::new(0.33333334, 0.33333334, -4998.6665),
+            },
+            TAabb3 {
+                min: TPoint3::new(-5000.3335, -5000.3335, -5000.3335),
+                max: TPoint3::new(0.33333334, 0.33333334, 5000.3335),
+            },
+        ];
+        let ray = TRay3::new(
+            TPoint3::new(-5000.0, -5000.0, -5000.0),
+            TVector3::new(1.0, 0.0, 0.0),
+        );
+
+        let bvh = TBvh3::build(&mut aabbs);
+        assert!(bvh
+            .nearest_traverse_iterator(&ray, &aabbs)
+            .is_sorted_by(|a, b| {
+                let (a, _) = ray.intersection_slice_for_aabb(a).unwrap();
+                let (b, _) = ray.intersection_slice_for_aabb(b).unwrap();
+                a <= b
+            }));
     }
 }
