@@ -1,6 +1,8 @@
 //! This module defines a Ray structure and intersection algorithms
 //! for axis aligned bounding boxes and triangles.
 
+use std::cmp::Ordering;
+
 use crate::aabb::IntersectsAabb;
 use crate::utils::fast_max;
 use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
@@ -124,15 +126,15 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
 
         let (inf, sup) = lbr.inf_sup(&rtr);
 
-        let tmin = inf.max();
+        let tmin = fast_max(inf.max(), T::zero());
         let tmax = sup.min();
 
-        // no intersection
-        if tmin > tmax || tmax < T::zero() {
+        if matches!(tmin.partial_cmp(&tmax), Some(Ordering::Greater) | None) {
+            // tmin > tmax or either was NaN, meaning no intersection.
             return None;
         }
 
-        Some((fast_max(tmin, T::zero()), tmax))
+        Some((tmin, tmax))
     }
 
     /// Implementation of the
