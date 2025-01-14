@@ -322,8 +322,19 @@ impl<const D: usize> Workload<D> {
     ///
     /// The contents are explained in the module-level comment up above.
     fn fuzz(mut self) {
-        let mut bvh = Bvh::build(&mut self.shapes);
         let ray = self.ray.ray();
+        let aabb = self.aabb.aabb();
+
+        // Make sure these functions agree and that the latter doesn't return NaN.
+        let intersects = ray.intersects_aabb(&aabb);
+        if let Some((entry, exit)) = ray.intersection_slice_for_aabb(&aabb) {
+            assert!(intersects);
+            assert!(entry <= exit, "{entry} {exit}");
+        } else {
+            assert!(!intersects);
+        }
+
+        let mut bvh = Bvh::build(&mut self.shapes);
 
         if self.shapes.len()
             + self
@@ -367,18 +378,9 @@ impl<const D: usize> Workload<D> {
             bvh.assert_tight();
             let flat_bvh = bvh.flatten();
 
-            let traverse_ray = self.fuzz_traversal(
-                &bvh,
-                &flat_bvh,
-                &self.ray.ray(),
-                assert_ray_traversal_agreement,
-            );
-            self.fuzz_traversal(
-                &bvh,
-                &flat_bvh,
-                &self.aabb.aabb(),
-                assert_aabb_traversal_agreement,
-            );
+            let traverse_ray =
+                self.fuzz_traversal(&bvh, &flat_bvh, &ray, assert_ray_traversal_agreement);
+            self.fuzz_traversal(&bvh, &flat_bvh, &aabb, assert_aabb_traversal_agreement);
             self.fuzz_traversal(
                 &bvh,
                 &flat_bvh,

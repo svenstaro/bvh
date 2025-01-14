@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   need to change it to `BvhTraverseIterator<T, D, Ray, S>`. [#128](https://github.com/svenstaro/bvh/pull/128) (thanks @finnbear)
 - **Breaking change:** Distance-traversal no longer outputs non-intersected shapes, but note that
   `Ray::intersection_slice_for_aabb` now returns `None` instead of `(-1.0, -1.0)` in the case of no 
-  intersection, and `Some((entry, exit))` in the case of intersection. [#133](https://github.com/svenstaro/bvh/pull/133) (thanks @finnbear)
+  intersection, and `Some((entry, exit))` in the case of intersection. [#133](https://github.com/svenstaro/bvh/pull/133) [#142](https://github.com/svenstaro/bvh/pull/142) (thanks @finnbear)
 - Fix panic on empty `DistanceTraverseIterator` [#117](https://github.com/svenstaro/bvh/pull/117) (thanks @finnbear)
 - Fix center() for very large AABBs [#118](https://github.com/svenstaro/bvh/pull/118) (thanks @finnbear)
 - Fix more cases where an empty BVH would panic [#116](https://github.com/svenstaro/bvh/pull/116) (thanks @finnbear)
