@@ -10,9 +10,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   allowing points, AABB's, and circles/spheres to be tested, too. Most use-cases involving `Ray` 
   will continue to compile as-is. If you previously wrote `BvhTraverseIterator<T, D, S>`, you'll
   need to change it to `BvhTraverseIterator<T, D, Ray, S>`. [#128](https://github.com/svenstaro/bvh/pull/128) (thanks @finnbear)
-- **Breaking change:** Distance-traversal no longer outputs non-intersected shapes, but note that
-  `Ray::intersection_slice_for_aabb` now returns `None` instead of `(-1.0, -1.0)` in the case of no 
+- **Breaking change:** `Ray::intersection_slice_for_aabb` now returns `None` instead of `(-1.0, -1.0)` in the case of no 
   intersection, and `Some((entry, exit))` in the case of intersection. [#133](https://github.com/svenstaro/bvh/pull/133) [#142](https://github.com/svenstaro/bvh/pull/142) (thanks @finnbear)
+- `Bvh::nearest_traverse_iterator` and `Bvh::farthest_traverse_iterator` now output correctly ordered results when the children
+  of an internal node overlap, resulting in them taking more time and requiring heap allocation.
+  The new iterators `Bvh::nearest_child_traverse_iterator` and `Bvh::farthest_child_traverse_iterator` use the old algorithm. [#133](https://github.com/svenstaro/bvh/pull/139) (thanks @dashedman)
 - Fix panic on empty `DistanceTraverseIterator` [#117](https://github.com/svenstaro/bvh/pull/117) (thanks @finnbear)
 - Fix center() for very large AABBs [#118](https://github.com/svenstaro/bvh/pull/118) (thanks @finnbear)
 - Fix more cases where an empty BVH would panic [#116](https://github.com/svenstaro/bvh/pull/116) (thanks @finnbear)
