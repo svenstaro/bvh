@@ -16,8 +16,10 @@
 
 use std::cmp::Ordering;
 use std::collections::HashSet;
+use std::env;
 use std::fmt::{self, Debug, Formatter};
 use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 
 use arbitrary::Arbitrary;
 use bvh::aabb::{Aabb, Bounded, IntersectsAabb};
@@ -334,6 +336,21 @@ impl<const D: usize> Workload<D> {
             assert!(!intersects);
         }
 
+        // If this environment variable is present, only test limited-size BVH's without mutations.
+        //
+        // This way, problems detected with more complex BVH's might be able to be minimized
+        // to simple BVH's.
+        //
+        // This is accessible via commands in the project's `justfile`.
+        if let Some(max_shapes) = env::var("MAX_SHAPES")
+            .ok()
+            .map(|s| usize::from_str(&s).expect("MAX_SHAPES"))
+        {
+            if !self.mutations.is_empty() || self.shapes.len() > max_shapes {
+                return;
+            }
+        }
+
         let mut bvh = Bvh::build(&mut self.shapes);
 
         if self.shapes.len()
@@ -390,23 +407,73 @@ impl<const D: usize> Workload<D> {
             // Due to sphere geometry, `Mode::Grid` doesn't imply traversals will agree.
             self.fuzz_traversal(&bvh, &flat_bvh, &self.ball.ball(), false);
 
+            // In addition to collecting the output into a `HashSet`, make sure each subsequent
+            // item is further (or equally close) with respect to the ray, thus testing the
+            // correctness of the iterator.
+            let mut last_distance = f32::NEG_INFINITY;
             let nearest_traverse_iterator = bvh
                 .nearest_traverse_iterator(&ray, &self.shapes)
+                .inspect(|shape| {
+                    // Use `.0` to get the entry distance, which the iterator is based on.
+                    let distance = ray.intersection_slice_for_aabb(&shape.aabb())
+                        .expect("nearest_traverse_iterator returned aabb for which no intersection slice exists")
+                        .0;
+                    // Until https://github.com/svenstaro/bvh/issues/140 is completely fixed, the `distance`
+                    // and the relationship between `distance` and `last_distance` only necessarily holds if
+                    // ray-AABB intersection is definitive, so don't panic if `!assert_ray_traversal_agreement`.
+                    assert!(
+                        !assert_ray_traversal_agreement || distance >= last_distance,
+                        "nearest_traverse_iterator returned shapes out of order: {distance} {last_distance}"
+                    );
+                    last_distance = distance;
+                })
                 .map(ByPtr)
                 .collect::<HashSet<_>>();
+
+            // Same as the above, but in the opposite direction.
+            let mut last_distance = f32::INFINITY;
             let farthest_traverse_iterator = bvh
                 .farthest_traverse_iterator(&ray, &self.shapes)
+                .inspect(|shape| {
+                    // Use `.1` to get the exit distance, which the iterator is based on.
+                    let distance = ray.intersection_slice_for_aabb(&shape.aabb())
+                        .expect("farthest_traverse_iterator returned aabb for which no intersection slice exists")
+                        .1;
+                    assert!(
+                        !assert_ray_traversal_agreement || distance <= last_distance,
+                        "farthest_traverse_iterator returned shapes out of order: {distance} {last_distance}"
+                    );
+                    last_distance = distance;
+                })
+                .map(ByPtr)
+                .collect::<HashSet<_>>();
+
+            // We do not assert the order, because we didn't check if any children overlap, the
+            // condition under which order isn't guaranteed. TODO: check this.
+            let nearest_child_traverse_iterator = bvh
+                .nearest_child_traverse_iterator(&ray, &self.shapes)
+                .map(ByPtr)
+                .collect::<HashSet<_>>();
+
+            // Same as the above, but in the opposite direction.
+            let farthest_child_traverse_iterator = bvh
+                .farthest_child_traverse_iterator(&ray, &self.shapes)
                 .map(ByPtr)
                 .collect::<HashSet<_>>();
 
             if assert_ray_traversal_agreement {
                 assert_eq!(traverse_ray, nearest_traverse_iterator);
+                assert_eq!(traverse_ray, nearest_child_traverse_iterator);
             } else {
                 // Fails, probably due to normal rounding errors.
             }
 
             // Since the algorithm is similar, these should agree regardless of mode.
             assert_eq!(nearest_traverse_iterator, farthest_traverse_iterator);
+            assert_eq!(
+                nearest_child_traverse_iterator,
+                farthest_child_traverse_iterator
+            );
 
             if let Some(mutation) = self.mutations.pop() {
                 match mutation {

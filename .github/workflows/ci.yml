@@ -54,7 +54,8 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly
+          # use a known good version (e.g. on Jan 14 2025, a faulty `rustc` nightly panicked)
+          toolchain: nightly-2024-01-13
           components: rust-src
 
       - name: Install cargo-fuzz

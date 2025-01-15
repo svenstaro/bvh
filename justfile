@@ -36,3 +36,13 @@ bench_simd:
 # fuzz the library
 fuzz:
     cargo fuzz run fuzz
+
+# fuzz the library, but stick to BVH's with at most 3 shapes
+# that do not undergo mutations
+fuzz-max-three-shapes:
+    MAX_SHAPES=3 cargo fuzz run fuzz
+
+# fuzz the library, but stick to BVH's with at most 5 shapes
+# that do not undergo mutations
+fuzz-max-five-shapes:
+    MAX_SHAPES=5 cargo fuzz run fuzz
