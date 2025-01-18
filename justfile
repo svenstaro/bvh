@@ -46,3 +46,12 @@ fuzz-max-three-shapes:
 # that do not undergo mutations
 fuzz-max-five-shapes:
     MAX_SHAPES=5 cargo fuzz run fuzz
+
+# find the current MSRV, if it is greater than or equal to
+# the rust-version in Cargo.toml
+find-msrv:
+    cargo msrv find --ignore-lockfile
+
+# verify the rust-version in Cargo.toml is compatible
+verify-msrv:
+    cargo msrv verify --ignore-lockfile 

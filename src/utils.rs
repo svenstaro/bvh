@@ -101,7 +101,7 @@ impl<T: BHValue, const D: usize> Bucket<T, D> {
     }
 }
 
-pub fn joint_aabb_of_shapes<T: BHValue, const D: usize, Shape: BHShape<T, D>>(
+pub(crate) fn joint_aabb_of_shapes<T: BHValue, const D: usize, Shape: BHShape<T, D>>(
     indices: &[ShapeIndex],
     shapes: &Shapes<Shape>,
 ) -> (Aabb<T, D>, Aabb<T, D>) {

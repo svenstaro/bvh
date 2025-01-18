@@ -3,6 +3,7 @@ name = "bvh"
 description = "A fast BVH using SAH"
 version = "0.10.0"
 edition = "2021"
+rust-version = "1.65" # may raise to versions that are at least 1y old.
 authors = [
     "Sven-Hendrik Haase <svenstaro@gmail.com>",
     "Alexander Dmitriev <alexander.dmitriev2580@gmail.com>",

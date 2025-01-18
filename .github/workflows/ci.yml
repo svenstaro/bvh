@@ -29,6 +29,23 @@ jobs:
       - name: Run clippy (fuzzer)
         run: cargo clippy --manifest-path fuzz/Cargo.toml --all-targets --all-features -- -D warnings
 
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+
+      - name: Install cargo-msrv
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-msrv
+          locked: false
+
+      - name: Verify MSRV
+        run: cargo msrv verify --ignore-lockfile
+
   coverage:
     runs-on: ubuntu-latest
     steps:
