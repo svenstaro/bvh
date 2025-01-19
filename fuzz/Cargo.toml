@@ -10,6 +10,7 @@ cargo-fuzz = true
 
 [dependencies]
 arbitrary = { version = "1.4.1", features = ["derive"] }
+approx = "0.5"
 libfuzzer-sys = "0.4"
 nalgebra = "0.33"
 ordered-float = { version = "4.6.0", features = ["arbitrary"] }

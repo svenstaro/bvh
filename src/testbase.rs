@@ -3,6 +3,7 @@
 use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::ball::Sphere;
 use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use crate::point_query::PointDistance;
 
 use num::{FromPrimitive, Integer};
 use obj::raw::object::Polygon;
@@ -59,6 +60,7 @@ pub fn tuple_to_vector(tpl: &TupleVec) -> TVector3 {
 }
 
 /// Define some [`Bounded`] structure.
+#[derive(PartialEq, Debug)]
 pub struct UnitBox {
     pub id: i32,
     pub pos: TPoint3,
@@ -91,6 +93,12 @@ impl BHShape<f32, 3> for UnitBox {
 
     fn bh_node_index(&self) -> usize {
         self.node_index
+    }
+}
+
+impl PointDistance<f32, 3> for UnitBox {
+    fn distance_squared(&self, query_point: TPoint3) -> f32 {
+        self.aabb().min_distance_squared(query_point)
     }
 }
 
@@ -256,8 +264,53 @@ fn traverse_some_built_bh<BH: BoundingHierarchy<f32, 3>>(all_shapes: &[UnitBox],
     }
 }
 
+/// Perform some fixed distance tests on [`BoundingHierarchy`] structures.
+pub fn nearest_to_some_bh<BH: BoundingHierarchy<f32, 3>>() {
+    let bounds = TAabb3::with_bounds(
+        TPoint3::new(-1000.0, -1000.0, -1000.0),
+        TPoint3::new(1000.0, 1000.0, 1000.0),
+    );
+
+    let mut triangles = create_n_cubes(1000, &default_bounds());
+    let bvh = BH::build(&mut triangles);
+
+    let mut query_points = vec![];
+    for _ in 0..100 {
+        query_points.push(next_point3(&mut 0, &bounds));
+    }
+    for point in query_points {
+        nearest_to_and_verify(point, &bvh, &triangles);
+    }
+}
+
+/// Given a query point, a bounding hierarchy, the complete list of shapes in the scene and a list of
+/// expected hits, verifies that nearest_to returns the correct answer.
+fn nearest_to_and_verify<BH: BoundingHierarchy<f32, 3>>(
+    query_point: TPoint3,
+    bvh: &BH,
+    triangles: &[Triangle],
+) {
+    let result = bvh.nearest_to(query_point, triangles);
+
+    // Bruteforce the nearest triangle.
+    let mut best = (&triangles[0], f32::MAX);
+    for triangle in triangles {
+        // Check if the AABB distance is less than the current best distance
+        // for better performance.
+        let aabb_min_dist = triangle.aabb().min_distance_squared(query_point);
+        if aabb_min_dist.sqrt() < best.1 {
+            // Compute the actual distance.
+            let distance = triangle.distance_squared(query_point).sqrt();
+            if distance < best.1 {
+                best = (triangle, distance);
+            }
+        }
+    }
+    assert_eq!(result.unwrap(), best);
+}
+
 /// A triangle struct. Instance of a more complex [`Bounded`] primitive.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Triangle {
     pub a: TPoint3,
     pub b: TPoint3,
@@ -291,6 +344,99 @@ impl BHShape<f32, 3> for Triangle {
 
     fn bh_node_index(&self) -> usize {
         self.node_index
+    }
+}
+
+/// Project p on \[ab\].
+fn closest_point_segment(p: &TPoint3, a: &TPoint3, b: &TPoint3) -> TPoint3 {
+    let ab = b - a;
+    let m = ab.dot(&ab);
+
+    // find parameter value of closest point on segment
+    let ap = p - a;
+    let mut s12 = ab.dot(&ap) / m;
+    s12 = s12.clamp(0.0, 1.0);
+
+    a + s12 * ab
+}
+/// Project a point onto a triangle.
+/// Adapted from Embree.
+/// <https://github.com/embree/embree/blob/master/tutorials/common/math/closest_point.h#L10>
+fn closest_point_triangle(p: &TPoint3, a: &TPoint3, b: &TPoint3, c: &TPoint3) -> TPoint3 {
+    // Add safety checks for degenerate triangles
+    #[allow(clippy::match_same_arms)]
+    match (a.eq(b), b.eq(c), a.eq(c)) {
+        (true, true, true) => {
+            return *a;
+        }
+        (true, _, _) => {
+            return closest_point_segment(p, a, c);
+        }
+        (_, true, _) => {
+            return closest_point_segment(p, a, b);
+        }
+        (_, _, true) => {
+            return closest_point_segment(p, a, b);
+        }
+        // they are all different
+        _ => {}
+    }
+
+    // Actual embree code.
+    let ab = b - a;
+    let ac = c - a;
+    let ap = p - a;
+
+    let d1 = ab.dot(&ap);
+    let d2 = ac.dot(&ap);
+    if d1 <= 0.0 && d2 <= 0.0 {
+        return *a;
+    }
+
+    let bp = p - b;
+    let d3 = ab.dot(&bp);
+    let d4 = ac.dot(&bp);
+    if d3 >= 0.0 && d4 <= d3 {
+        return *b;
+    }
+
+    let cp = p - c;
+    let d5 = ab.dot(&cp);
+    let d6 = ac.dot(&cp);
+    if d6 >= 0.0 && d5 <= d6 {
+        return *c;
+    }
+
+    let vc = d1 * d4 - d3 * d2;
+    if vc <= 0.0 && d1 >= 0.0 && d3 <= 0.0 {
+        let v = d1 / (d1 - d3);
+        return a + v * ab;
+    }
+
+    let vb = d5 * d2 - d1 * d6;
+    if vb <= 0.0 && d2 >= 0.0 && d6 <= 0.0 {
+        let v = d2 / (d2 - d6);
+        return a + v * ac;
+    }
+
+    let va = d3 * d6 - d5 * d4;
+    if va <= 0.0 && d4 - d3 >= 0.0 && d5 - d6 >= 0.0 {
+        let v = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+        return b + v * (c - b);
+    }
+
+    let denom = 1.0 / (va + vb + vc);
+    let v = vb * denom;
+    let w = vc * denom;
+    a + v * ab + w * ac
+}
+
+impl PointDistance<f32, 3> for Triangle {
+    fn distance_squared(&self, query_point: nalgebra::Point<f32, 3>) -> f32 {
+        // Compute the unsigned distance from the point to the plane of the triangle
+        let nearest = closest_point_triangle(&query_point, &self.a, &self.b, &self.c);
+        let diff = query_point - nearest;
+        diff.dot(&diff)
     }
 }
 
@@ -717,4 +863,129 @@ pub fn intersect_12k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::
 #[cfg(feature = "bench")]
 pub fn intersect_120k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
     intersect_n_triangles::<T>(10_000, b);
+}
+
+/// Benchmark nearest_to on a `triangles` list without acceleration structures.
+#[cfg(feature = "bench")]
+pub fn nearest_to_list(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::test::Bencher) {
+    let mut seed = 0;
+    b.iter(|| {
+        let point = next_point3(&mut seed, bounds);
+
+        let mut min_dist = f32::MAX;
+        // Iterate over the list of triangles.
+        for triangle in triangles {
+            let dist = std::hint::black_box(triangle.distance_squared(point));
+            if dist < min_dist {
+                min_dist = dist;
+            }
+        }
+
+        std::hint::black_box(min_dist)
+    });
+}
+
+/// Benchmark nearest_to on a `triangles` list with [`Aabb`] checks, but without acceleration
+/// structures.
+#[cfg(feature = "bench")]
+pub fn nearest_to_list_aabb(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::test::Bencher) {
+    let mut seed = 0;
+    b.iter(|| {
+        let point = next_point3(&mut seed, bounds);
+
+        // Note: all distances here are squared.
+        let mut min_dist = f32::MAX;
+        // Iterate over the list of triangles.
+        for triangle in triangles {
+            // First test whether the point-aabb distance is within bounds.
+            let aabb_min_dist = std::hint::black_box(triangle.aabb().min_distance_squared(point));
+            if aabb_min_dist < min_dist {
+                let dist = std::hint::black_box(triangle.distance_squared(point));
+                if dist < min_dist {
+                    min_dist = dist;
+                }
+            }
+        }
+
+        std::hint::black_box(min_dist)
+    });
+}
+
+#[cfg(feature = "bench")]
+#[bench]
+/// Benchmark nearest_to on 120,000 triangles directly.
+fn bench_nearest_to_120k_triangles_list(b: &mut ::test::Bencher) {
+    let bounds = default_bounds();
+    let triangles = create_n_cubes(10_000, &bounds);
+    nearest_to_list(&triangles, &bounds, b);
+}
+
+#[cfg(feature = "bench")]
+#[bench]
+/// Benchmark nearest_to on Sponza.
+fn bench_nearest_to_sponza_list(b: &mut ::test::Bencher) {
+    let (triangles, bounds) = load_sponza_scene();
+    nearest_to_list(&triangles, &bounds, b);
+}
+
+#[cfg(feature = "bench")]
+#[bench]
+/// Benchmark nearest_to on 120,000 triangles with preceeding [`Aabb`] tests.
+fn bench_nearest_to_120k_triangles_list_aabb(b: &mut ::test::Bencher) {
+    let bounds = default_bounds();
+    let triangles = create_n_cubes(10_000, &bounds);
+    nearest_to_list_aabb(&triangles, &bounds, b);
+}
+
+#[cfg(feature = "bench")]
+#[bench]
+/// Benchmark nearest_to on 120,000 triangles with preceeding [`Aabb`] tests.
+fn bench_nearest_to_sponza_list_aabb(b: &mut ::test::Bencher) {
+    let (triangles, bounds) = load_sponza_scene();
+    nearest_to_list_aabb(&triangles, &bounds, b);
+}
+
+#[cfg(feature = "bench")]
+pub fn nearest_to_bh<T: BoundingHierarchy<f32, 3>>(
+    bh: &T,
+    triangles: &[Triangle],
+    bounds: &TAabb3,
+    b: &mut ::test::Bencher,
+) {
+    let mut seed = 0;
+    b.iter(|| {
+        let point = next_point3(&mut seed, bounds);
+
+        // Traverse the [`BoundingHierarchy`] recursively.
+        let _best_result = std::hint::black_box(
+            bh.nearest_to(std::hint::black_box(point), std::hint::black_box(triangles)),
+        );
+    });
+}
+
+/// Benchmark the nearest_to traversal of a [`BoundingHierarchy`] with `n` triangles.
+#[cfg(feature = "bench")]
+pub fn nearest_to_n_triangles<T: BoundingHierarchy<f32, 3>>(n: usize, b: &mut ::test::Bencher) {
+    let bounds = default_bounds();
+    let mut triangles = create_n_cubes(n, &bounds);
+    let bh = T::build(&mut triangles);
+    nearest_to_bh(&bh, &triangles, &bounds, b)
+}
+
+/// Benchmark the nearest_to traversal of a [`BoundingHierarchy`] with 1,200 triangles.
+#[cfg(feature = "bench")]
+pub fn nearest_to_1200_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
+    nearest_to_n_triangles::<T>(100, b);
+}
+
+/// Benchmark the nearest_to traversal of a [`BoundingHierarchy`] with 12,000 triangles.
+#[cfg(feature = "bench")]
+pub fn nearest_to_12k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
+    nearest_to_n_triangles::<T>(1_000, b);
+}
+
+/// Benchmark the nearest_to traversal of a [`BoundingHierarchy`] with 120,000 triangles.
+#[cfg(feature = "bench")]
+pub fn nearest_to_120k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
+    nearest_to_n_triangles::<T>(10_000, b);
 }

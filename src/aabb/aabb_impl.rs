@@ -594,6 +594,39 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     pub fn largest_axis(&self) -> usize {
         self.size().imax()
     }
+
+    /// Returns the minimum distance squared to the [`Aabb`].
+    /// The minimum distance is the distance to the closest point on the box,
+    /// or 0 if the point is inside the box.
+    ///
+    /// # Examples
+    /// ```
+    /// use bvh::aabb::Aabb;
+    /// use nalgebra::Point3;
+    ///
+    /// let min = Point3::new(0.0,0.0,0.0);
+    /// let max = Point3::new(10.0,10.0,10.0);
+    ///
+    /// let aabb = Aabb::with_bounds(min, max);
+    /// let query = Point3::new(20.0, 0.0, 0.0);
+    /// let min_dist = aabb.min_distance_squared(query);
+    /// assert_eq!((min_dist as f32).sqrt(), 10.0);
+    /// ```
+    ///
+    /// [`Aabb`]: struct.Aabb.html
+    ///
+    pub fn min_distance_squared(&self, point: Point<T, D>) -> T {
+        let half_size = self.half_size();
+        let center = self.min + half_size;
+
+        let delta = point - center;
+
+        // See <https://iquilezles.org/articles/distfunctions/>
+        let q = delta.abs() - half_size;
+        let outside_vec = q.map(|x| x.max(T::zero()));
+
+        outside_vec.dot(&outside_vec)
+    }
 }
 
 /// Default instance for [`Aabb`]s. Returns an [`Aabb`] which is [`empty()`].

@@ -1,5 +1,6 @@
 use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue};
+use crate::point_query::PointDistance;
 use crate::utils::{joint_aabb_of_shapes, Bucket};
 use std::cell::RefCell;
 use std::marker::PhantomData;
@@ -319,6 +320,61 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
                 // need to check the AABB.
                 if node_index != 0 || query.intersects_aabb(&shapes[shape_index].aabb()) {
                     indices.push(shape_index);
+                }
+            }
+        }
+    }
+
+    /// Traverses the [`Bvh`] recursively and updates the given `best_candidate` with
+    /// the nearest shape found so far.
+    ///
+    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Bvh`]: struct.Bvh.html
+    ///
+    pub(crate) fn nearest_to_recursive<'a, Shape: Bounded<T, D> + PointDistance<T, D>>(
+        nodes: &[BvhNode<T, D>],
+        node_index: usize,
+        query: nalgebra::Point<T, D>,
+        shapes: &'a [Shape],
+        best_candidate: &mut Option<(&'a Shape, T)>,
+    ) {
+        match nodes[node_index] {
+            BvhNode::Node {
+                ref child_l_aabb,
+                child_l_index,
+                ref child_r_aabb,
+                child_r_index,
+                ..
+            } => {
+                // Compute the min dist for both children
+                let mut children = [
+                    (child_l_index, child_l_aabb.min_distance_squared(query)),
+                    (child_r_index, child_r_aabb.min_distance_squared(query)),
+                ];
+
+                // Sort children to go to the best candidate first and have a better chance of pruning
+                if children[0].1 > children[1].1 {
+                    children.swap(0, 1);
+                }
+
+                // Traverse children
+                for (index, child_dist) in children {
+                    // Node might contain a better shape: check it.
+                    // TODO: to be replaced by `Option::is_none_or` after 2025-10 for 1 year MSRV.
+                    #[allow(clippy::unnecessary_map_or)]
+                    if best_candidate.map_or(true, |(_, best_dist)| child_dist < best_dist) {
+                        Self::nearest_to_recursive(nodes, index, query, shapes, best_candidate);
+                    }
+                }
+            }
+            BvhNode::Leaf { shape_index, .. } => {
+                // This leaf might contain a better shape: check it directly with its exact distance (squared).
+                let dist = shapes[shape_index].distance_squared(query);
+
+                // TODO: to be replaced by `Option::is_none_or` after 2025-10 for 1 year MSRV.
+                #[allow(clippy::unnecessary_map_or)]
+                if best_candidate.map_or(true, |(_, best_dist)| dist < best_dist) {
+                    *best_candidate = Some((&shapes[shape_index], dist));
                 }
             }
         }
