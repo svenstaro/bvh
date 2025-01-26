@@ -5,6 +5,7 @@ use crate::bvh::ShapeIndex;
 use crate::{aabb::Aabb, bvh::Shapes};
 
 use nalgebra::Scalar;
+use num::Float;
 
 /// Fast floating point minimum.  This function matches the semantics of
 ///
@@ -113,4 +114,10 @@ pub(crate) fn joint_aabb_of_shapes<T: BHValue, const D: usize, Shape: BHShape<T,
         centroid.grow_mut(&shape.aabb().center());
     }
     (aabb, centroid)
+}
+
+/// Returns `true` if and only if any of the floats returned by `iter` are NaN.
+#[inline(always)]
+pub(crate) fn has_nan<'a, T: Float + 'a>(iter: impl IntoIterator<Item = &'a T>) -> bool {
+    iter.into_iter().any(|f| f.is_nan())
 }
