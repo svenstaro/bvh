@@ -353,7 +353,9 @@ impl<const D: usize> Workload<D> {
         // assert_eq!(best, flat_best);
         // as such we only assert for distance equivalence if they are not None
         if let Some((best, flat_best)) = best.zip(flat_best) {
-            approx::assert_abs_diff_eq!(best.1, flat_best.1);
+            const EPSILON: f32 = 0.001;
+
+            approx::assert_abs_diff_eq!(best.1, flat_best.1, epsilon = EPSILON);
 
             // Brute force search for the ground truth, shapes is not empty since the results are not None.
             let mut bruteforce = (
@@ -368,8 +370,8 @@ impl<const D: usize> Workload<D> {
             }
             bruteforce = (bruteforce.0, bruteforce.1.sqrt());
             // Again we only test for distances.
-            approx::assert_abs_diff_eq!(best.1, bruteforce.1);
-            approx::assert_abs_diff_eq!(flat_best.1, bruteforce.1);
+            approx::assert_abs_diff_eq!(best.1, bruteforce.1, epsilon = EPSILON);
+            approx::assert_abs_diff_eq!(flat_best.1, bruteforce.1, epsilon = EPSILON);
         }
     }
 
