@@ -1,0 +1,10 @@
+[package]
+name = "benches"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bvh = { path = ".." }
+clap = { version = "4.5.27", features = ["derive"] }
+nalgebra = "0.33.2"
+rand = "0.9.0"

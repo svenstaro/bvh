@@ -33,6 +33,10 @@ bench:
 bench_simd:
     cargo bench --features bench,simd
 
+# WIP/temporary
+bench_fancy:
+    cd benches; python3 plot.py
+
 # fuzz the library
 fuzz:
     cargo fuzz run fuzz
