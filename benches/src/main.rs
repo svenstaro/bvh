@@ -6,7 +6,7 @@ use bvh::{
     bvh::Bvh,
     ray::Ray,
 };
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use nalgebra::{Point3, Vector3};
 use rand::{rng, Rng};
 
@@ -19,6 +19,17 @@ struct Cli {
     triangles: usize,
     #[arg(long)]
     samples: usize,
+    #[arg(long)]
+    benchmark: Benchmark,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+#[clap(rename_all = "snake_case")]
+enum Benchmark {
+    Traverse,
+    TraverseIterator,
+    NearestTraverseIterator,
+    NearestChildTraverseIterator,
 }
 
 fn main() {
@@ -87,12 +98,30 @@ fn main() {
         let mut measure_brute_force = |triangles: &[Triangle]| {
             let start_brute_force = Instant::now();
             for ray in &rays {
-                black_box(
-                    black_box(&triangles)
-                        .iter()
-                        .filter(|triangle| triangle.intersect(&ray))
-                        .count(),
-                );
+                match cli.benchmark {
+                    Benchmark::Traverse | Benchmark::TraverseIterator => {
+                        black_box(
+                            black_box(&triangles)
+                                .iter()
+                                .filter(|triangle| triangle.intersect(&ray))
+                                .count(),
+                        );
+                    }
+                    Benchmark::NearestTraverseIterator
+                    | Benchmark::NearestChildTraverseIterator => {
+                        let mut results = black_box(
+                            black_box(&triangles)
+                                .iter()
+                                .filter(|triangle| triangle.intersect(&ray))
+                                .collect::<Vec<_>>(),
+                        );
+                        results.sort_by_cached_key(|triangle| {
+                            (ray.intersection_slice_for_aabb(&triangle.aabb).unwrap().0 * 1000.0)
+                                as usize
+                        });
+                        black_box(results);
+                    }
+                }
             }
             brute_force_duration = start_brute_force.elapsed().as_secs_f64();
         };
@@ -101,11 +130,40 @@ fn main() {
             let start_bvh = Instant::now();
             let bvh = Bvh::build(black_box(triangles));
             for ray in &rays {
-                black_box(
-                    bvh.traverse_iterator(black_box(ray), black_box(&triangles))
-                        .filter(|triangle| triangle.intersect(&ray))
-                        .count(),
-                );
+                match cli.benchmark {
+                    Benchmark::Traverse => {
+                        black_box(
+                            bvh.traverse(black_box(ray), black_box(&triangles))
+                                .into_iter()
+                                .filter(|triangle| triangle.intersect(&ray))
+                                .count(),
+                        );
+                    }
+                    Benchmark::TraverseIterator => {
+                        black_box(
+                            bvh.traverse_iterator(black_box(ray), black_box(&triangles))
+                                .filter(|triangle| triangle.intersect(&ray))
+                                .count(),
+                        );
+                    }
+                    Benchmark::NearestTraverseIterator => {
+                        black_box(
+                            bvh.nearest_traverse_iterator(black_box(ray), black_box(&triangles))
+                                .filter(|triangle| triangle.intersect(&ray))
+                                .count(),
+                        );
+                    }
+                    Benchmark::NearestChildTraverseIterator => {
+                        black_box(
+                            bvh.nearest_child_traverse_iterator(
+                                black_box(ray),
+                                black_box(&triangles),
+                            )
+                            .filter(|triangle| triangle.intersect(&ray))
+                            .count(),
+                        );
+                    }
+                }
             }
             bvh_duration = start_bvh.elapsed().as_secs_f64();
         };
