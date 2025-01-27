@@ -383,13 +383,27 @@ impl<const D: usize> Workload<D> {
         let ray = self.ray.ray();
         let aabb = self.aabb.aabb();
 
-        // Make sure these functions agree and that the latter doesn't return NaN.
+        // Make sure these functions agree and that the latter doesn't return NaN/infinity.
         let intersects = ray.intersects_aabb(&aabb);
         if let Some((entry, exit)) = ray.intersection_slice_for_aabb(&aabb) {
-            assert!(intersects);
-            assert!(entry <= exit, "{entry} {exit}");
+            assert!(
+                intersects,
+                "intersection_slice_for_aabb returned Some for non-intersection"
+            );
+            assert!(entry >= 0.0, "entry ({entry}) must be non-negative");
+            assert!(
+                entry <= exit,
+                "entry ({entry}) must not exceed exit ({exit})"
+            );
+            assert!(
+                entry.is_finite() && exit.is_finite(),
+                "neither entry ({entry}) nor exit ({exit}) may be infinite or NaN for AABB's and rays with finite coordinates"
+            );
         } else {
-            assert!(!intersects);
+            assert!(
+                !intersects,
+                "intersection_slice_for_aabb returned None for intersection"
+            );
         }
 
         // If this environment variable is present, only test limited-size BVH's without mutations.

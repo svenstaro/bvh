@@ -5,7 +5,10 @@ use std::arch::x86_64::*;
 
 use nalgebra::SVector;
 
-use crate::{aabb::Aabb, utils::fast_max};
+use crate::{
+    aabb::Aabb,
+    utils::{fast_max, has_nan},
+};
 
 use super::{intersect_default::RayIntersection, Ray};
 
@@ -73,6 +76,33 @@ fn min_elem_m128(mm: __m128) -> f32 {
 }
 
 #[inline(always)]
+fn has_nan_m128(mm: __m128) -> bool {
+    unsafe {
+        let mut data = std::mem::MaybeUninit::<[f32; 4]>::uninit();
+        _mm_store_ps(data.as_mut_ptr() as *mut f32, mm);
+        has_nan(data.assume_init_ref())
+    }
+}
+
+#[inline(always)]
+fn has_nan_m128d(mm: __m128d) -> bool {
+    unsafe {
+        let mut data = std::mem::MaybeUninit::<[f64; 2]>::uninit();
+        _mm_store_pd(data.as_mut_ptr() as *mut f64, mm);
+        has_nan(data.assume_init_ref())
+    }
+}
+
+#[inline(always)]
+fn has_nan_m256d(mm: __m256d) -> bool {
+    unsafe {
+        let mut data = std::mem::MaybeUninit::<[f64; 4]>::uninit();
+        _mm256_store_pd(data.as_mut_ptr() as *mut f64, mm);
+        has_nan(data.assume_init_ref())
+    }
+}
+
+#[inline(always)]
 fn ray_intersects_aabb_m128(
     ray_origin: __m128,
     ray_inv_dir: __m128,
@@ -82,6 +112,10 @@ fn ray_intersects_aabb_m128(
     unsafe {
         let v1 = _mm_mul_ps(_mm_sub_ps(aabb_0, ray_origin), ray_inv_dir);
         let v2 = _mm_mul_ps(_mm_sub_ps(aabb_1, ray_origin), ray_inv_dir);
+
+        if has_nan_m128(v1) | has_nan_m128(v2) {
+            return false;
+        }
 
         let inf = _mm_min_ps(v1, v2);
         let sup = _mm_max_ps(v1, v2);
@@ -176,6 +210,10 @@ fn ray_intersects_aabb_m128d(
         let v1 = _mm_mul_pd(_mm_sub_pd(aabb_0, ray_origin), ray_inv_dir);
         let v2 = _mm_mul_pd(_mm_sub_pd(aabb_1, ray_origin), ray_inv_dir);
 
+        if has_nan_m128d(v1) | has_nan_m128d(v2) {
+            return false;
+        }
+
         let inf = _mm_min_pd(v1, v2);
         let sup = _mm_max_pd(v1, v2);
 
@@ -256,6 +294,10 @@ fn ray_intersects_aabb_m256d(
     unsafe {
         let v1 = _mm256_mul_pd(_mm256_sub_pd(aabb_0, ray_origin), ray_inv_dir);
         let v2 = _mm256_mul_pd(_mm256_sub_pd(aabb_1, ray_origin), ray_inv_dir);
+
+        if has_nan_m256d(v1) | has_nan_m256d(v2) {
+            return false;
+        }
 
         let inf = _mm256_min_pd(v1, v2);
         let sup = _mm256_max_pd(v1, v2);

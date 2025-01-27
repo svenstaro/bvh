@@ -4,7 +4,7 @@
 use std::cmp::Ordering;
 
 use crate::aabb::IntersectsAabb;
-use crate::utils::fast_max;
+use crate::utils::{fast_max, has_nan};
 use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
 use nalgebra::{
     ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, ComplexField, Point, SVector, SimdPartialOrd,
@@ -123,6 +123,14 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
         // Copied from the default `RayIntersection` implementation. TODO: abstract and add SIMD.
         let lbr = (aabb[0].coords - self.origin.coords).component_mul(&self.inv_direction);
         let rtr = (aabb[1].coords - self.origin.coords).component_mul(&self.inv_direction);
+
+        if has_nan(&lbr) | has_nan(&rtr) {
+            // Assumption: the ray is in the plane of an AABB face. Be consistent and
+            // consider this a non-intersection. This avoids making the result depend
+            // on which axis/axes have NaN (min/max in the code that follows are not
+            // commutative).
+            return None;
+        }
 
         let (inf, sup) = lbr.inf_sup(&rtr);
 
@@ -275,6 +283,22 @@ mod tests {
             TVector3::new(1.0, 0.0, 0.0),
         );
         assert!(ray.intersection_slice_for_aabb(&aabb.aabb()).is_none());
+    }
+
+    /// Ensure no slice is returned when the ray is in the plane of an AABB
+    /// face, which is a special case due to NaN's in the computation.
+    #[test]
+    fn test_in_plane_ray_slice() {
+        let aabb = UnitBox::new(0, TPoint3::new(0.0, 0.0, 0.0)).aabb();
+        let ray = TRay3::new(TPoint3::new(0.0, 0.0, -0.5), TVector3::new(1.0, 0.0, 0.0));
+        assert!(!ray.intersects_aabb(&aabb));
+        assert!(ray.intersection_slice_for_aabb(&aabb).is_none());
+
+        // Test a different ray direction, to ensure that order of `fast_max` (relevant
+        // to the result when NaN's are involved) doesn't matter.
+        let ray = TRay3::new(TPoint3::new(0.0, 0.5, 0.0), TVector3::new(0.0, 0.0, 1.0));
+        assert!(!ray.intersects_aabb(&aabb));
+        assert!(ray.intersection_slice_for_aabb(&aabb).is_none());
     }
 
     proptest! {
