@@ -26,10 +26,12 @@ fn main() {
     let mut rng = rng();
 
     let mut samples = Vec::new();
+    let mut rays = Vec::new();
+    let mut triangles = Vec::new();
 
-    for _ in 0..cli.samples {
-        let mut rays = Vec::new();
-        let mut triangles = Vec::new();
+    for i in 0..cli.samples {
+        rays.clear();
+        triangles.clear();
 
         for _ in 0..cli.rays {
             rays.push(Ray::<f32, 3>::new(
@@ -79,27 +81,44 @@ fn main() {
             });
         }
 
-        let start_brute_force = Instant::now();
-        for ray in &rays {
-            black_box(
-                black_box(&triangles)
-                    .iter()
-                    .filter(|triangle| triangle.intersect(&ray))
-                    .count(),
-            );
-        }
-        let brute_force_duration = start_brute_force.elapsed().as_secs_f64();
+        let mut brute_force_duration = f64::NAN;
+        let mut bvh_duration = f64::NAN;
 
-        let start_bvh = Instant::now();
-        let bvh = Bvh::build(&mut triangles);
-        for ray in &rays {
-            black_box(
-                bvh.traverse_iterator(black_box(ray), black_box(&triangles))
-                    .filter(|triangle| triangle.intersect(&ray))
-                    .count(),
-            );
+        let mut measure_brute_force = |triangles: &[Triangle]| {
+            let start_brute_force = Instant::now();
+            for ray in &rays {
+                black_box(
+                    black_box(&triangles)
+                        .iter()
+                        .filter(|triangle| triangle.intersect(&ray))
+                        .count(),
+                );
+            }
+            brute_force_duration = start_brute_force.elapsed().as_secs_f64();
+        };
+
+        let mut measure_bvh = |triangles: &mut Vec<Triangle>| {
+            let start_bvh = Instant::now();
+            let bvh = Bvh::build(black_box(triangles));
+            for ray in &rays {
+                black_box(
+                    bvh.traverse_iterator(black_box(ray), black_box(&triangles))
+                        .filter(|triangle| triangle.intersect(&ray))
+                        .count(),
+                );
+            }
+            bvh_duration = start_bvh.elapsed().as_secs_f64();
+        };
+
+        // Flip order to minimize bias due to caching.
+        if i % 2 == 0 {
+            measure_bvh(&mut triangles);
+            measure_brute_force(&triangles);
+        } else {
+            measure_brute_force(&triangles);
+            measure_bvh(&mut triangles);
         }
-        let bvh_duration = start_bvh.elapsed().as_secs_f64();
+
         let bvh_speedup = brute_force_duration / bvh_duration;
         samples.push(bvh_speedup);
     }

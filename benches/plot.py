@@ -9,21 +9,20 @@ resolution = 10
 # benchmark 1..=10^max rays/triangles
 max = 4
 
-#newcmp = LinearSegmentedColormap('testCmap', segmentdata=cdict, N=256)
 cmap = LinearSegmentedColormap.from_list("speedup", ["red", "white", "green"], N=256)
 
 def plot(colormaps):
     mesh = []
-    for x in range(1 * resolution, max * resolution + 1):
+    for x in range(0, max * resolution + 1):
         mesh.append(round(math.pow(10, x * (1.0 / resolution))))
 
-    data = np.empty(((max - 1) * resolution + 1, (max - 1) * resolution + 1))
+    data = np.empty((max * resolution + 1, max * resolution + 1))
 
     with np.nditer(data, flags=['multi_index'], op_flags=['writeonly']) as it:
         for x in it:
             rays = mesh[it.multi_index[0]]
             triangles = mesh[it.multi_index[1]]
-            samples = 11
+            samples = 51
             if triangles >= 100 and rays >= 100:
                 # these run longer so less intrinsic noise; save time
                 # by sampling less
