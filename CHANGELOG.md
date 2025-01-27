@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fix intersection between rays and AABBs that lack depth. [#131](https://github.com/svenstaro/bvh/pull/131) (thanks @finnbear)
 - Document the limitations of distance traversal best-effort ordering. [#135](https://github.com/svenstaro/bvh/pull/135) (thanks @finnbear)
 - Add `Bvh::nearest_to`, which returns the nearest shape to a point. [#108](https://github.com/svenstaro/bvh/pull/108) (thanks @Azkellas)
+- Fix ray-AABB intersection such that a ray in the plane of an AABB face is never
+  considered intersecting, rather than returning an arbitrary answer in the case of
+  `Ray::intersects_aabb` or an erroneous answer in the case of
+  `Ray::intersection_slice_for_aabb`. [#149](https://github.com/svenstaro/bvh/pull/149) (thanks @finnbear)
 
 ## 0.10.0 - 2024-07-06
 - Don't panic when traversing empty BVH [#106](https://github.com/svenstaro/bvh/pull/106) (thanks @finnbear)
