@@ -439,15 +439,15 @@ mod bench {
 
     /// Generate a random deterministic `Ray`.
     fn random_ray(rng: &mut StdRng) -> TRay3 {
-        let a = tuple_to_point(&rng.gen::<TupleVec>());
-        let b = tuple_to_vector(&rng.gen::<TupleVec>());
+        let a = tuple_to_point(&rng.random::<TupleVec>());
+        let b = tuple_to_vector(&rng.random::<TupleVec>());
         TRay3::new(a, b)
     }
 
     /// Generate a random deterministic `Aabb`.
     fn random_aabb(rng: &mut StdRng) -> TAabb3 {
-        let a = tuple_to_point(&rng.gen::<TupleVec>());
-        let b = tuple_to_point(&rng.gen::<TupleVec>());
+        let a = tuple_to_point(&rng.random::<TupleVec>());
+        let b = tuple_to_point(&rng.random::<TupleVec>());
 
         TAabb3::empty().grow(&a).grow(&b)
     }
