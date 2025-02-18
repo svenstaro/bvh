@@ -17,7 +17,6 @@ license = "MIT"
 
 [dependencies]
 approx = "0.5"
-rand = "0.9"
 log = "0.4"
 serde = { optional = true, version = "1", features = ["derive"] }
 num = "0.4.3"
@@ -27,6 +26,7 @@ rayon = {optional = true, version = "1.8.1" }
 [dev-dependencies]
 proptest = "1.0"
 obj-rs = "0.7"
+rand = "0.9"
 float_eq = "1"
 doc-comment = "0.3"
 
