@@ -409,12 +409,12 @@ mod tests {
                     (v - 1.0).abs() < f32::EPSILON || (u + v - 1.0).abs() < f32::EPSILON;
 
                 if !(intersection_inside || close_to_border) {
-                    println!("uvsum {}", uv_sum);
+                    println!("uvsum {uv_sum}");
                     println!("intersects.0 {}", intersects.distance);
                     println!("intersects.1 (u) {}", intersects.u);
                     println!("intersects.2 (v) {}", intersects.v);
-                    println!("u {}", u);
-                    println!("v {}", v);
+                    println!("u {u}");
+                    println!("v {v}");
                 }
 
                 assert!(intersection_inside || close_to_border);

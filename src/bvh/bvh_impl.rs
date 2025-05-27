@@ -256,14 +256,14 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
                     ..
                 } => {
                     let padding: String = " ".repeat(depth);
-                    println!("{}child_l {}", padding, child_l_aabb);
+                    println!("{padding}child_l {child_l_aabb}");
                     print_node(nodes, child_l_index, depth + 1);
-                    println!("{}child_r {}", padding, child_r_aabb);
+                    println!("{padding}child_r {child_r_aabb}");
                     print_node(nodes, child_r_index, depth + 1);
                 }
                 BvhNode::Leaf { shape_index, .. } => {
                     let padding: String = " ".repeat(depth);
-                    println!("{}shape\t{:?}", padding, shape_index);
+                    println!("{padding}shape\t{shape_index:?}");
                 }
             }
         }
@@ -382,18 +382,14 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
                 assert!(
                     expected_outer_aabb.approx_contains_aabb_eps(&child_l_aabb, T::epsilon()),
                     "Left child lies outside the expected bounds.
-                         \tBounds: {}
-                         \tLeft child: {}",
-                    expected_outer_aabb,
-                    child_l_aabb
+                         \tBounds: {expected_outer_aabb}
+                         \tLeft child: {child_l_aabb}"
                 );
                 assert!(
                     expected_outer_aabb.approx_contains_aabb_eps(&child_r_aabb, T::epsilon()),
                     "Right child lies outside the expected bounds.
-                         \tBounds: {}
-                         \tRight child: {}",
-                    expected_outer_aabb,
-                    child_r_aabb
+                         \tBounds: {expected_outer_aabb}
+                         \tRight child: {child_r_aabb}"
                 );
                 self.assert_consistent_subtree(
                     child_l_index,

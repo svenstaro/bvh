@@ -41,7 +41,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         shapes: &[Shape],
     ) {
         let child_aabb = self.nodes[child_index].get_node_aabb(shapes);
-        info!("\tConnecting: {} < {}.", child_index, parent_index);
+        info!("\tConnecting: {child_index} < {parent_index}.");
         // Set parent's child aabb and index.
         match self.nodes[parent_index] {
             BvhNode::Node {
@@ -58,7 +58,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
                     *child_r_index = child_index;
                     *child_r_aabb = child_aabb;
                 }
-                info!("\t  {}'s new {}", parent_index, child_aabb);
+                info!("\t  {parent_index}'s new {child_aabb}");
             }
             // Assuming that our `Bvh` is correct, the parent cannot be a leaf.
             _ => unreachable!(),
@@ -259,8 +259,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
                 // The old root node and the dead child then have to be removed
                 assert_eq!(
                     parent_index, 0,
-                    "Circular node that wasn't root parent={} node={}",
-                    parent_index, dead_node_index
+                    "Circular node that wasn't root parent={parent_index} node={dead_node_index}"
                 );
 
                 match self.nodes[sibling_index] {
