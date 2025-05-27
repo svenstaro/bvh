@@ -75,7 +75,7 @@ let hit_sphere_aabbs = bvh.traverse(&ray, &spheres);
 
 ## Explicit SIMD
 
-This crate features some manually written SIMD instructions, currently only for the `x86_64` architecture.
+This crate features some SIMD operations. See [`wide`](https://crates.io/crates/wide) documentation for supported architectures.
 While nalgebra provides us with generic SIMD optimization (and it does a great job for the most part) - 
 some important functions, such as ray-aabb-intersection have been optimized by hand.
 
