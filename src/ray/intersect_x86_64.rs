@@ -1,7 +1,7 @@
 //! This file contains overrides for specific SIMD implementations of [`RayIntersection`]
 //! for the x86_64 architecture.
 
-use std::arch::x86_64::*;
+use std::{arch::x86_64::*, mem::MaybeUninit, ops::Deref};
 
 use nalgebra::SVector;
 
@@ -53,7 +53,7 @@ fn max_elem_m128(mm: __m128) -> f32 {
         let b = _mm_unpackhi_ps(mm, mm); // z z w w
         let c = _mm_max_ps(a, b); // ..., max(x, z), ..., ...
         let res = _mm_max_ps(mm, c); // ..., max(y, max(x, z)), ..., ...
-        let mut data = std::mem::MaybeUninit::<[f32; 4]>::uninit();
+        let mut data = uninit_align_16::<[f32; 4]>();
         _mm_store_ps(data.as_mut_ptr() as *mut f32, res);
         let data = data.assume_init();
         data[1]
@@ -68,7 +68,7 @@ fn min_elem_m128(mm: __m128) -> f32 {
         let b = _mm_unpackhi_ps(mm, mm); // z z w w
         let c = _mm_min_ps(a, b); // ..., min(x, z), ..., ...
         let res = _mm_min_ps(mm, c); // ..., min(y, min(x, z)), ..., ...
-        let mut data = std::mem::MaybeUninit::<[f32; 4]>::uninit();
+        let mut data = uninit_align_16::<[f32; 4]>();
         _mm_store_ps(data.as_mut_ptr() as *mut f32, res);
         let data = data.assume_init();
         data[1]
@@ -78,7 +78,7 @@ fn min_elem_m128(mm: __m128) -> f32 {
 #[inline(always)]
 fn has_nan_m128(mm: __m128) -> bool {
     unsafe {
-        let mut data = std::mem::MaybeUninit::<[f32; 4]>::uninit();
+        let mut data = uninit_align_16::<[f32; 4]>();
         _mm_store_ps(data.as_mut_ptr() as *mut f32, mm);
         has_nan(data.assume_init_ref())
     }
@@ -87,7 +87,7 @@ fn has_nan_m128(mm: __m128) -> bool {
 #[inline(always)]
 fn has_nan_m128d(mm: __m128d) -> bool {
     unsafe {
-        let mut data = std::mem::MaybeUninit::<[f64; 2]>::uninit();
+        let mut data = uninit_align_16::<[f64; 2]>();
         _mm_store_pd(data.as_mut_ptr() as *mut f64, mm);
         has_nan(data.assume_init_ref())
     }
@@ -96,7 +96,7 @@ fn has_nan_m128d(mm: __m128d) -> bool {
 #[inline(always)]
 fn has_nan_m256d(mm: __m256d) -> bool {
     unsafe {
-        let mut data = std::mem::MaybeUninit::<[f64; 4]>::uninit();
+        let mut data = uninit_align_16::<[f64; 4]>();
         _mm256_store_pd(data.as_mut_ptr() as *mut f64, mm);
         has_nan(data.assume_init_ref())
     }
@@ -178,7 +178,7 @@ fn max_elem_m128d(mm: __m128d) -> f64 {
     unsafe {
         let a = _mm_unpacklo_pd(mm, mm); // x x
         let b = _mm_max_pd(mm, a); // max(x, x), max(x, y)
-        let mut data = std::mem::MaybeUninit::<[f64; 2]>::uninit();
+        let mut data = uninit_align_16::<[f64; 2]>();
         _mm_store_pd(data.as_mut_ptr() as *mut f64, b);
         let data = data.assume_init();
         data[1]
@@ -192,7 +192,7 @@ fn min_elem_m128d(mm: __m128d) -> f64 {
         let a = _mm_unpacklo_pd(mm, mm); // x x
         let b = _mm_unpackhi_pd(mm, mm); // y y
         let c = _mm_min_pd(a, b); // min(x, y), min(x, y)
-        let mut data = std::mem::MaybeUninit::<[f64; 2]>::uninit();
+        let mut data = uninit_align_16::<[f64; 2]>();
         _mm_store_pd(data.as_mut_ptr() as *mut f64, c);
         let data = data.assume_init();
         data[0]
@@ -262,7 +262,7 @@ fn max_elem_m256d(mm: __m256d) -> f64 {
         let b = _mm256_unpackhi_pd(mm, mm); // z z w w
         let c = _mm256_max_pd(a, b); // ..., max(x, z), ..., ...
         let res = _mm256_max_pd(mm, c); // ..., max(y, max(x, z)), ..., ...
-        let mut data = std::mem::MaybeUninit::<[f64; 4]>::uninit();
+        let mut data = uninit_align_16::<[f64; 4]>();
         _mm256_store_pd(data.as_mut_ptr() as *mut f64, res);
         let data = data.assume_init();
         data[1]
@@ -277,7 +277,7 @@ fn min_elem_m256d(mm: __m256d) -> f64 {
         let b = _mm256_unpackhi_pd(mm, mm); // z z w w
         let c = _mm256_min_pd(a, b); // ..., min(x, z), ..., ...
         let res = _mm256_min_pd(mm, c); // ..., min(y, min(x, z)), ..., ...
-        let mut data = std::mem::MaybeUninit::<[f64; 4]>::uninit();
+        let mut data = uninit_align_16::<[f64; 4]>();
         _mm256_store_pd(data.as_mut_ptr() as *mut f64, res);
         let data = data.assume_init();
         data[1]
@@ -330,5 +330,37 @@ impl RayIntersection<f64, 4> for Ray<f64, 4> {
         let aabb_1 = aabb[1].coords.to_register();
 
         ray_intersects_aabb_m256d(ro, ri, aabb_0, aabb_1)
+    }
+}
+
+#[repr(C, align(16))]
+struct Align16<T>(T);
+
+/// SIMD stores expect 16-byte aligned addresses.
+#[inline(always)]
+fn uninit_align_16<T>() -> MaybeUninit<Align16<T>> {
+    MaybeUninit::uninit()
+}
+
+impl<T> Deref for Align16<T> {
+    type Target = T;
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+/// Facilitates `has_nan`
+impl<'a, T> IntoIterator for &'a Align16<T>
+where
+    &'a T: IntoIterator,
+{
+    type IntoIter = <&'a T as IntoIterator>::IntoIter;
+    type Item = <&'a T as IntoIterator>::Item;
+
+    #[inline(always)]
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }

@@ -21,9 +21,13 @@ clippy:
     cargo clippy
     cargo clippy --manifest-path fuzz/Cargo.toml
 
-# test default features
+# test (default features)
 test:
     cargo test
+
+# test (with SIMD)
+test_simd:
+    cargo test --features simd
 
 # run benchmarks (without SIMD)
 bench:
