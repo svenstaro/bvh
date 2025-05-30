@@ -36,7 +36,7 @@ impl<T: BHValue, const D: usize> RayIntersection<T, D> for Ray<T, D> {
     }
 }
 
-#[cfg(all(feature = "simd", target_arch = "x86_64"))]
+#[cfg(feature = "simd")]
 impl<T: BHValue, const D: usize> RayIntersection<T, D> for Ray<T, D> {
     default fn ray_intersects_aabb(&self, aabb: &Aabb<T, D>) -> bool {
         let lbr = (aabb[0].coords - self.origin.coords).component_mul(&self.inv_direction);
