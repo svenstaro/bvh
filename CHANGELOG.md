@@ -5,7 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## 0.11.0 - 2025-??-??
+## 0.12.0 - 2025-??-??
+- Replace hand-written x86_64 SIMD with safe and portable [`wide`](https://crates.io/crates/wide) SIMD. [#158](https://github.com/svenstaro/bvh/pull/158) (thanks @finnbear)
+
+## 0.11.0 - 2025-02-18
 - **Breaking change:** BVH traversal now accepts a `Query: IntersectsAabb` rather than a `Ray`,
   allowing points, AABB's, and circles/spheres to be tested, too. Most use-cases involving `Ray` 
   will continue to compile as-is. If you previously wrote `BvhTraverseIterator<T, D, S>`, you'll

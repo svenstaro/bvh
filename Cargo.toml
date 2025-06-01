@@ -22,6 +22,7 @@ serde = { optional = true, version = "1", features = ["derive"] }
 num = "0.4.3"
 nalgebra = { version = "0.33.0", features = ["default", "serde-serialize"] }
 rayon = { optional = true, version = "1.8.1" }
+wide = "0.7.32"
 
 [dev-dependencies]
 proptest = "1.0"

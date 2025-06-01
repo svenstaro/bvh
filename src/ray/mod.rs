@@ -2,7 +2,7 @@
 mod intersect_default;
 mod ray_impl;
 
-#[cfg(all(feature = "simd", target_arch = "x86_64"))]
-mod intersect_x86_64;
+#[cfg(feature = "simd")]
+mod intersect_simd;
 
 pub use self::ray_impl::*;
