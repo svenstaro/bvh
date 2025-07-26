@@ -425,7 +425,7 @@ impl<S> Shapes<'_, S> {
     }
 
     /// Creates a [`Shapes`] that inherits its lifetime from the slice.
-    pub(crate) fn from_slice<T: BHValue, const D: usize>(slice: &mut [S]) -> Shapes<S>
+    pub(crate) fn from_slice<T: BHValue, const D: usize>(slice: &mut [S]) -> Shapes<'_, S>
     where
         S: BHShape<T, D>,
     {
