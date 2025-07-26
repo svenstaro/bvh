@@ -5,7 +5,7 @@ use crate::bvh::ShapeIndex;
 use crate::{aabb::Aabb, bvh::Shapes};
 
 use nalgebra::Scalar;
-use num::Float;
+use num_traits::Float;
 
 /// Fast floating point minimum.  This function matches the semantics of
 ///
