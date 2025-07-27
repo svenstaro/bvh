@@ -16,25 +16,28 @@ keywords = ["bvh", "bounding", "volume", "sah", "aabb"]
 license = "MIT"
 
 [dependencies]
-approx = "0.5"
-log = "0.4"
-serde = { optional = true, version = "1", features = ["derive"] }
-num = "0.4.3"
-nalgebra = { version = "0.33.0", features = ["default", "serde-serialize"] }
+log = { optional = true, version = "0.4" }
+nalgebra = { version = "0.33.0", default-features = false }
+num-traits = { version = "0.2.19", default-features = false, features = ["std"] }
 rayon = { optional = true, version = "1.8.1" }
-wide = "0.7.32"
+serde = { optional = true, version = "1", features = ["derive"] }
+wide = { version = "0.7.32", optional = true }
 
 [dev-dependencies]
-proptest = "1.0"
-obj-rs = "0.7"
-rand = "0.9"
-float_eq = "1"
+approx = "0.5"
 doc-comment = "0.3"
+float_eq = "1"
+nalgebra = "0.33.0"
+num = "0.4.3"
+obj-rs = "0.7"
+proptest = "1.0"
+rand = "0.9"
 
 [features]
-default = ["rayon"]
 bench = []
-simd = []
+default = ["rayon"]
+serde = ["dep:serde", "nalgebra/serde-serialize"]
+simd = ["wide"]
 
 [profile.release]
 lto = true

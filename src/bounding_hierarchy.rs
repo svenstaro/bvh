@@ -4,7 +4,7 @@ use nalgebra::{
     ClosedAddAssign, ClosedDivAssign, ClosedMulAssign, ClosedSubAssign, Point, Scalar,
     SimdPartialOrd,
 };
-use num::{Float, FromPrimitive, Signed};
+use num_traits::{Float, FromPrimitive, Signed};
 
 use crate::aabb::{Bounded, IntersectsAabb};
 #[cfg(feature = "rayon")]

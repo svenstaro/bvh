@@ -5,7 +5,7 @@ use crate::bvh::{Bvh, BvhNode};
 use crate::point_query::PointDistance;
 
 use nalgebra::Point;
-use num::Float;
+use num_traits::Float;
 
 /// A structure of a node of a flat [`Bvh`]. The structure of the nodes allows for an
 /// iterative traversal approach without the necessity to maintain a stack or queue.

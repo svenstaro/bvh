@@ -9,8 +9,6 @@
 use crate::bounding_hierarchy::{BHShape, BHValue};
 use crate::bvh::*;
 
-use log::info;
-
 // TODO Consider: Instead of getting the scene's shapes passed, let leaf nodes store an `Aabb`
 // that is updated from the outside, perhaps by passing not only the indices of the changed
 // shapes, but also their new `Aabb`'s into update_shapes().
@@ -41,7 +39,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         shapes: &[Shape],
     ) {
         let child_aabb = self.nodes[child_index].get_node_aabb(shapes);
-        info!("\tConnecting: {child_index} < {parent_index}.");
+        #[cfg(feature = "log")]
+        log::info!("\tConnecting: {child_index} < {parent_index}.");
         // Set parent's child aabb and index.
         match self.nodes[parent_index] {
             BvhNode::Node {
@@ -58,7 +57,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
                     *child_r_index = child_index;
                     *child_r_aabb = child_aabb;
                 }
-                info!("\t  {parent_index}'s new {child_aabb}");
+                #[cfg(feature = "log")]
+                log::info!("\t  {parent_index}'s new {child_aabb}");
             }
             // Assuming that our `Bvh` is correct, the parent cannot be a leaf.
             _ => unreachable!(),
