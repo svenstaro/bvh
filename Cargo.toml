@@ -16,7 +16,6 @@ keywords = ["bvh", "bounding", "volume", "sah", "aabb"]
 license = "MIT"
 
 [dependencies]
-approx = "0.5"
 log = "0.4"
 serde = { optional = true, version = "1", features = ["derive"] }
 num = "0.4.3"
