@@ -9,7 +9,7 @@ use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
 use nalgebra::{
     ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, ComplexField, Point, SVector, SimdPartialOrd,
 };
-use num::{Float, One, Zero};
+use num_traits::{Float, One, Zero};
 
 use super::intersect_default::RayIntersection;
 
