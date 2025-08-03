@@ -193,8 +193,9 @@ pub(crate) fn iter_initially_has_node<
 mod tests {
     use crate::ray::Ray;
     use crate::testbase::{generate_aligned_boxes, TBvh3, TPoint3, TVector3, UnitBox};
+    use alloc::vec::Vec;
+    use hashbrown::HashSet;
     use nalgebra::{OPoint, OVector};
-    use std::collections::HashSet;
 
     /// Creates an empty [`Bvh`].
     pub fn build_empty_bvh() -> ([UnitBox; 0], TBvh3) {

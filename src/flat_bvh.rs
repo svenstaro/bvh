@@ -1,9 +1,12 @@
 //! This module exports methods to flatten the [`Bvh`] into a [`FlatBvh`] and traverse it iteratively.
+use core::fmt;
+
 use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
 use crate::bvh::{Bvh, BvhNode};
 use crate::point_query::PointDistance;
 
+use alloc::vec::Vec;
 use nalgebra::Point;
 use num_traits::Float;
 
@@ -317,7 +320,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 }
 
-impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for FlatBvh<T, D> {
+impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for FlatBvh<T, D> {
     /// A [`FlatBvh`] is built from a regular [`Bvh`] using the [`Bvh::flatten`] method.
     ///
     /// [`FlatBvh`]: struct.FlatBvh.html
@@ -563,6 +566,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     ///
     /// [`FlatBvh`]: struct.FlatBvh.html
     ///
+    #[cfg(feature = "std")]
     fn pretty_print(&self) {
         for (i, node) in self.iter().enumerate() {
             println!(

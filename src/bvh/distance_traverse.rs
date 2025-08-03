@@ -1,10 +1,9 @@
-use std::cmp::Ordering;
-use std::collections::BinaryHeap;
-
 use crate::aabb::{Aabb, Bounded};
 use crate::bounding_hierarchy::BHValue;
 use crate::bvh::{iter_initially_has_node, Bvh, BvhNode};
 use crate::ray::Ray;
+use alloc::collections::BinaryHeap;
+use core::cmp::Ordering;
 
 #[derive(Debug, Clone, Copy)]
 struct DistNodePair<T: PartialOrd> {
@@ -159,8 +158,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use crate::aabb::{Aabb, Bounded};
     use crate::bounding_hierarchy::{BHShape, BHValue};
     use crate::bvh::Bvh;
@@ -168,6 +165,8 @@ mod tests {
     use crate::testbase::{
         generate_aligned_boxes, TAabb3, TBvh3, TPoint3, TRay3, TVector3, UnitBox,
     };
+    use alloc::vec::Vec;
+    use hashbrown::HashSet;
 
     /// Create a `Bvh` for a fixed scene structure.
     pub fn build_some_bvh() -> (Vec<UnitBox>, TBvh3) {

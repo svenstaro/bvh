@@ -76,12 +76,15 @@
 //! - `simd` (default **disabled**) - adds explicitly written SIMD instructions for certain architectures (requires nightly)
 //!
 
+#![cfg_attr(not(feature = "std"), no_std)]
 #![deny(missing_docs)]
 #![cfg_attr(feature = "bench", feature(test))]
 #![cfg_attr(feature = "simd", feature(min_specialization))]
 
 #[cfg(all(feature = "bench", test))]
 extern crate test;
+
+extern crate alloc;
 
 pub mod aabb;
 pub mod ball;

@@ -2,16 +2,20 @@ use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue};
 use crate::point_query::PointDistance;
 use crate::utils::{joint_aabb_of_shapes, Bucket};
-use std::cell::RefCell;
-use std::marker::PhantomData;
-use std::mem::MaybeUninit;
+use alloc::vec::Vec;
+use core::{marker::PhantomData, mem::MaybeUninit};
 
 const NUM_BUCKETS: usize = 6;
 
+#[cfg(feature = "std")]
 thread_local! {
     /// Thread local for the buckets used while building to reduce allocations during build
-    static BUCKETS: RefCell<[Vec<ShapeIndex>; NUM_BUCKETS]> = RefCell::new(Default::default());
+    static BUCKETS: core::cell::RefCell<[Vec<ShapeIndex>; NUM_BUCKETS]> = core::cell::RefCell::new(Default::default());
 }
+
+#[cfg(not(feature = "std"))]
+static BUCKETS: once_cell::race::OnceBox<spin::Mutex<[Vec<ShapeIndex>; NUM_BUCKETS]>> =
+    once_cell::race::OnceBox::new();
 
 /// The [`BvhNode`] enum that describes a node in a [`Bvh`].
 /// It's either a leaf node and references a shape (by holding its index)
@@ -198,91 +202,137 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
         (Aabb<T, D>, Aabb<T, D>, &'a mut [ShapeIndex]),
     ) {
         // Use fixed size arrays of `Bucket`s, and thread local index assignment vectors.
-        BUCKETS.with(move |buckets_ref| {
-            let bucket_assignments = &mut *buckets_ref.borrow_mut();
-            let mut buckets = [Bucket::empty(); NUM_BUCKETS];
-            buckets.fill(Bucket::empty());
-            for b in bucket_assignments.iter_mut() {
-                b.clear();
-            }
+        #[cfg(feature = "std")]
+        {
+            BUCKETS.with(move |buckets_ref| {
+                let bucket_assignments = &mut *buckets_ref.borrow_mut();
+                Self::build_buckets_inner::<S>(
+                    bucket_assignments,
+                    shapes,
+                    indices,
+                    split_axis,
+                    split_axis_size,
+                    centroid_bounds,
+                    aabb_bounds,
+                )
+            })
+        }
 
-            // In this branch the `split_axis_size` is large enough to perform meaningful splits.
-            // We start by assigning the shapes to `Bucket`s.
-            for idx in indices.iter() {
-                let shape = shapes.get(*idx);
-                let shape_aabb = shape.aabb();
-                let shape_center = shape_aabb.center();
+        #[cfg(not(feature = "std"))]
+        {
+            use alloc::boxed::Box;
+            use spin::Mutex;
 
-                // Get the relative position of the shape centroid `[0.0..1.0]`.
-                let bucket_num_relative =
-                    (shape_center[split_axis] - centroid_bounds.min[split_axis]) / split_axis_size;
-
-                // Convert that to the actual `Bucket` number.
-                let bucket_num = (bucket_num_relative
-                    * (T::from(NUM_BUCKETS).unwrap() - T::from(0.01).unwrap()))
-                .to_usize()
-                .unwrap();
-
-                // Extend the selected `Bucket` and add the index to the actual bucket.
-                buckets[bucket_num].add_aabb(&shape_aabb);
-                bucket_assignments[bucket_num].push(*idx);
-            }
-
-            // Compute the costs for each configuration and select the best configuration.
-            let mut min_bucket = 0;
-            let mut min_cost = T::infinity();
-            let mut child_l_aabb = Aabb::empty();
-            let mut child_l_centroid = Aabb::empty();
-            let mut child_r_aabb = Aabb::empty();
-            let mut child_r_centroid = Aabb::empty();
-            for i in 0..(NUM_BUCKETS - 1) {
-                let (l_buckets, r_buckets) = buckets.split_at(i + 1);
-                let child_l = l_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
-                let child_r = r_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
-
-                let cost = (T::from(child_l.size).unwrap() * child_l.aabb.surface_area()
-                    + T::from(child_r.size).unwrap() * child_r.aabb.surface_area())
-                    / aabb_bounds.surface_area();
-                if cost < min_cost {
-                    min_bucket = i;
-                    min_cost = cost;
-                    child_l_aabb = child_l.aabb;
-                    child_l_centroid = child_l.centroid;
-                    child_r_aabb = child_r.aabb;
-                    child_r_centroid = child_r.centroid;
-                }
-            }
-            // Join together all index buckets.
-            // split input indices, loop over assignments and assign
-            let (l_assignments, r_assignments) = bucket_assignments.split_at_mut(min_bucket + 1);
-
-            let mut l_count = 0;
-            for group in l_assignments.iter() {
-                l_count += group.len();
-            }
-
-            let (child_l_indices, child_r_indices) = indices.split_at_mut(l_count);
-
-            for (l_i, shape_index) in l_assignments
-                .iter()
-                .flat_map(|group| group.iter())
-                .enumerate()
-            {
-                child_l_indices[l_i] = *shape_index;
-            }
-            for (r_i, shape_index) in r_assignments
-                .iter()
-                .flat_map(|group| group.iter())
-                .enumerate()
-            {
-                child_r_indices[r_i] = *shape_index;
-            }
-
-            (
-                (child_l_aabb, child_l_centroid, child_l_indices),
-                (child_r_aabb, child_r_centroid, child_r_indices),
+            let bucket_assignments = &mut *BUCKETS
+                .get_or_init(|| Box::new(Mutex::new(Default::default())))
+                .lock();
+            Self::build_buckets_inner::<S>(
+                bucket_assignments,
+                shapes,
+                indices,
+                split_axis,
+                split_axis_size,
+                centroid_bounds,
+                aabb_bounds,
             )
-        })
+        }
+    }
+
+    #[allow(clippy::type_complexity)]
+    fn build_buckets_inner<'a, S: BHShape<T, D>>(
+        bucket_assignments: &mut [Vec<ShapeIndex>; NUM_BUCKETS],
+        shapes: &Shapes<S>,
+        indices: &'a mut [ShapeIndex],
+        split_axis: usize,
+        split_axis_size: T,
+        centroid_bounds: &Aabb<T, D>,
+        aabb_bounds: &Aabb<T, D>,
+    ) -> (
+        (Aabb<T, D>, Aabb<T, D>, &'a mut [ShapeIndex]),
+        (Aabb<T, D>, Aabb<T, D>, &'a mut [ShapeIndex]),
+    ) {
+        let mut buckets = [Bucket::empty(); NUM_BUCKETS];
+        buckets.fill(Bucket::empty());
+        for b in bucket_assignments.iter_mut() {
+            b.clear();
+        }
+
+        // In this branch the `split_axis_size` is large enough to perform meaningful splits.
+        // We start by assigning the shapes to `Bucket`s.
+        for idx in indices.iter() {
+            let shape = shapes.get(*idx);
+            let shape_aabb = shape.aabb();
+            let shape_center = shape_aabb.center();
+
+            // Get the relative position of the shape centroid `[0.0..1.0]`.
+            let bucket_num_relative =
+                (shape_center[split_axis] - centroid_bounds.min[split_axis]) / split_axis_size;
+
+            // Convert that to the actual `Bucket` number.
+            let bucket_num = (bucket_num_relative
+                * (T::from(NUM_BUCKETS).unwrap() - T::from(0.01).unwrap()))
+            .to_usize()
+            .unwrap();
+
+            // Extend the selected `Bucket` and add the index to the actual bucket.
+            buckets[bucket_num].add_aabb(&shape_aabb);
+            bucket_assignments[bucket_num].push(*idx);
+        }
+
+        // Compute the costs for each configuration and select the best configuration.
+        let mut min_bucket = 0;
+        let mut min_cost = T::infinity();
+        let mut child_l_aabb = Aabb::empty();
+        let mut child_l_centroid = Aabb::empty();
+        let mut child_r_aabb = Aabb::empty();
+        let mut child_r_centroid = Aabb::empty();
+        for i in 0..(NUM_BUCKETS - 1) {
+            let (l_buckets, r_buckets) = buckets.split_at(i + 1);
+            let child_l = l_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
+            let child_r = r_buckets.iter().fold(Bucket::empty(), Bucket::join_bucket);
+
+            let cost = (T::from(child_l.size).unwrap() * child_l.aabb.surface_area()
+                + T::from(child_r.size).unwrap() * child_r.aabb.surface_area())
+                / aabb_bounds.surface_area();
+            if cost < min_cost {
+                min_bucket = i;
+                min_cost = cost;
+                child_l_aabb = child_l.aabb;
+                child_l_centroid = child_l.centroid;
+                child_r_aabb = child_r.aabb;
+                child_r_centroid = child_r.centroid;
+            }
+        }
+        // Join together all index buckets.
+        // split input indices, loop over assignments and assign
+        let (l_assignments, r_assignments) = bucket_assignments.split_at_mut(min_bucket + 1);
+
+        let mut l_count = 0;
+        for group in l_assignments.iter() {
+            l_count += group.len();
+        }
+
+        let (child_l_indices, child_r_indices) = indices.split_at_mut(l_count);
+
+        for (l_i, shape_index) in l_assignments
+            .iter()
+            .flat_map(|group| group.iter())
+            .enumerate()
+        {
+            child_l_indices[l_i] = *shape_index;
+        }
+        for (r_i, shape_index) in r_assignments
+            .iter()
+            .flat_map(|group| group.iter())
+            .enumerate()
+        {
+            child_r_indices[r_i] = *shape_index;
+        }
+
+        (
+            (child_l_aabb, child_l_centroid, child_l_indices),
+            (child_r_aabb, child_r_centroid, child_r_indices),
+        )
     }
 
     /// Traverses the [`Bvh`] recursively and returns all shapes whose [`Aabb`] is

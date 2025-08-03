@@ -9,8 +9,9 @@ use crate::bvh::iter::BvhTraverseIterator;
 use crate::point_query::PointDistance;
 use crate::ray::Ray;
 use crate::utils::joint_aabb_of_shapes;
-
-use std::mem::MaybeUninit;
+use alloc::vec::Vec;
+use core::{fmt, marker};
+use core::{mem::MaybeUninit, slice};
 
 use super::{
     BvhNode, BvhNodeBuildArgs, ChildDistanceTraverseIterator, DistanceTraverseIterator, ShapeIndex,
@@ -64,7 +65,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         let mut nodes = Vec::with_capacity(expected_node_count);
 
         let uninit_slice = unsafe {
-            std::slice::from_raw_parts_mut(
+            slice::from_raw_parts_mut(
                 nodes.as_mut_ptr() as *mut MaybeUninit<BvhNode<T, D>>,
                 expected_node_count,
             )
@@ -223,7 +224,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         shapes: &'a [Shape],
     ) -> Option<(&'a Shape, T)>
     where
-        Self: std::marker::Sized,
+        Self: marker::Sized,
     {
         if self.nodes.is_empty() {
             return None;
@@ -240,6 +241,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     ///
     /// [`Bvh`]: struct.Bvh.html
     ///
+    #[cfg(feature = "std")]
     pub fn pretty_print(&self) {
         let nodes = &self.nodes;
         fn print_node<T: BHValue, const D: usize>(
@@ -360,7 +362,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         node_count: &mut usize,
         shapes: &[Shape],
     ) where
-        T: std::fmt::Display,
+        T: fmt::Display,
     {
         *node_count += 1;
         let node = &self.nodes[node_index];
@@ -419,7 +421,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Assert version of `is_consistent`.
     pub fn assert_consistent<Shape: BHShape<T, D>>(&self, shapes: &[Shape])
     where
-        T: std::fmt::Display,
+        T: fmt::Display,
     {
         if self.nodes.is_empty() {
             // There is no node_index=0.
@@ -481,7 +483,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 }
 
-impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for Bvh<T, D> {
+impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for Bvh<T, D> {
     fn build<Shape: BHShape<T, D>>(shapes: &mut [Shape]) -> Bvh<T, D> {
         Bvh::build(shapes)
     }
@@ -502,6 +504,7 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
         self.nearest_to(query, shapes)
     }
 
+    #[cfg(feature = "std")]
     fn pretty_print(&self) {
         self.pretty_print();
     }
@@ -539,6 +542,8 @@ pub fn rayon_executor<S, T: Send + BHValue, const D: usize>(
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec;
+
     use crate::{
         bounding_hierarchy::BoundingHierarchy,
         testbase::{
@@ -581,7 +586,7 @@ mod tests {
     #[test]
     /// Verify contents of the bounding hierarchy for a fixed scene structure
     fn test_bvh_shape_indices() {
-        use std::collections::HashSet;
+        use hashbrown::HashSet;
 
         let (all_shapes, bh) = build_some_bh::<TBvh3>();
 
@@ -628,7 +633,7 @@ mod tests {
     #[cfg(feature = "rayon")]
     /// Verify contents of the bounding hierarchy for a fixed scene structure
     fn test_bvh_shape_indices_rayon() {
-        use std::collections::HashSet;
+        use hashbrown::HashSet;
 
         use crate::testbase::build_some_bh_rayon;
 
