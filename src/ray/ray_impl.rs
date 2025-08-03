@@ -1,11 +1,10 @@
 //! This module defines a Ray structure and intersection algorithms
 //! for axis aligned bounding boxes and triangles.
 
-use std::cmp::Ordering;
-
 use crate::aabb::IntersectsAabb;
 use crate::utils::{fast_max, has_nan};
 use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
+use core::cmp::Ordering;
 use nalgebra::{
     ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, ComplexField, Point, SVector, SimdPartialOrd,
 };
@@ -216,8 +215,6 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
 
 #[cfg(test)]
 mod tests {
-    use std::cmp;
-
     use crate::{
         aabb::Bounded,
         testbase::{
@@ -225,7 +222,7 @@ mod tests {
             UnitBox,
         },
     };
-
+    use core::cmp;
     use proptest::prelude::*;
 
     /// Generates a random [`Ray`] which points at at a random [`Aabb`].
@@ -408,6 +405,7 @@ mod tests {
                     u.abs() < f32::EPSILON || (u - 1.0).abs() < f32::EPSILON || v.abs() < f32::EPSILON ||
                     (v - 1.0).abs() < f32::EPSILON || (u + v - 1.0).abs() < f32::EPSILON;
 
+                #[cfg(feature = "std")]
                 if !(intersection_inside || close_to_border) {
                     println!("uvsum {uv_sum}");
                     println!("intersects.0 {}", intersects.distance);

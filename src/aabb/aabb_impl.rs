@@ -1,8 +1,7 @@
-use nalgebra::{Point, SVector};
-use std::fmt;
-use std::ops::Index;
-
 use crate::bounding_hierarchy::BHValue;
+use alloc::boxed::Box;
+use core::{fmt, ops::Index};
+use nalgebra::{Point, SVector};
 
 /// [`Aabb`] struct.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -15,7 +14,7 @@ pub struct Aabb<T: BHValue, const D: usize> {
     pub max: Point<T, D>,
 }
 
-impl<T: BHValue + std::fmt::Display, const D: usize> fmt::Display for Aabb<T, D> {
+impl<T: BHValue + fmt::Display, const D: usize> fmt::Display for Aabb<T, D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Min bound: {}; Max bound: {}", self.min, self.max)
     }
@@ -722,6 +721,7 @@ mod tests {
         TupleVec,
     };
 
+    use alloc::vec::Vec;
     use float_eq::assert_float_eq;
     use proptest::prelude::*;
 

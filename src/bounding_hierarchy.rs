@@ -1,16 +1,17 @@
 //! This module defines the [`BoundingHierarchy`] trait.
 
-use nalgebra::{
-    ClosedAddAssign, ClosedDivAssign, ClosedMulAssign, ClosedSubAssign, Point, Scalar,
-    SimdPartialOrd,
-};
-use num_traits::{Float, FromPrimitive, Signed};
-
 use crate::aabb::{Bounded, IntersectsAabb};
 #[cfg(feature = "rayon")]
 use crate::bvh::rayon_executor;
 use crate::bvh::BvhNodeBuildArgs;
 use crate::point_query::PointDistance;
+use alloc::{boxed::Box, vec::Vec};
+use core::fmt;
+use nalgebra::{
+    ClosedAddAssign, ClosedDivAssign, ClosedMulAssign, ClosedSubAssign, Point, Scalar,
+    SimdPartialOrd,
+};
+use num_traits::{Float, FromPrimitive, Signed};
 
 /// Encapsulates the required traits for the value type used in the Bvh.
 pub trait BHValue:
@@ -24,7 +25,7 @@ pub trait BHValue:
     + ClosedDivAssign
     + Float
     + Signed
-    + std::fmt::Display
+    + fmt::Display
 {
 }
 
@@ -39,7 +40,7 @@ impl<T> BHValue for T where
         + ClosedDivAssign
         + Float
         + Signed
-        + std::fmt::Display
+        + fmt::Display
 {
 }
 
