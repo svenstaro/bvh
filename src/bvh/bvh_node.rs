@@ -1,21 +1,10 @@
 use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue};
+use crate::bvh::bucket::{BucketArray, NUM_BUCKETS};
 use crate::point_query::PointDistance;
 use crate::utils::{joint_aabb_of_shapes, Bucket};
 use alloc::vec::Vec;
 use core::{marker::PhantomData, mem::MaybeUninit};
-
-const NUM_BUCKETS: usize = 6;
-
-#[cfg(feature = "std")]
-thread_local! {
-    /// Thread local for the buckets used while building to reduce allocations during build
-    static BUCKETS: core::cell::RefCell<[Vec<ShapeIndex>; NUM_BUCKETS]> = core::cell::RefCell::new(Default::default());
-}
-
-#[cfg(not(feature = "std"))]
-static BUCKETS: once_cell::race::OnceBox<spin::Mutex<[Vec<ShapeIndex>; NUM_BUCKETS]>> =
-    once_cell::race::OnceBox::new();
 
 /// The [`BvhNode`] enum that describes a node in a [`Bvh`].
 /// It's either a leaf node and references a shape (by holding its index)
@@ -133,14 +122,39 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
                 (child_r_aabb, child_r_centroid, child_r_indices),
             )
         } else {
-            BvhNode::build_buckets(
-                shapes,
-                indices,
-                split_axis,
-                split_axis_size,
-                &centroid_bounds,
-                &aabb_bounds,
-            )
+            #[cfg(feature = "std")]
+            {
+                use crate::bvh::bucket::BUCKETS;
+
+                BUCKETS.with(move |buckets_ref| {
+                    let bucket_assignments = &mut *buckets_ref.borrow_mut();
+                    BvhNode::build_buckets(
+                        bucket_assignments,
+                        shapes,
+                        indices,
+                        split_axis,
+                        split_axis_size,
+                        &centroid_bounds,
+                        &aabb_bounds,
+                    )
+                })
+            }
+
+            #[cfg(not(feature = "std"))]
+            {
+                use crate::bvh::bucket::alloc_buckets;
+
+                let bucket_assignments = &mut alloc_buckets();
+                BvhNode::build_buckets(
+                    bucket_assignments,
+                    shapes,
+                    indices,
+                    split_axis,
+                    split_axis_size,
+                    &centroid_bounds,
+                    &aabb_bounds,
+                )
+            }
         };
 
         // Since the Bvh is a full binary tree, we can calculate exactly how many indices each side of the tree
@@ -191,6 +205,7 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
 
     #[allow(clippy::type_complexity)]
     fn build_buckets<'a, S: BHShape<T, D>>(
+        bucket_assignments: &mut BucketArray,
         shapes: &Shapes<S>,
         indices: &'a mut [ShapeIndex],
         split_axis: usize,
@@ -202,55 +217,6 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
         (Aabb<T, D>, Aabb<T, D>, &'a mut [ShapeIndex]),
     ) {
         // Use fixed size arrays of `Bucket`s, and thread local index assignment vectors.
-        #[cfg(feature = "std")]
-        {
-            BUCKETS.with(move |buckets_ref| {
-                let bucket_assignments = &mut *buckets_ref.borrow_mut();
-                Self::build_buckets_inner::<S>(
-                    bucket_assignments,
-                    shapes,
-                    indices,
-                    split_axis,
-                    split_axis_size,
-                    centroid_bounds,
-                    aabb_bounds,
-                )
-            })
-        }
-
-        #[cfg(not(feature = "std"))]
-        {
-            use alloc::boxed::Box;
-            use spin::Mutex;
-
-            let bucket_assignments = &mut *BUCKETS
-                .get_or_init(|| Box::new(Mutex::new(Default::default())))
-                .lock();
-            Self::build_buckets_inner::<S>(
-                bucket_assignments,
-                shapes,
-                indices,
-                split_axis,
-                split_axis_size,
-                centroid_bounds,
-                aabb_bounds,
-            )
-        }
-    }
-
-    #[allow(clippy::type_complexity)]
-    fn build_buckets_inner<'a, S: BHShape<T, D>>(
-        bucket_assignments: &mut [Vec<ShapeIndex>; NUM_BUCKETS],
-        shapes: &Shapes<S>,
-        indices: &'a mut [ShapeIndex],
-        split_axis: usize,
-        split_axis_size: T,
-        centroid_bounds: &Aabb<T, D>,
-        aabb_bounds: &Aabb<T, D>,
-    ) -> (
-        (Aabb<T, D>, Aabb<T, D>, &'a mut [ShapeIndex]),
-        (Aabb<T, D>, Aabb<T, D>, &'a mut [ShapeIndex]),
-    ) {
         let mut buckets = [Bucket::empty(); NUM_BUCKETS];
         buckets.fill(Bucket::empty());
         for b in bucket_assignments.iter_mut() {

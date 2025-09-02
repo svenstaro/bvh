@@ -3,6 +3,7 @@
 //! [`Bvh`]: struct.Bvh.html
 //!
 
+mod bucket;
 mod bvh_impl;
 mod bvh_node;
 mod child_distance_traverse;
