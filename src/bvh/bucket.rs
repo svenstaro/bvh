@@ -17,7 +17,7 @@ mod inner {
     pub fn with_buckets<R>(closure: impl FnOnce(&mut BucketArray) -> R) -> R {
         BUCKETS.with(move |buckets| {
             let mut buckets = buckets.borrow_mut();
-            closure(&mut *buckets)
+            closure(&mut buckets)
         })
     }
 }
