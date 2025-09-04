@@ -13,22 +13,23 @@ mod inner {
         /// Thread local for the buckets used while building to reduce allocations during build
         pub static BUCKETS: RefCell<BucketArray> = RefCell::new(Default::default());
     }
+
+    pub fn with_buckets<R>(closure: impl FnOnce(&mut BucketArray) -> R) -> R {
+        BUCKETS.with(move |buckets| {
+            let mut buckets = buckets.borrow_mut();
+            closure(&mut *buckets)
+        })
+    }
 }
 
 #[cfg(not(feature = "std"))]
 mod inner {
-    use crate::bvh::bucket::BucketArray;
+    use crate::bvh::{bucket::BucketArray, ShapeIndex};
     use alloc::vec::Vec;
 
-    pub fn alloc_buckets() -> BucketArray {
-        [
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-            Vec::new(),
-        ]
+    pub fn with_buckets<R>(closure: impl FnOnce(&mut BucketArray) -> R) -> R {
+        const EMPTY: Vec<ShapeIndex> = Vec::new();
+        closure(&mut [EMPTY; 6])
     }
 }
 

@@ -1,6 +1,6 @@
 use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue};
-use crate::bvh::bucket::{BucketArray, NUM_BUCKETS};
+use crate::bvh::bucket::{with_buckets, BucketArray, NUM_BUCKETS};
 use crate::point_query::PointDistance;
 use crate::utils::{joint_aabb_of_shapes, Bucket};
 use alloc::vec::Vec;
@@ -122,39 +122,17 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
                 (child_r_aabb, child_r_centroid, child_r_indices),
             )
         } else {
-            #[cfg(feature = "std")]
-            {
-                use crate::bvh::bucket::BUCKETS;
-
-                BUCKETS.with(move |buckets_ref| {
-                    let bucket_assignments = &mut *buckets_ref.borrow_mut();
-                    BvhNode::build_buckets(
-                        bucket_assignments,
-                        shapes,
-                        indices,
-                        split_axis,
-                        split_axis_size,
-                        &centroid_bounds,
-                        &aabb_bounds,
-                    )
-                })
-            }
-
-            #[cfg(not(feature = "std"))]
-            {
-                use crate::bvh::bucket::alloc_buckets;
-
-                let bucket_assignments = &mut alloc_buckets();
+            with_buckets(move |bucket_assignments| {
                 BvhNode::build_buckets(
-                    bucket_assignments,
                     shapes,
                     indices,
                     split_axis,
                     split_axis_size,
                     &centroid_bounds,
                     &aabb_bounds,
+                    bucket_assignments,
                 )
-            }
+            })
         };
 
         // Since the Bvh is a full binary tree, we can calculate exactly how many indices each side of the tree
@@ -204,14 +182,14 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
     }
 
     #[allow(clippy::type_complexity)]
-    fn build_buckets<'a, S: BHShape<T, D>>(
-        bucket_assignments: &mut BucketArray,
+    fn build_buckets<'a, 'b, S: BHShape<T, D>>(
         shapes: &Shapes<S>,
         indices: &'a mut [ShapeIndex],
         split_axis: usize,
         split_axis_size: T,
         centroid_bounds: &Aabb<T, D>,
         aabb_bounds: &Aabb<T, D>,
+        bucket_assignments: &'b mut BucketArray,
     ) -> (
         (Aabb<T, D>, Aabb<T, D>, &'a mut [ShapeIndex]),
         (Aabb<T, D>, Aabb<T, D>, &'a mut [ShapeIndex]),
