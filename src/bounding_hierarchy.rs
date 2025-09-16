@@ -1,10 +1,5 @@
 //! This module defines the [`BoundingHierarchy`] trait.
 
-use crate::aabb::{Bounded, IntersectsAabb};
-#[cfg(feature = "rayon")]
-use crate::bvh::rayon_executor;
-use crate::bvh::BvhNodeBuildArgs;
-use crate::point_query::PointDistance;
 use alloc::{boxed::Box, vec::Vec};
 use core::fmt;
 use nalgebra::{
@@ -12,6 +7,12 @@ use nalgebra::{
     SimdPartialOrd,
 };
 use num_traits::{Float, FromPrimitive, Signed};
+
+use crate::aabb::{Bounded, IntersectsAabb};
+#[cfg(feature = "rayon")]
+use crate::bvh::rayon_executor;
+use crate::bvh::BvhNodeBuildArgs;
+use crate::point_query::PointDistance;
 
 /// Encapsulates the required traits for the value type used in the Bvh.
 pub trait BHValue:

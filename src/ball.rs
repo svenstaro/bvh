@@ -1,10 +1,11 @@
 //! Balls, including circles and spheres.
 
+use nalgebra::Point;
+
 use crate::{
     aabb::{Aabb, IntersectsAabb},
     bounding_hierarchy::BHValue,
 };
-use nalgebra::Point;
 
 /// A circle, which can be used for traversing 2D BVHs.
 pub type Circle<T> = Ball<T, 2>;

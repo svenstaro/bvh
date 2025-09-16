@@ -1,13 +1,15 @@
-use crate::bvh::ShapeIndex;
 use alloc::vec::Vec;
+
+use crate::bvh::ShapeIndex;
 
 pub const NUM_BUCKETS: usize = 6;
 pub type BucketArray = [Vec<ShapeIndex>; NUM_BUCKETS];
 
 #[cfg(feature = "std")]
 mod inner {
+    use std::{cell::RefCell, thread_local};
+
     use super::BucketArray;
-    use std::cell::RefCell;
 
     thread_local! {
         /// Thread local for the buckets used while building to reduce allocations during build
@@ -24,8 +26,9 @@ mod inner {
 
 #[cfg(not(feature = "std"))]
 mod inner {
-    use crate::bvh::{bucket::BucketArray, ShapeIndex};
     use alloc::vec::Vec;
+
+    use crate::bvh::{bucket::BucketArray, ShapeIndex};
 
     pub fn with_buckets<R>(closure: impl FnOnce(&mut BucketArray) -> R) -> R {
         const EMPTY: Vec<ShapeIndex> = Vec::new();

@@ -1,9 +1,6 @@
 //! This module defines a Ray structure and intersection algorithms
 //! for axis aligned bounding boxes and triangles.
 
-use crate::aabb::IntersectsAabb;
-use crate::utils::{fast_max, has_nan};
-use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
 use core::cmp::Ordering;
 use nalgebra::{
     ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, ComplexField, Point, SVector, SimdPartialOrd,
@@ -11,6 +8,9 @@ use nalgebra::{
 use num_traits::{Float, One, Zero};
 
 use super::intersect_default::RayIntersection;
+use crate::aabb::IntersectsAabb;
+use crate::utils::{fast_max, has_nan};
+use crate::{aabb::Aabb, bounding_hierarchy::BHValue};
 
 /// A struct which defines a ray and some of its cached values.
 #[derive(Debug, Clone, Copy)]
@@ -407,6 +407,8 @@ mod tests {
 
                 #[cfg(feature = "std")]
                 if !(intersection_inside || close_to_border) {
+                    use std::println;
+
                     println!("uvsum {uv_sum}");
                     println!("intersects.0 {}", intersects.distance);
                     println!("intersects.1 (u) {}", intersects.u);

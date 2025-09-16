@@ -1,7 +1,8 @@
-use crate::bounding_hierarchy::BHValue;
 use alloc::boxed::Box;
 use core::{fmt, ops::Index};
 use nalgebra::{Point, SVector};
+
+use crate::bounding_hierarchy::BHValue;
 
 /// [`Aabb`] struct.
 #[derive(Debug, Copy, Clone, PartialEq)]

@@ -1,9 +1,10 @@
+use alloc::collections::BinaryHeap;
+use core::cmp::Ordering;
+
 use crate::aabb::{Aabb, Bounded};
 use crate::bounding_hierarchy::BHValue;
 use crate::bvh::{iter_initially_has_node, Bvh, BvhNode};
 use crate::ray::Ray;
-use alloc::collections::BinaryHeap;
-use core::cmp::Ordering;
 
 #[derive(Debug, Clone, Copy)]
 struct DistNodePair<T: PartialOrd> {

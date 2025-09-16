@@ -3,12 +3,6 @@
 //! [`Bvh`]: struct.Bvh.html
 //! [`BvhNode`]: struct.BvhNode.html
 //!
-use crate::aabb::{Aabb, Bounded, IntersectsAabb};
-use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
-use crate::bvh::iter::BvhTraverseIterator;
-use crate::point_query::PointDistance;
-use crate::ray::Ray;
-use crate::utils::joint_aabb_of_shapes;
 use alloc::vec::Vec;
 use core::{fmt, marker};
 use core::{mem::MaybeUninit, slice};
@@ -17,6 +11,12 @@ use super::{
     BvhNode, BvhNodeBuildArgs, ChildDistanceTraverseIterator, DistanceTraverseIterator, ShapeIndex,
     Shapes,
 };
+use crate::aabb::{Aabb, Bounded, IntersectsAabb};
+use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
+use crate::bvh::iter::BvhTraverseIterator;
+use crate::point_query::PointDistance;
+use crate::ray::Ray;
+use crate::utils::joint_aabb_of_shapes;
 
 /// The [`Bvh`] data structure. Contains the list of [`BvhNode`]s.
 ///
@@ -243,6 +243,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     ///
     #[cfg(feature = "std")]
     pub fn pretty_print(&self) {
+        use std::{println, string::String};
+
         let nodes = &self.nodes;
         fn print_node<T: BHValue, const D: usize>(
             nodes: &[BvhNode<T, D>],
