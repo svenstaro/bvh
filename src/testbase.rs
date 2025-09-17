@@ -3,7 +3,6 @@
 use alloc::vec;
 use alloc::vec::Vec;
 use core::f32;
-use hashbrown::HashSet;
 use num::{FromPrimitive, Integer};
 use obj::raw::object::Polygon;
 use obj::*;
@@ -11,6 +10,7 @@ use proptest::prelude::*;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
+use std::collections::HashSet;
 
 use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::ball::Sphere;

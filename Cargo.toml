@@ -21,7 +21,6 @@ num-traits = "0.2.19"
 nalgebra = { version = "0.33.0", features = ["default", "serde-serialize"] }
 rayon = { optional = true, version = "1.8.1" }
 wide = { optional = true, version = "0.7.32" }
-hashbrown = { version = "0.15.4" }
 
 [dev-dependencies]
 num = "0.4.3"

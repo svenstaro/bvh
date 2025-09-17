@@ -399,7 +399,7 @@ mod tests {
     };
     use alloc::vec;
     use alloc::vec::Vec;
-    use hashbrown::HashSet;
+    use std::collections::HashSet;
 
     #[test]
     /// Tests whether a Bvh is still consistent after a few optimization calls.

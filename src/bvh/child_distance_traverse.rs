@@ -223,7 +223,7 @@ mod tests {
     use crate::ray::Ray;
     use crate::testbase::{generate_aligned_boxes, TBvh3, TPoint3, TVector3, UnitBox};
     use alloc::vec::Vec;
-    use hashbrown::HashSet;
+    use std::collections::HashSet;
 
     /// Create a `Bvh` for a fixed scene structure.
     pub fn build_some_bvh() -> (Vec<UnitBox>, TBvh3) {

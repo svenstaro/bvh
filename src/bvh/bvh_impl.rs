@@ -588,7 +588,7 @@ mod tests {
     #[test]
     /// Verify contents of the bounding hierarchy for a fixed scene structure
     fn test_bvh_shape_indices() {
-        use hashbrown::HashSet;
+        use std::collections::HashSet;
 
         let (all_shapes, bh) = build_some_bh::<TBvh3>();
 
@@ -635,7 +635,7 @@ mod tests {
     #[cfg(feature = "rayon")]
     /// Verify contents of the bounding hierarchy for a fixed scene structure
     fn test_bvh_shape_indices_rayon() {
-        use hashbrown::HashSet;
+        use std::collections::HashSet;
 
         use crate::testbase::build_some_bh_rayon;
 
