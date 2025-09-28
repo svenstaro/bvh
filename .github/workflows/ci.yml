@@ -85,6 +85,25 @@ jobs:
         run: |
           RUST_BACKTRACE=1 cargo fuzz run fuzz -- -max_total_time=60
 
+  build-and-test-no-std:
+    name: CI with ${{ matrix.rust }} on ${{ matrix.os }} [no STD]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        rust: [stable, nightly]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: cargo build --no-default-features
+        run: cargo build --no-default-features
+
+      # unit tests cannot be run in no-std environment
+
   build-and-test-no-simd:
     name: CI with ${{ matrix.rust }} on ${{ matrix.os }} [no SIMD]
     runs-on: ${{ matrix.os }}

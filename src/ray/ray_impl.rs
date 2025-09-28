@@ -431,6 +431,7 @@ impl<T: BHValue, const D: usize> IntersectsAabb<T, D> for Ray<T, D> {
 
 #[cfg(all(feature = "bench", test))]
 mod bench {
+    use alloc::vec::Vec;
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
     use test::{black_box, Bencher};
