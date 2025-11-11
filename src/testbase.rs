@@ -652,11 +652,7 @@ pub fn randomly_transform_scene(
     indices.shuffle(&mut rng);
     indices.truncate(amount);
 
-    let max_offset = if let Some(value) = max_offset_option {
-        value
-    } else {
-        f32::INFINITY
-    };
+    let max_offset = max_offset_option.unwrap_or(f32::INFINITY);
 
     for index in &indices {
         let aabb = triangles[*index].aabb();
