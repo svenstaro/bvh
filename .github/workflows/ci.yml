@@ -72,7 +72,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           # use a known good version (e.g. on Jan 14 2025, a faulty `rustc` nightly panicked)
-          toolchain: nightly-2025-02-17
+          toolchain: nightly-2025-11-12
           components: rust-src
 
       - name: Install cargo-fuzz
