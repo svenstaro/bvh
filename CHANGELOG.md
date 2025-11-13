@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## 0.12.0 - 2025-??-??
 - Replace hand-written x86_64 SIMD with safe and portable [`wide`](https://crates.io/crates/wide) SIMD. [#158](https://github.com/svenstaro/bvh/pull/158) (thanks @finnbear)
 - Update Rust edition to 2024
-- Bump MSRV to 1.85
+- Bump MSRV to 1.87
 
 ## 0.11.0 - 2025-02-18
 - **Breaking change:** BVH traversal now accepts a `Query: IntersectsAabb` rather than a `Ray`,
