@@ -416,6 +416,7 @@ impl<const D: usize> Workload<D> {
             .ok()
             .map(|s| usize::from_str(&s).expect("MAX_SHAPES"))
         {
+            #[allow(clippy::collapsible_if)]
             if !self.mutations.is_empty() || self.shapes.len() > max_shapes {
                 return;
             }
