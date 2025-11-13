@@ -1,7 +1,7 @@
 use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue};
 use crate::point_query::PointDistance;
-use crate::utils::{joint_aabb_of_shapes, Bucket};
+use crate::utils::{Bucket, joint_aabb_of_shapes};
 use std::cell::RefCell;
 use std::marker::PhantomData;
 use std::mem::MaybeUninit;

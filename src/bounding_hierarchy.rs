@@ -7,9 +7,9 @@ use nalgebra::{
 use num_traits::{Float, FromPrimitive, Signed};
 
 use crate::aabb::{Bounded, IntersectsAabb};
+use crate::bvh::BvhNodeBuildArgs;
 #[cfg(feature = "rayon")]
 use crate::bvh::rayon_executor;
-use crate::bvh::BvhNodeBuildArgs;
 use crate::point_query::PointDistance;
 
 /// Encapsulates the required traits for the value type used in the Bvh.

@@ -27,14 +27,8 @@ pub struct BvhTraverseIterator<
     has_node: bool,
 }
 
-impl<
-        'bvh,
-        'shape,
-        T: BHValue,
-        const D: usize,
-        Query: IntersectsAabb<T, D>,
-        Shape: Bounded<T, D>,
-    > BvhTraverseIterator<'bvh, 'shape, T, D, Query, Shape>
+impl<'bvh, 'shape, T: BHValue, const D: usize, Query: IntersectsAabb<T, D>, Shape: Bounded<T, D>>
+    BvhTraverseIterator<'bvh, 'shape, T, D, Query, Shape>
 {
     /// Creates a new [`BvhTraverseIterator`]
     pub fn new(bvh: &'bvh Bvh<T, D>, query: &'bvh Query, shapes: &'shape [Shape]) -> Self {
@@ -192,7 +186,7 @@ pub(crate) fn iter_initially_has_node<
 #[cfg(test)]
 mod tests {
     use crate::ray::Ray;
-    use crate::testbase::{generate_aligned_boxes, TBvh3, TPoint3, TVector3, UnitBox};
+    use crate::testbase::{TBvh3, TPoint3, TVector3, UnitBox, generate_aligned_boxes};
     use nalgebra::{OPoint, OVector};
     use std::collections::HashSet;
 
@@ -321,7 +315,7 @@ mod tests {
 
 #[cfg(all(feature = "bench", test))]
 mod bench {
-    use crate::testbase::{create_ray, load_sponza_scene, TBvh3};
+    use crate::testbase::{TBvh3, create_ray, load_sponza_scene};
 
     #[bench]
     /// Benchmark the traversal of a [`Bvh`] with the Sponza scene with [`Vec`] return.
