@@ -3,7 +3,7 @@ use std::collections::BinaryHeap;
 
 use crate::aabb::{Aabb, Bounded};
 use crate::bounding_hierarchy::BHValue;
-use crate::bvh::{iter_initially_has_node, Bvh, BvhNode};
+use crate::bvh::{Bvh, BvhNode, iter_initially_has_node};
 use crate::ray::Ray;
 
 #[derive(Debug, Clone, Copy)]
@@ -166,7 +166,7 @@ mod tests {
     use crate::bvh::Bvh;
     use crate::ray::Ray;
     use crate::testbase::{
-        generate_aligned_boxes, TAabb3, TBvh3, TPoint3, TRay3, TVector3, UnitBox,
+        TAabb3, TBvh3, TPoint3, TRay3, TVector3, UnitBox, generate_aligned_boxes,
     };
 
     /// Create a `Bvh` for a fixed scene structure.
@@ -311,12 +311,13 @@ mod tests {
         );
 
         let bvh = TBvh3::build(&mut aabbs);
-        assert!(bvh
-            .nearest_traverse_iterator(&ray, &aabbs)
-            .is_sorted_by(|a, b| {
-                let (a, _) = ray.intersection_slice_for_aabb(a).unwrap();
-                let (b, _) = ray.intersection_slice_for_aabb(b).unwrap();
-                a <= b
-            }));
+        assert!(
+            bvh.nearest_traverse_iterator(&ray, &aabbs)
+                .is_sorted_by(|a, b| {
+                    let (a, _) = ray.intersection_slice_for_aabb(a).unwrap();
+                    let (b, _) = ray.intersection_slice_for_aabb(b).unwrap();
+                    a <= b
+                })
+        );
     }
 }

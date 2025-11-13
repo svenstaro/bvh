@@ -27,11 +27,7 @@ use num_traits::Float;
 #[inline(always)]
 #[allow(dead_code)]
 pub fn fast_min<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
-    if x < y {
-        x
-    } else {
-        y
-    }
+    if x < y { x } else { y }
 }
 
 /// Fast floating point maximum.  This function matches the semantics of
@@ -54,11 +50,7 @@ pub fn fast_min<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
 #[inline(always)]
 #[allow(dead_code)]
 pub fn fast_max<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
-    if x > y {
-        x
-    } else {
-        y
-    }
+    if x > y { x } else { y }
 }
 
 /// Defines a Bucket utility object. Used to store the properties of shape-partitions

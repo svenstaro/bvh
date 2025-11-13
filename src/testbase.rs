@@ -9,9 +9,9 @@ use num::{FromPrimitive, Integer};
 use obj::raw::object::Polygon;
 use obj::*;
 use proptest::prelude::*;
+use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
-use rand::SeedableRng;
 use std::collections::HashSet;
 use std::f32;
 
