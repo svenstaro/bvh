@@ -20,6 +20,8 @@ use in a shader this module also exports a flattening procedure, which allows fo
 iterative traversal of the BVH.
 
 It uses `rayon` by default to parallelize building the BVH.
+It can also be used in `no_std` contexts for micro-controllers and retro-consoles
+by disabling default features.
 
 ## Example
 
