@@ -549,8 +549,8 @@ mod tests {
     use crate::{
         bounding_hierarchy::BoundingHierarchy,
         testbase::{
-            build_empty_bh, build_some_bh, nearest_to_some_bh, traverse_some_bh, TBvh3, TBvhNode3,
-            TPoint3, TRay3, TVector3, UnitBox,
+            TBvh3, TBvhNode3, TPoint3, TRay3, TVector3, UnitBox, build_empty_bh, build_some_bh,
+            nearest_to_some_bh, traverse_some_bh,
         },
     };
 
@@ -695,14 +695,14 @@ mod bench {
     #[cfg(feature = "rayon")]
     use crate::bounding_hierarchy::BoundingHierarchy;
     use crate::testbase::{
-        build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh,
-        intersect_1200_triangles_bh, intersect_120k_triangles_bh, intersect_12k_triangles_bh,
-        intersect_bh, load_sponza_scene, nearest_to_1200_triangles_bh,
-        nearest_to_120k_triangles_bh, nearest_to_12k_triangles_bh, nearest_to_bh, TBvh3,
+        TBvh3, build_12k_triangles_bh, build_120k_triangles_bh, build_1200_triangles_bh,
+        intersect_12k_triangles_bh, intersect_120k_triangles_bh, intersect_1200_triangles_bh,
+        intersect_bh, load_sponza_scene, nearest_to_12k_triangles_bh, nearest_to_120k_triangles_bh,
+        nearest_to_1200_triangles_bh, nearest_to_bh,
     };
     #[cfg(feature = "rayon")]
     use crate::testbase::{
-        build_1200_triangles_bh_rayon, build_120k_triangles_bh_rayon, build_12k_triangles_bh_rayon,
+        build_12k_triangles_bh_rayon, build_120k_triangles_bh_rayon, build_1200_triangles_bh_rayon,
     };
 
     #[bench]

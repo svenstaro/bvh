@@ -596,7 +596,7 @@ impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for Flat
 #[cfg(test)]
 mod tests {
     use crate::testbase::{
-        build_empty_bh, build_some_bh, nearest_to_some_bh, traverse_some_bh, TBvh3, TFlatBvh3,
+        TBvh3, TFlatBvh3, build_empty_bh, build_some_bh, nearest_to_some_bh, traverse_some_bh,
     };
 
     #[test]
@@ -628,10 +628,10 @@ mod tests {
 #[cfg(all(feature = "bench", test))]
 mod bench {
     use crate::testbase::{
-        build_1200_triangles_bh, build_120k_triangles_bh, build_12k_triangles_bh, create_n_cubes,
-        default_bounds, intersect_1200_triangles_bh, intersect_120k_triangles_bh,
-        intersect_12k_triangles_bh, nearest_to_1200_triangles_bh, nearest_to_120k_triangles_bh,
-        nearest_to_12k_triangles_bh, TBvh3, TFlatBvh3,
+        TBvh3, TFlatBvh3, build_12k_triangles_bh, build_120k_triangles_bh, build_1200_triangles_bh,
+        create_n_cubes, default_bounds, intersect_12k_triangles_bh, intersect_120k_triangles_bh,
+        intersect_1200_triangles_bh, nearest_to_12k_triangles_bh, nearest_to_120k_triangles_bh,
+        nearest_to_1200_triangles_bh,
     };
 
     #[bench]

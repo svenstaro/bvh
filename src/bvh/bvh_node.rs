@@ -3,9 +3,9 @@ use core::{marker::PhantomData, mem::MaybeUninit};
 
 use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue};
-use crate::bvh::bucket::{with_buckets, NUM_BUCKETS};
+use crate::bvh::bucket::{NUM_BUCKETS, with_buckets};
 use crate::point_query::PointDistance;
-use crate::utils::{joint_aabb_of_shapes, Bucket};
+use crate::utils::{Bucket, joint_aabb_of_shapes};
 
 /// The [`BvhNode`] enum that describes a node in a [`Bvh`].
 /// It's either a leaf node and references a shape (by holding its index)

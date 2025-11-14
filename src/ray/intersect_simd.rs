@@ -9,7 +9,7 @@ use crate::{
     utils::{fast_max, fast_min, has_nan},
 };
 
-use super::{intersect_default::RayIntersection, Ray};
+use super::{Ray, intersect_default::RayIntersection};
 
 trait ToRegisterType {
     type Register;

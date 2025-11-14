@@ -28,7 +28,7 @@ mod inner {
 mod inner {
     use alloc::vec::Vec;
 
-    use crate::bvh::{bucket::BucketArray, ShapeIndex};
+    use crate::bvh::{ShapeIndex, bucket::BucketArray};
 
     pub fn with_buckets<R>(closure: impl FnOnce(&mut BucketArray) -> R) -> R {
         const EMPTY: Vec<ShapeIndex> = Vec::new();

@@ -2,8 +2,8 @@
 name = "bvh"
 description = "A fast BVH using SAH"
 version = "0.11.0"
-edition = "2021"
-rust-version = "1.80" # may raise to versions that are at least 1y old.
+edition = "2024"
+rust-version = "1.87" # may raise to versions that are at least 1y old.
 authors = [
     "Sven-Hendrik Haase <svenstaro@gmail.com>",
     "Alexander Dmitriev <alexander.dmitriev2580@gmail.com>",
@@ -18,9 +18,9 @@ license = "MIT"
 [dependencies]
 serde = { optional = true, version = "1", features = ["derive"] }
 num-traits = "0.2.19"
-nalgebra = { version = "0.33.0", features = ["default", "serde-serialize"] }
+nalgebra = { version = "0.34.0", features = ["default", "serde-serialize"] }
 rayon = { optional = true, version = "1.8.1" }
-wide = { optional = true, version = "0.7.32" }
+wide = { optional = true, version = "0.8" }
 
 [dev-dependencies]
 num = "0.4.3"

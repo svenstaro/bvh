@@ -394,8 +394,8 @@ mod tests {
     use crate::aabb::Bounded;
     use crate::bounding_hierarchy::BHShape;
     use crate::testbase::{
-        build_some_bh, create_n_cubes, default_bounds, randomly_transform_scene, TBvh3, TBvhNode3,
-        TPoint3, UnitBox,
+        TBvh3, TBvhNode3, TPoint3, UnitBox, build_some_bh, create_n_cubes, default_bounds,
+        randomly_transform_scene,
     };
     use alloc::vec;
     use alloc::vec::Vec;
@@ -571,18 +571,26 @@ mod tests {
         assert_eq!(nodes[5].parent(), 1);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert!(nodes[1]
-            .child_l_aabb()
-            .relative_eq(&shapes[2].aabb(), f32::EPSILON));
-        assert!(nodes[1]
-            .child_r_aabb()
-            .relative_eq(&shapes[1].aabb(), f32::EPSILON));
-        assert!(nodes[2]
-            .child_l_aabb()
-            .relative_eq(&shapes[0].aabb(), f32::EPSILON));
-        assert!(nodes[2]
-            .child_r_aabb()
-            .relative_eq(&shapes[3].aabb(), f32::EPSILON));
+        assert!(
+            nodes[1]
+                .child_l_aabb()
+                .relative_eq(&shapes[2].aabb(), f32::EPSILON)
+        );
+        assert!(
+            nodes[1]
+                .child_r_aabb()
+                .relative_eq(&shapes[1].aabb(), f32::EPSILON)
+        );
+        assert!(
+            nodes[2]
+                .child_l_aabb()
+                .relative_eq(&shapes[0].aabb(), f32::EPSILON)
+        );
+        assert!(
+            nodes[2]
+                .child_r_aabb()
+                .relative_eq(&shapes[3].aabb(), f32::EPSILON)
+        );
     }
 
     #[test]
@@ -613,18 +621,26 @@ mod tests {
         assert_eq!(nodes[5].parent(), 0);
         assert_eq!(nodes[6].parent(), 2);
 
-        assert!(nodes[0]
-            .child_l_aabb()
-            .relative_eq(&shapes[2].aabb(), f32::EPSILON));
-        assert!(nodes[2]
-            .child_r_aabb()
-            .relative_eq(&shapes[3].aabb(), f32::EPSILON));
-        assert!(nodes[1]
-            .child_l_aabb()
-            .relative_eq(&shapes[0].aabb(), f32::EPSILON));
-        assert!(nodes[1]
-            .child_r_aabb()
-            .relative_eq(&shapes[1].aabb(), f32::EPSILON));
+        assert!(
+            nodes[0]
+                .child_l_aabb()
+                .relative_eq(&shapes[2].aabb(), f32::EPSILON)
+        );
+        assert!(
+            nodes[2]
+                .child_r_aabb()
+                .relative_eq(&shapes[3].aabb(), f32::EPSILON)
+        );
+        assert!(
+            nodes[1]
+                .child_l_aabb()
+                .relative_eq(&shapes[0].aabb(), f32::EPSILON)
+        );
+        assert!(
+            nodes[1]
+                .child_r_aabb()
+                .relative_eq(&shapes[1].aabb(), f32::EPSILON)
+        );
     }
 
     #[test]
@@ -656,8 +672,8 @@ mod tests {
 #[cfg(all(feature = "bench", test))]
 mod bench {
     use crate::testbase::{
-        create_n_cubes, default_bounds, intersect_bh, load_sponza_scene, randomly_transform_scene,
-        TAabb3, TBvh3, Triangle,
+        TAabb3, TBvh3, Triangle, create_n_cubes, default_bounds, intersect_bh, load_sponza_scene,
+        randomly_transform_scene,
     };
 
     #[bench]

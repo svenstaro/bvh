@@ -218,8 +218,8 @@ mod tests {
     use crate::{
         aabb::Bounded,
         testbase::{
-            tuple_to_point, tuplevec_small_strategy, TAabb3, TPoint3, TRay3, TVector3, TupleVec,
-            UnitBox,
+            TAabb3, TPoint3, TRay3, TVector3, TupleVec, UnitBox, tuple_to_point,
+            tuplevec_small_strategy,
         },
     };
     use core::cmp;
@@ -434,9 +434,9 @@ mod bench {
     use alloc::vec::Vec;
     use rand::rngs::StdRng;
     use rand::{Rng, SeedableRng};
-    use test::{black_box, Bencher};
+    use test::{Bencher, black_box};
 
-    use crate::testbase::{tuple_to_point, tuple_to_vector, TAabb3, TRay3, TupleVec};
+    use crate::testbase::{TAabb3, TRay3, TupleVec, tuple_to_point, tuple_to_vector};
 
     /// Generate a random deterministic `Ray`.
     fn random_ray(rng: &mut StdRng) -> TRay3 {

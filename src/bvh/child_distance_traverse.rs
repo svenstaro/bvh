@@ -1,6 +1,6 @@
 use crate::aabb::Bounded;
 use crate::bounding_hierarchy::BHValue;
-use crate::bvh::{iter_initially_has_node, Bvh, BvhNode};
+use crate::bvh::{Bvh, BvhNode, iter_initially_has_node};
 use crate::ray::Ray;
 
 #[derive(Debug, Clone, Copy)]
@@ -221,7 +221,8 @@ mod tests {
     use crate::aabb::Bounded;
     use crate::bvh::Bvh;
     use crate::ray::Ray;
-    use crate::testbase::{generate_aligned_boxes, TBvh3, TPoint3, TVector3, UnitBox};
+    use crate::testbase::{TBvh3, TPoint3, TVector3, UnitBox, generate_aligned_boxes};
+
     use alloc::vec::Vec;
     use std::collections::HashSet;
 
