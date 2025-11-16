@@ -1,7 +1,7 @@
 [package]
 name = "bvh"
 description = "A fast BVH using SAH"
-version = "0.11.0"
+version = "0.12.0"
 edition = "2024"
 rust-version = "1.87" # may raise to versions that are at least 1y old.
 authors = [
