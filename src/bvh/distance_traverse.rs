@@ -1,5 +1,5 @@
-use std::cmp::Ordering;
-use std::collections::BinaryHeap;
+use alloc::collections::BinaryHeap;
+use core::cmp::Ordering;
 
 use crate::aabb::{Aabb, Bounded};
 use crate::bounding_hierarchy::BHValue;
@@ -159,8 +159,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use crate::aabb::{Aabb, Bounded};
     use crate::bounding_hierarchy::{BHShape, BHValue};
     use crate::bvh::Bvh;
@@ -168,6 +166,8 @@ mod tests {
     use crate::testbase::{
         TAabb3, TBvh3, TPoint3, TRay3, TVector3, UnitBox, generate_aligned_boxes,
     };
+    use alloc::vec::Vec;
+    use std::collections::HashSet;
 
     /// Create a `Bvh` for a fixed scene structure.
     pub fn build_some_bvh() -> (Vec<UnitBox>, TBvh3) {

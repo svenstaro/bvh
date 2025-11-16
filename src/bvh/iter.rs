@@ -187,6 +187,8 @@ pub(crate) fn iter_initially_has_node<
 mod tests {
     use crate::ray::Ray;
     use crate::testbase::{TBvh3, TPoint3, TVector3, UnitBox, generate_aligned_boxes};
+
+    use alloc::vec::Vec;
     use nalgebra::{OPoint, OVector};
     use std::collections::HashSet;
 

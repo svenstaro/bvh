@@ -1,11 +1,13 @@
 //! This module exports methods to flatten the [`Bvh`] into a [`FlatBvh`] and traverse it iteratively.
+use alloc::vec::Vec;
+use core::fmt;
+use nalgebra::Point;
+use num_traits::Float;
+
 use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
 use crate::bvh::{Bvh, BvhNode};
 use crate::point_query::PointDistance;
-
-use nalgebra::Point;
-use num_traits::Float;
 
 /// A structure of a node of a flat [`Bvh`]. The structure of the nodes allows for an
 /// iterative traversal approach without the necessity to maintain a stack or queue.
@@ -317,7 +319,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 }
 
-impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for FlatBvh<T, D> {
+impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for FlatBvh<T, D> {
     /// A [`FlatBvh`] is built from a regular [`Bvh`] using the [`Bvh::flatten`] method.
     ///
     /// [`FlatBvh`]: struct.FlatBvh.html
@@ -563,11 +565,15 @@ impl<T: BHValue + std::fmt::Display, const D: usize> BoundingHierarchy<T, D> for
     ///
     /// [`FlatBvh`]: struct.FlatBvh.html
     ///
+    #[cfg(feature = "std")]
     fn pretty_print(&self) {
         for (i, node) in self.iter().enumerate() {
-            println!(
+            std::println!(
                 "{}\tentry {}\texit {}\tshape {}",
-                i, node.entry_index, node.exit_index, node.shape_index
+                i,
+                node.entry_index,
+                node.exit_index,
+                node.shape_index
             );
         }
     }

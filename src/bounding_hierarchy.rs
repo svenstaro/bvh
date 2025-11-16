@@ -1,5 +1,7 @@
 //! This module defines the [`BoundingHierarchy`] trait.
 
+use alloc::{boxed::Box, vec::Vec};
+use core::fmt;
 use nalgebra::{
     ClosedAddAssign, ClosedDivAssign, ClosedMulAssign, ClosedSubAssign, Point, Scalar,
     SimdPartialOrd,
@@ -24,7 +26,7 @@ pub trait BHValue:
     + ClosedDivAssign
     + Float
     + Signed
-    + std::fmt::Display
+    + fmt::Display
 {
 }
 
@@ -39,7 +41,7 @@ impl<T> BHValue for T where
         + ClosedDivAssign
         + Float
         + Signed
-        + std::fmt::Display
+        + fmt::Display
 {
 }
 

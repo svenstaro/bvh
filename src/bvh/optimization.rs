@@ -69,7 +69,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Useful for moving a small subset of nodes around in a large `BVH`
     pub fn add_shape<Shape: BHShape<T, D>>(&mut self, shapes: &mut [Shape], new_shape_index: usize)
     where
-        T: std::ops::Div<Output = T>,
+        T: core::ops::Div<Output = T>,
     {
         let mut node_index = 0;
         let new_shape = &shapes[new_shape_index];
@@ -397,6 +397,8 @@ mod tests {
         TBvh3, TBvhNode3, TPoint3, UnitBox, build_some_bh, create_n_cubes, default_bounds,
         randomly_transform_scene,
     };
+    use alloc::vec;
+    use alloc::vec::Vec;
     use std::collections::HashSet;
 
     #[test]
@@ -424,6 +426,7 @@ mod tests {
         ];
 
         let mut bvh = TBvh3::build(&mut shapes);
+        #[cfg(feature = "std")]
         bvh.pretty_print();
 
         // Assert that SAH joined shapes #0 and #1.
@@ -455,6 +458,7 @@ mod tests {
         shapes[1].pos = TPoint3::new(40.0, 0.0, 0.0);
         let refit_shape_indices: HashSet<usize> = (1..2).collect();
         bvh.update_shapes(&refit_shape_indices, &mut shapes);
+        #[cfg(feature = "std")]
         bvh.pretty_print();
         bvh.assert_consistent(&shapes);
 

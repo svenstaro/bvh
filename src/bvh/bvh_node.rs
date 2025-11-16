@@ -1,17 +1,11 @@
+use alloc::vec::Vec;
+use core::{marker::PhantomData, mem::MaybeUninit};
+
 use crate::aabb::{Aabb, Bounded, IntersectsAabb};
 use crate::bounding_hierarchy::{BHShape, BHValue};
+use crate::bvh::bucket::{NUM_BUCKETS, with_buckets};
 use crate::point_query::PointDistance;
 use crate::utils::{Bucket, joint_aabb_of_shapes};
-use std::cell::RefCell;
-use std::marker::PhantomData;
-use std::mem::MaybeUninit;
-
-const NUM_BUCKETS: usize = 6;
-
-thread_local! {
-    /// Thread local for the buckets used while building to reduce allocations during build
-    static BUCKETS: RefCell<[Vec<ShapeIndex>; NUM_BUCKETS]> = RefCell::new(Default::default());
-}
 
 /// The [`BvhNode`] enum that describes a node in a [`Bvh`].
 /// It's either a leaf node and references a shape (by holding its index)
@@ -198,8 +192,7 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
         (Aabb<T, D>, Aabb<T, D>, &'a mut [ShapeIndex]),
     ) {
         // Use fixed size arrays of `Bucket`s, and thread local index assignment vectors.
-        BUCKETS.with(move |buckets_ref| {
-            let bucket_assignments = &mut *buckets_ref.borrow_mut();
+        with_buckets(move |bucket_assignments| {
             let mut buckets = [Bucket::empty(); NUM_BUCKETS];
             buckets.fill(Bucket::empty());
             for b in bucket_assignments.iter_mut() {

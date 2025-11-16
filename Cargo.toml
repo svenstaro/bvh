@@ -31,7 +31,8 @@ float_eq = "1"
 doc-comment = "0.3"
 
 [features]
-default = ["rayon"]
+default = ["std", "rayon"]
+std = []
 bench = []
 simd = ["wide"]
 

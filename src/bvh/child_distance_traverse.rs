@@ -222,6 +222,8 @@ mod tests {
     use crate::bvh::Bvh;
     use crate::ray::Ray;
     use crate::testbase::{TBvh3, TPoint3, TVector3, UnitBox, generate_aligned_boxes};
+
+    use alloc::vec::Vec;
     use std::collections::HashSet;
 
     /// Create a `Bvh` for a fixed scene structure.
