@@ -2,7 +2,6 @@
 
 use alloc::vec;
 use alloc::vec::Vec;
-use core::f32;
 use num::{FromPrimitive, Integer};
 use obj::raw::object::Polygon;
 use obj::*;
