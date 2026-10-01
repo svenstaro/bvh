@@ -80,7 +80,7 @@
 #![deny(missing_docs)]
 #![cfg_attr(all(feature = "bench", test), feature(test))]
 #![cfg_attr(feature = "simd", feature(min_specialization))]
-#![cfg(feature = "std")]
+#[cfg(feature = "std")]
 extern crate std;
 
 #[cfg(all(feature = "bench", test))]
