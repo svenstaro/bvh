@@ -213,6 +213,12 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
     }
 }
 
+impl<T: BHValue, const D: usize> IntersectsAabb<T, D> for Ray<T, D> {
+    fn intersects_aabb(&self, aabb: &Aabb<T, D>) -> bool {
+        self.intersects_aabb(aabb)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
@@ -420,12 +426,6 @@ mod tests {
                 assert!(intersection_inside || close_to_border);
             }
         }
-    }
-}
-
-impl<T: BHValue, const D: usize> IntersectsAabb<T, D> for Ray<T, D> {
-    fn intersects_aabb(&self, aabb: &Aabb<T, D>) -> bool {
-        self.intersects_aabb(aabb)
     }
 }
 

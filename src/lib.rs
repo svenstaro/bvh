@@ -78,7 +78,7 @@
 
 #![no_std]
 #![deny(missing_docs)]
-#![cfg_attr(feature = "bench", feature(test))]
+#![cfg_attr(all(feature = "bench", test), feature(test))]
 #![cfg_attr(feature = "simd", feature(min_specialization))]
 #![cfg(feature = "std")]
 extern crate std;
