@@ -353,9 +353,7 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
                 // Traverse children
                 for (index, child_dist) in children {
                     // Node might contain a better shape: check it.
-                    // TODO: to be replaced by `Option::is_none_or` after 2025-10 for 1 year MSRV.
-                    #[allow(clippy::unnecessary_map_or)]
-                    if best_candidate.map_or(true, |(_, best_dist)| child_dist < best_dist) {
+                    if best_candidate.is_none_or(|(_, best_dist)| child_dist < best_dist) {
                         Self::nearest_to_recursive(nodes, index, query, shapes, best_candidate);
                     }
                 }
@@ -364,9 +362,7 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
                 // This leaf might contain a better shape: check it directly with its exact distance (squared).
                 let dist = shapes[shape_index].distance_squared(query);
 
-                // TODO: to be replaced by `Option::is_none_or` after 2025-10 for 1 year MSRV.
-                #[allow(clippy::unnecessary_map_or)]
-                if best_candidate.map_or(true, |(_, best_dist)| dist < best_dist) {
+                if best_candidate.is_none_or(|(_, best_dist)| dist < best_dist) {
                     *best_candidate = Some((&shapes[shape_index], dist));
                 }
             }

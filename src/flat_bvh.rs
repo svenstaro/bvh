@@ -534,9 +534,7 @@ impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for Flat
                 let shape = &shapes[node.shape_index as usize];
                 let dist = shape.distance_squared(query);
 
-                // TODO: to be replaced by `Option::is_none_or` after 2025-10 for 1 year MSRV.
-                #[allow(clippy::unnecessary_map_or)]
-                if best_element.map_or(true, |(_, best_dist)| dist < best_dist) {
+                if best_element.is_none_or(|(_, best_dist)| dist < best_dist) {
                     best_element = Some((shape, dist));
                 }
 
@@ -545,9 +543,7 @@ impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for Flat
             } else {
                 let min_dist = node.aabb.min_distance_squared(query);
 
-                // TODO: to be replaced by `Option::is_none_or` after 2025-10 for 1 year MSRV.
-                #[allow(clippy::unnecessary_map_or)]
-                if best_element.map_or(true, |(_, best_dist)| min_dist < best_dist) {
+                if best_element.is_none_or(|(_, best_dist)| min_dist < best_dist) {
                     // This node needs further traversal.
                     index = node.entry_index as usize;
                 } else {
