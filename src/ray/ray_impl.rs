@@ -433,7 +433,7 @@ mod tests {
 mod bench {
     use alloc::vec::Vec;
     use rand::rngs::StdRng;
-    use rand::{Rng, SeedableRng};
+    use rand::{RngExt, SeedableRng};
     use test::{Bencher, black_box};
 
     use crate::testbase::{TAabb3, TRay3, TupleVec, tuple_to_point, tuple_to_vector};
