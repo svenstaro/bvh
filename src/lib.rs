@@ -13,9 +13,8 @@
 //!
 //! ## Note
 //!
-//! If you are concerned about performance and do not mind using nightly, it is recommended to
-//! use the `simd` feature as it introduces explicitly written simd to optimize certain areas
-//! of the BVH.
+//! If you are concerned about performance, it is recommended to use the `simd` feature, which
+//! introduces explicitly written simd to optimize certain areas of the BVH.
 //!
 //! ## Example
 //!
@@ -73,13 +72,12 @@
 //! ## Features
 //!
 //! - `serde` (default **disabled**) - adds `Serialize` and `Deserialize` implementations for some types
-//! - `simd` (default **disabled**) - adds explicitly written SIMD instructions for certain architectures (requires nightly)
+//! - `simd` (default **disabled**) - adds explicitly written SIMD instructions for certain architectures
 //!
 
 #![no_std]
 #![deny(missing_docs)]
 #![cfg_attr(all(feature = "bench", test), feature(test))]
-#![cfg_attr(feature = "simd", feature(min_specialization))]
 #[cfg(feature = "std")]
 extern crate std;
 
