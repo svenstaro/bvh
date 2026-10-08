@@ -19,7 +19,9 @@ the BVH once in advance. This technique is especially useful in ray/path tracers
 use in a shader this module also exports a flattening procedure, which allows for
 iterative traversal of the BVH.
 
-It uses `rayon` by default to parallelize building the BVH.
+It uses `rayon` to parallelize building the BVH and `wide` for explicit SIMD.
+Both of these are enabled by default.
+Make sure to use `RUSTFLAGS='-C target-cpu=native'` for the best possible speedup.
 It can also be used in `no_std` contexts by disabling default features.
 
 ## Example
@@ -77,14 +79,14 @@ let hit_sphere_aabbs = bvh.traverse(&ray, &spheres);
 ## Explicit SIMD
 
 This crate features some SIMD operations. See [`wide`](https://crates.io/crates/wide) documentation for supported architectures.
-While nalgebra provides us with generic SIMD optimization (and it does a great job for the most part) - 
+While nalgebra provides us with generic SIMD optimization (and it does a great job for the most part) -
 some important functions, such as ray-aabb-intersection have been optimized by hand.
 
 The currently optimized intersections for ray-aabb are:
 Type: f32, Dimension: 2,3,4
 Type: f64, Dimension: 2,3,4
 
-To enable these optimziations, build with the `simd` feature enabled.
+These optimizations are enabled by default via the `simd` feature.
 
 ## Optimization
 

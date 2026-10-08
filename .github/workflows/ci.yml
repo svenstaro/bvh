@@ -111,10 +111,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - name: cargo build
-        run: cargo build
+        run: cargo build --no-default-features --features std,rayon
 
       - name: cargo test
-        run: cargo test
+        run: cargo test --no-default-features --features std,rayon
 
   build-and-test-simd:
     name: CI on ${{ matrix.os }} [SIMD]

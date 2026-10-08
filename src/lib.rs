@@ -13,8 +13,8 @@
 //!
 //! ## Note
 //!
-//! If you are concerned about performance, it is recommended to use the `simd` feature, which
-//! introduces explicitly written simd to optimize certain areas of the BVH.
+//! If you are concerned about performance, you should make sure to use
+//! `RUSTFLAGS='-C target-cpu=native'` for the best possible speedup.
 //!
 //! ## Example
 //!
@@ -72,7 +72,8 @@
 //! ## Features
 //!
 //! - `serde` (default **disabled**) - adds `Serialize` and `Deserialize` implementations for some types
-//! - `simd` (default **disabled**) - adds explicitly written SIMD instructions for certain architectures
+//! - `rayon` (default **enabled**) - parallelize building of the BVH
+//! - `simd` (default **enabled**) - adds explicitly written SIMD instructions for certain architectures
 //!
 
 #![no_std]
