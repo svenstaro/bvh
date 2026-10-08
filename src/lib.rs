@@ -74,17 +74,12 @@
 //! - `serde` (default **disabled**) - adds `Serialize` and `Deserialize` implementations for some types
 //! - `rayon` (default **enabled**) - parallelize building of the BVH (via [`rayon`](https://crates.io/crates/rayon))
 //! - `simd` (default **enabled**) - enables explicit SIMD kernels (via [`wide`](https://crates.io/crates/wide)) for ray-AABB intersection
-//! - `bench` (default **disabled**) - enables the benchmark suite; requires a nightly toolchain
 //!
 
 #![no_std]
 #![deny(missing_docs)]
-#![cfg_attr(all(feature = "bench", test), feature(test))]
 #[cfg(feature = "std")]
 extern crate std;
-
-#[cfg(all(feature = "bench", test))]
-extern crate test;
 
 extern crate alloc;
 
@@ -96,9 +91,6 @@ pub mod flat_bvh;
 pub mod point_query;
 pub mod ray;
 mod utils;
-
-#[cfg(test)]
-mod testbase;
 
 #[cfg(doctest)]
 doc_comment::doctest!("../README.md", readme);

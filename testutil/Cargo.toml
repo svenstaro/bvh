@@ -1,0 +1,20 @@
+[package]
+name = "bvh-testutil"
+description = "Shared test and benchmark helpers for the `bvh` crate (not published)"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+bvh = { path = "..", features = ["std"] }
+nalgebra = { workspace = true }
+num = "0.4.3"
+proptest = { workspace = true }
+obj-rs = "0.7"
+rand = { workspace = true }
+
+[features]
+default = ["rayon"]
+# Forwarded to `bvh`; enables the parallel build/traverse helpers.
+rayon = ["bvh/rayon"]
