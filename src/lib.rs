@@ -13,9 +13,8 @@
 //!
 //! ## Note
 //!
-//! If you are concerned about performance and do not mind using nightly, it is recommended to
-//! use the `simd` feature as it introduces explicitly written simd to optimize certain areas
-//! of the BVH.
+//! If you are concerned about performance, you should make sure to use
+//! `RUSTFLAGS='-C target-cpu=native'` for the best possible speedup.
 //!
 //! ## Example
 //!
@@ -73,13 +72,14 @@
 //! ## Features
 //!
 //! - `serde` (default **disabled**) - adds `Serialize` and `Deserialize` implementations for some types
-//! - `simd` (default **disabled**) - adds explicitly written SIMD instructions for certain architectures (requires nightly)
+//! - `rayon` (default **enabled**) - parallelize building of the BVH (via [`rayon`](https://crates.io/crates/rayon))
+//! - `simd` (default **enabled**) - enables explicit SIMD kernels (via [`wide`](https://crates.io/crates/wide)) for ray-AABB intersection
+//! - `bench` (default **disabled**) - enables the benchmark suite; requires a nightly toolchain
 //!
 
 #![no_std]
 #![deny(missing_docs)]
 #![cfg_attr(all(feature = "bench", test), feature(test))]
-#![cfg_attr(feature = "simd", feature(min_specialization))]
 #[cfg(feature = "std")]
 extern crate std;
 

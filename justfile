@@ -13,25 +13,27 @@ fmt:
 # to a different feature than the code that relies on it.
 check:
     cargo check
+    cargo check --no-default-features --features std,rayon
     cargo check --all-features
     cargo check --manifest-path fuzz/Cargo.toml
 
 # run clippy on src and fuzzer
 clippy:
     cargo clippy
+    cargo clippy --no-default-features --features std,rayon
     cargo clippy --manifest-path fuzz/Cargo.toml
 
 # test default features
 test:
     cargo test
 
-# run benchmarks (without SIMD)
+# run benchmarks
 bench:
     cargo bench --features bench
 
-# run benchmarks (with SIMD)
-bench_simd:
-    cargo bench --features bench,simd
+# run benchmarks (without SIMD)
+bench_no_simd:
+    cargo bench --no-default-features --features std,rayon,bench
 
 # fuzz the library
 fuzz:
@@ -54,4 +56,4 @@ find-msrv:
 
 # verify the rust-version in Cargo.toml is compatible
 verify-msrv:
-    cargo msrv verify --ignore-lockfile 
+    cargo msrv verify --ignore-lockfile
