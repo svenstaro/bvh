@@ -83,8 +83,9 @@ While nalgebra provides us with generic SIMD optimization (and it does a great j
 some important functions, such as ray-aabb-intersection have been optimized by hand.
 
 The currently optimized intersections for ray-aabb are:
-Type: f32, Dimension: 2,3,4
-Type: f64, Dimension: 2,3,4
+
+- f32, dimensions 2, 3, 4
+- f64, dimensions 2, 3, 4
 
 These optimizations are enabled by default via the `simd` feature.
 
