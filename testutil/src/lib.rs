@@ -1,7 +1,10 @@
-//! Common utilities shared by unit tests.
+//! Shared test and benchmark helpers for the [`bvh`] crate.
+//!
+//! This is a separate crate (not published) so that both the in-tree unit tests
+//! and the standalone `benches/` targets can share one copy of the scene
+//! builders and shape types. It intentionally depends only on `bvh`'s public
+//! API, so nothing here needs nightly or crate-internal access.
 
-use alloc::vec;
-use alloc::vec::Vec;
 use num::{FromPrimitive, Integer};
 use obj::raw::object::Polygon;
 use obj::*;
@@ -10,24 +13,26 @@ use rand::SeedableRng;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use std::collections::HashSet;
+use std::vec;
+use std::vec::Vec;
 
-use crate::aabb::{Aabb, Bounded, IntersectsAabb};
-use crate::ball::Sphere;
-use crate::bounding_hierarchy::{BHShape, BoundingHierarchy};
-use crate::point_query::PointDistance;
+use bvh::aabb::{Aabb, Bounded, IntersectsAabb};
+use bvh::ball::Sphere;
+use bvh::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use bvh::point_query::PointDistance;
 
 // TODO These all need to be realtyped and bounded
 
 /// A vector represented as a tuple
 pub type TupleVec = (f32, f32, f32);
 
-pub type TRay3 = crate::ray::Ray<f32, 3>;
-pub type TAabb3 = crate::aabb::Aabb<f32, 3>;
-pub type TBvh3 = crate::bvh::Bvh<f32, 3>;
-pub type TBvhNode3 = crate::bvh::BvhNode<f32, 3>;
+pub type TRay3 = bvh::ray::Ray<f32, 3>;
+pub type TAabb3 = bvh::aabb::Aabb<f32, 3>;
+pub type TBvh3 = bvh::bvh::Bvh<f32, 3>;
+pub type TBvhNode3 = bvh::bvh::BvhNode<f32, 3>;
 pub type TVector3 = nalgebra::SVector<f32, 3>;
 pub type TPoint3 = nalgebra::Point<f32, 3>;
-pub type TFlatBvh3 = crate::flat_bvh::FlatBvh<f32, 3>;
+pub type TFlatBvh3 = bvh::flat_bvh::FlatBvh<f32, 3>;
 
 /// Generate a [`TupleVec`] for [`proptest::strategy::Strategy`] from -10e10 to 10e10
 /// A small enough range to prevent most fp32 errors from breaking certain tests
@@ -614,7 +619,6 @@ pub fn create_n_cubes(n: usize, bounds: &TAabb3) -> Vec<Triangle> {
 }
 
 /// Loads the sponza model.
-#[cfg(feature = "bench")]
 pub fn load_sponza_scene() -> (Vec<Triangle>, TAabb3) {
     use std::fs::File;
     use std::io::BufReader;
@@ -679,310 +683,11 @@ pub fn randomly_transform_scene(
     indices.into_iter().collect()
 }
 
-/// Creates a [`Ray`] from the random `seed`. Mutates the `seed`.
+/// Creates a [`Ray`] from the random `seed`. Mutates the seed.
 /// The [`Ray`] origin will be inside the `bounds` and point to some other point inside this
 /// `bounds`.
-#[cfg(feature = "bench")]
 pub fn create_ray(seed: &mut u64, bounds: &TAabb3) -> TRay3 {
     let origin = next_point3(seed, bounds);
     let direction = next_point3(seed, bounds);
     TRay3::new(origin, direction.coords)
-}
-
-/// Benchmark the construction of a [`BoundingHierarchy`] with `n` triangles.
-#[cfg(feature = "bench")]
-fn build_n_triangles_bh<T: BoundingHierarchy<f32, 3>>(n: usize, b: &mut ::test::Bencher) {
-    let bounds = default_bounds();
-    let mut triangles = create_n_cubes(n, &bounds);
-    b.iter(|| {
-        T::build(&mut triangles);
-    });
-}
-
-/// Benchmark the construction of a [`BoundingHierarchy`] with 1,200 triangles.
-#[cfg(feature = "bench")]
-pub fn build_1200_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
-    build_n_triangles_bh::<T>(100, b);
-}
-
-/// Benchmark the construction of a [`BoundingHierarchy`] with 12,000 triangles.
-#[cfg(feature = "bench")]
-pub fn build_12k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
-    build_n_triangles_bh::<T>(1_000, b);
-}
-
-/// Benchmark the construction of a [`BoundingHierarchy`] with 120,000 triangles.
-#[cfg(feature = "bench")]
-pub fn build_120k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
-    build_n_triangles_bh::<T>(10_000, b);
-}
-
-#[cfg(all(feature = "bench", feature = "rayon"))]
-fn build_n_triangles_bh_rayon<T: BoundingHierarchy<f32, 3>>(n: usize, b: &mut ::test::Bencher) {
-    let bounds = default_bounds();
-    let mut triangles = create_n_cubes(n, &bounds);
-    b.iter(|| {
-        T::build_par(&mut triangles);
-    });
-}
-
-/// Benchmark the construction of a [`BoundingHierarchy`] with 1,200 triangles.
-#[cfg(all(feature = "bench", feature = "rayon"))]
-pub fn build_1200_triangles_bh_rayon<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
-    build_n_triangles_bh_rayon::<T>(100, b);
-}
-
-/// Benchmark the construction of a [`BoundingHierarchy`] with 12,000 triangles.
-#[cfg(all(feature = "bench", feature = "rayon"))]
-pub fn build_12k_triangles_bh_rayon<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
-    build_n_triangles_bh_rayon::<T>(1_000, b);
-}
-
-/// Benchmark the construction of a [`BoundingHierarchy`] with 120,000 triangles.
-#[cfg(all(feature = "bench", feature = "rayon"))]
-pub fn build_120k_triangles_bh_rayon<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
-    build_n_triangles_bh_rayon::<T>(10_000, b);
-}
-
-/// Benchmark intersecting the `triangles` list without acceleration structures.
-#[cfg(feature = "bench")]
-pub fn intersect_list(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::test::Bencher) {
-    let mut seed = 0;
-    b.iter(|| {
-        let ray = create_ray(&mut seed, bounds);
-
-        // Iterate over the list of triangles.
-        for triangle in triangles {
-            std::hint::black_box(ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c));
-        }
-    });
-}
-
-#[cfg(feature = "bench")]
-#[bench]
-/// Benchmark intersecting 120,000 triangles directly.
-fn bench_intersect_120k_triangles_list(b: &mut ::test::Bencher) {
-    let bounds = default_bounds();
-    let triangles = create_n_cubes(10_000, &bounds);
-    intersect_list(&triangles, &bounds, b);
-}
-
-#[cfg(feature = "bench")]
-#[bench]
-/// Benchmark intersecting Sponza.
-fn bench_intersect_sponza_list(b: &mut ::test::Bencher) {
-    let (triangles, bounds) = load_sponza_scene();
-    intersect_list(&triangles, &bounds, b);
-}
-
-/// Benchmark intersecting the `triangles` list with [`Aabb`] checks, but without acceleration
-/// structures.
-#[cfg(feature = "bench")]
-pub fn intersect_list_aabb(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::test::Bencher) {
-    let mut seed = 0;
-    b.iter(|| {
-        let ray = create_ray(&mut seed, bounds);
-
-        // Iterate over the list of triangles.
-        for triangle in triangles {
-            // First test whether the ray intersects the `Aabb` of the triangle.
-            if ray.intersects_aabb(&triangle.aabb()) {
-                std::hint::black_box(ray.intersects_triangle(
-                    &triangle.a,
-                    &triangle.b,
-                    &triangle.c,
-                ));
-            }
-        }
-    });
-}
-
-#[cfg(feature = "bench")]
-#[bench]
-/// Benchmark intersecting 120,000 triangles with preceeding [`Aabb`] tests.
-fn bench_intersect_120k_triangles_list_aabb(b: &mut ::test::Bencher) {
-    let bounds = default_bounds();
-    let triangles = create_n_cubes(10_000, &bounds);
-    intersect_list_aabb(&triangles, &bounds, b);
-}
-
-#[cfg(feature = "bench")]
-#[bench]
-/// Benchmark intersecting 120,000 triangles with preceeding [`Aabb`] tests.
-fn bench_intersect_sponza_list_aabb(b: &mut ::test::Bencher) {
-    let (triangles, bounds) = load_sponza_scene();
-    intersect_list_aabb(&triangles, &bounds, b);
-}
-
-#[cfg(feature = "bench")]
-pub fn intersect_bh<T: BoundingHierarchy<f32, 3>>(
-    bh: &T,
-    triangles: &[Triangle],
-    bounds: &TAabb3,
-    b: &mut ::test::Bencher,
-) {
-    let mut seed = 0;
-    b.iter(|| {
-        let ray = create_ray(&mut seed, bounds);
-
-        // Traverse the [`BoundingHierarchy`] recursively.
-        let hits = bh.traverse(&ray, triangles);
-
-        // Traverse the resulting list of positive `Aabb` tests
-        for triangle in &hits {
-            ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c);
-        }
-    });
-}
-
-/// Benchmark the traversal of a [`BoundingHierarchy`] with `n` triangles.
-#[cfg(feature = "bench")]
-pub fn intersect_n_triangles<T: BoundingHierarchy<f32, 3>>(n: usize, b: &mut ::test::Bencher) {
-    let bounds = default_bounds();
-    let mut triangles = create_n_cubes(n, &bounds);
-    let bh = T::build(&mut triangles);
-    intersect_bh(&bh, &triangles, &bounds, b)
-}
-
-/// Benchmark the traversal of a [`BoundingHierarchy`] with 1,200 triangles.
-#[cfg(feature = "bench")]
-pub fn intersect_1200_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
-    intersect_n_triangles::<T>(100, b);
-}
-
-/// Benchmark the traversal of a [`BoundingHierarchy`] with 12,000 triangles.
-#[cfg(feature = "bench")]
-pub fn intersect_12k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
-    intersect_n_triangles::<T>(1_000, b);
-}
-
-/// Benchmark the traversal of a [`BoundingHierarchy`] with 120,000 triangles.
-#[cfg(feature = "bench")]
-pub fn intersect_120k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
-    intersect_n_triangles::<T>(10_000, b);
-}
-
-/// Benchmark nearest_to on a `triangles` list without acceleration structures.
-#[cfg(feature = "bench")]
-pub fn nearest_to_list(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::test::Bencher) {
-    let mut seed = 0;
-    b.iter(|| {
-        let point = next_point3(&mut seed, bounds);
-
-        let mut min_dist = f32::MAX;
-        // Iterate over the list of triangles.
-        for triangle in triangles {
-            let dist = std::hint::black_box(triangle.distance_squared(point));
-            if dist < min_dist {
-                min_dist = dist;
-            }
-        }
-
-        std::hint::black_box(min_dist)
-    });
-}
-
-/// Benchmark nearest_to on a `triangles` list with [`Aabb`] checks, but without acceleration
-/// structures.
-#[cfg(feature = "bench")]
-pub fn nearest_to_list_aabb(triangles: &[Triangle], bounds: &TAabb3, b: &mut ::test::Bencher) {
-    let mut seed = 0;
-    b.iter(|| {
-        let point = next_point3(&mut seed, bounds);
-
-        // Note: all distances here are squared.
-        let mut min_dist = f32::MAX;
-        // Iterate over the list of triangles.
-        for triangle in triangles {
-            // First test whether the point-aabb distance is within bounds.
-            let aabb_min_dist = std::hint::black_box(triangle.aabb().min_distance_squared(point));
-            if aabb_min_dist < min_dist {
-                let dist = std::hint::black_box(triangle.distance_squared(point));
-                if dist < min_dist {
-                    min_dist = dist;
-                }
-            }
-        }
-
-        std::hint::black_box(min_dist)
-    });
-}
-
-#[cfg(feature = "bench")]
-#[bench]
-/// Benchmark nearest_to on 120,000 triangles directly.
-fn bench_nearest_to_120k_triangles_list(b: &mut ::test::Bencher) {
-    let bounds = default_bounds();
-    let triangles = create_n_cubes(10_000, &bounds);
-    nearest_to_list(&triangles, &bounds, b);
-}
-
-#[cfg(feature = "bench")]
-#[bench]
-/// Benchmark nearest_to on Sponza.
-fn bench_nearest_to_sponza_list(b: &mut ::test::Bencher) {
-    let (triangles, bounds) = load_sponza_scene();
-    nearest_to_list(&triangles, &bounds, b);
-}
-
-#[cfg(feature = "bench")]
-#[bench]
-/// Benchmark nearest_to on 120,000 triangles with preceeding [`Aabb`] tests.
-fn bench_nearest_to_120k_triangles_list_aabb(b: &mut ::test::Bencher) {
-    let bounds = default_bounds();
-    let triangles = create_n_cubes(10_000, &bounds);
-    nearest_to_list_aabb(&triangles, &bounds, b);
-}
-
-#[cfg(feature = "bench")]
-#[bench]
-/// Benchmark nearest_to on 120,000 triangles with preceeding [`Aabb`] tests.
-fn bench_nearest_to_sponza_list_aabb(b: &mut ::test::Bencher) {
-    let (triangles, bounds) = load_sponza_scene();
-    nearest_to_list_aabb(&triangles, &bounds, b);
-}
-
-#[cfg(feature = "bench")]
-pub fn nearest_to_bh<T: BoundingHierarchy<f32, 3>>(
-    bh: &T,
-    triangles: &[Triangle],
-    bounds: &TAabb3,
-    b: &mut ::test::Bencher,
-) {
-    let mut seed = 0;
-    b.iter(|| {
-        let point = next_point3(&mut seed, bounds);
-
-        // Traverse the [`BoundingHierarchy`] recursively.
-        let _best_result = std::hint::black_box(
-            bh.nearest_to(std::hint::black_box(point), std::hint::black_box(triangles)),
-        );
-    });
-}
-
-/// Benchmark the nearest_to traversal of a [`BoundingHierarchy`] with `n` triangles.
-#[cfg(feature = "bench")]
-pub fn nearest_to_n_triangles<T: BoundingHierarchy<f32, 3>>(n: usize, b: &mut ::test::Bencher) {
-    let bounds = default_bounds();
-    let mut triangles = create_n_cubes(n, &bounds);
-    let bh = T::build(&mut triangles);
-    nearest_to_bh(&bh, &triangles, &bounds, b)
-}
-
-/// Benchmark the nearest_to traversal of a [`BoundingHierarchy`] with 1,200 triangles.
-#[cfg(feature = "bench")]
-pub fn nearest_to_1200_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
-    nearest_to_n_triangles::<T>(100, b);
-}
-
-/// Benchmark the nearest_to traversal of a [`BoundingHierarchy`] with 12,000 triangles.
-#[cfg(feature = "bench")]
-pub fn nearest_to_12k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
-    nearest_to_n_triangles::<T>(1_000, b);
-}
-
-/// Benchmark the nearest_to traversal of a [`BoundingHierarchy`] with 120,000 triangles.
-#[cfg(feature = "bench")]
-pub fn nearest_to_120k_triangles_bh<T: BoundingHierarchy<f32, 3>>(b: &mut ::test::Bencher) {
-    nearest_to_n_triangles::<T>(10_000, b);
 }

@@ -27,13 +27,13 @@ clippy:
 test:
     cargo test
 
-# run benchmarks
+# run benchmarks (with default features, incl. SIMD)
 bench:
-    cargo bench --features bench
+    cargo bench
 
 # run benchmarks (without SIMD)
 bench_no_simd:
-    cargo bench --no-default-features --features std,rayon,bench
+    cargo bench --no-default-features --features std,rayon
 
 # fuzz the library
 fuzz:
