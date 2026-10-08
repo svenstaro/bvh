@@ -247,6 +247,57 @@ mod tests {
         (ray, aabb)
     }
 
+    /// The SIMD kernels selected for `f64` must agree with the scalar
+    /// [`Ray::intersection_slice_for_aabb`] reference in every supported
+    /// dimension.
+    #[test]
+    fn intersects_aabb_f64_matches_scalar_reference() {
+        use crate::{aabb::Aabb, ray::Ray};
+        use nalgebra::{Point, SVector};
+        use rand::{RngExt, SeedableRng, rngs::StdRng};
+
+        fn random(rng: &mut StdRng) -> f64 {
+            rng.random::<f64>() * 4.0 - 2.0
+        }
+
+        // A random ray/box pair in `D` dimensions.
+        fn check<const D: usize>(rng: &mut StdRng) {
+            let point = |rng: &mut StdRng| Point::from(SVector::from_fn(|_, _| random(rng)));
+            let ray: Ray<f64, D> = Ray::new(point(rng), SVector::from_fn(|_, _| random(rng)));
+            let aabb: Aabb<f64, D> = Aabb::empty().grow(&point(rng)).grow(&point(rng));
+            assert_eq!(
+                ray.intersects_aabb(&aabb),
+                ray.intersection_slice_for_aabb(&aabb).is_some(),
+                "ray: {ray:?}, aabb: {aabb:?}"
+            );
+        }
+
+        let mut rng = StdRng::from_seed([0; 32]);
+        for _ in 0..1000 {
+            check::<2>(&mut rng);
+            check::<3>(&mut rng);
+            check::<4>(&mut rng);
+        }
+
+        // A ray aligned with a box plane produces NaN slab values; every
+        // kernel must treat this as a non-intersection.
+        fn check_plane_aligned<const D: usize>() {
+            let ray: Ray<f64, D> = Ray::new(
+                Point::from(SVector::from_fn(|i, _| if i == 1 { -5.0 } else { 0.0 })),
+                SVector::from_fn(|i, _| if i == 1 { 1.0 } else { 0.0 }),
+            );
+            let aabb: Aabb<f64, D> = Aabb::with_bounds(
+                Point::from(SVector::from_fn(|i, _| if i == 1 { -1.0 } else { 0.0 })),
+                Point::from(SVector::from_fn(|_, _| 1.0)),
+            );
+            assert!(!ray.intersects_aabb(&aabb));
+            assert!(ray.intersection_slice_for_aabb(&aabb).is_none());
+        }
+        check_plane_aligned::<2>();
+        check_plane_aligned::<3>();
+        check_plane_aligned::<4>();
+    }
+
     /// Make sure a ray can intersect an AABB with no depth.
     #[test]
     fn ray_hits_zero_depth_aabb() {
@@ -432,10 +483,13 @@ mod tests {
 #[cfg(all(feature = "bench", test))]
 mod bench {
     use alloc::vec::Vec;
+    use nalgebra::{Point, SVector};
     use rand::rngs::StdRng;
     use rand::{RngExt, SeedableRng};
     use test::{Bencher, black_box};
 
+    use crate::aabb::Aabb;
+    use crate::ray::Ray;
     use crate::testbase::{TAabb3, TRay3, TupleVec, tuple_to_point, tuple_to_vector};
 
     /// Generate a random deterministic `Ray`.
@@ -464,10 +518,63 @@ mod bench {
         black_box((ray, boxes))
     }
 
+    /// Generate an `f64` ray and boxes in `D` dimensions for the
+    /// `bench_intersects_aabb_f64_*` benchmarks. Coordinates span both signs
+    /// so misses, hits and box-plane alignment all occur.
+    fn random_ray_and_boxes_f64<const D: usize>() -> (Ray<f64, D>, Vec<Aabb<f64, D>>) {
+        let seed = [0; 32];
+        let mut rng = StdRng::from_seed(seed);
+        let random = |rng: &mut StdRng| rng.random::<f64>() * 4.0 - 2.0;
+        let point = |rng: &mut StdRng| Point::from(SVector::from_fn(|_, _| random(rng)));
+
+        let ray = Ray::new(point(&mut rng), SVector::from_fn(|_, _| random(&mut rng)));
+        let boxes = (0..1000)
+            .map(|_| Aabb::empty().grow(&point(&mut rng)).grow(&point(&mut rng)))
+            .collect::<Vec<_>>();
+
+        black_box((ray, boxes))
+    }
+
     /// Benchmark for the optimized intersection algorithm.
     #[bench]
     fn bench_intersects_aabb(b: &mut Bencher) {
         let (ray, boxes) = random_ray_and_boxes();
+
+        b.iter(|| {
+            for aabb in &boxes {
+                black_box(ray.intersects_aabb(aabb));
+            }
+        });
+    }
+
+    /// Benchmark for the 2-lane SIMD kernel selected for `Ray<f64, 2>`.
+    #[bench]
+    fn bench_intersects_aabb_f64_2d(b: &mut Bencher) {
+        let (ray, boxes) = random_ray_and_boxes_f64::<2>();
+
+        b.iter(|| {
+            for aabb in &boxes {
+                black_box(ray.intersects_aabb(aabb));
+            }
+        });
+    }
+
+    /// Benchmark for the padded 4-lane SIMD kernel selected for `Ray<f64, 3>`.
+    #[bench]
+    fn bench_intersects_aabb_f64_3d(b: &mut Bencher) {
+        let (ray, boxes) = random_ray_and_boxes_f64::<3>();
+
+        b.iter(|| {
+            for aabb in &boxes {
+                black_box(ray.intersects_aabb(aabb));
+            }
+        });
+    }
+
+    /// Benchmark for the 4-lane SIMD kernel selected for `Ray<f64, 4>`.
+    #[bench]
+    fn bench_intersects_aabb_f64_4d(b: &mut Bencher) {
+        let (ray, boxes) = random_ray_and_boxes_f64::<4>();
 
         b.iter(|| {
             for aabb in &boxes {

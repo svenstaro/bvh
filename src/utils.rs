@@ -25,7 +25,7 @@ use num_traits::Float;
 ///
 /// Note: This exists because [`std::cmp::min`] requires Ord which floating point types do not satisfy
 #[inline(always)]
-#[allow(dead_code)]
+#[cfg(feature = "simd")]
 pub fn fast_min<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
     if x < y { x } else { y }
 }
@@ -48,7 +48,6 @@ pub fn fast_min<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
 ///
 /// Note: This exists because [`std::cmp::max`] requires Ord which floating point types do not satisfy
 #[inline(always)]
-#[allow(dead_code)]
 pub fn fast_max<T: Scalar + Copy + PartialOrd>(x: T, y: T) -> T {
     if x > y { x } else { y }
 }
