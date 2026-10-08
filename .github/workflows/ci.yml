@@ -7,9 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: nightly
           components: rustfmt
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -20,12 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: nightly
           components: clippy
+      # Not `--all-features`: `bench` requires nightly.
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --features serde,simd -- -D warnings
       - name: Run clippy (fuzzer)
         run: cargo clippy --manifest-path fuzz/Cargo.toml --all-targets --all-features -- -D warnings
 
@@ -33,9 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Install cargo-msrv
         uses: baptiste0928/cargo-install@v3
@@ -50,10 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly
-          components: clippy
+      - uses: dtolnay/rust-toolchain@stable
       - run: cargo install cargo-tarpaulin
       - run: cargo tarpaulin --out xml
       - name: Upload coverage report to codecov.io
@@ -71,9 +65,13 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          # use a known good version (e.g. on Jan 14 2025, a faulty `rustc` nightly panicked)
+          # cargo-fuzz requires nightly. Use a known good version
+          # (e.g. on Jan 14 2025, a faulty `rustc` nightly panicked).
           toolchain: nightly-2025-11-12
           components: rust-src
+
+      - name: Check benchmarks (`feature(test)` requires nightly)
+        run: cargo check --features bench --all-targets
 
       - name: Install cargo-fuzz
         uses: baptiste0928/cargo-install@v3
@@ -86,18 +84,15 @@ jobs:
           RUST_BACKTRACE=1 cargo fuzz run fuzz -- -max_total_time=60
 
   build-and-test-no-std:
-    name: CI with ${{ matrix.rust }} on ${{ matrix.os }} [no STD]
+    name: CI on ${{ matrix.os }} [no STD]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        rust: [stable, nightly]
 
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: cargo build --no-default-features
         run: cargo build --no-default-features
@@ -105,18 +100,15 @@ jobs:
       # unit tests cannot be run in no-std environment
 
   build-and-test-no-simd:
-    name: CI with ${{ matrix.rust }} on ${{ matrix.os }} [no SIMD]
+    name: CI on ${{ matrix.os }} [no SIMD]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        rust: [stable, nightly]
 
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.rust }}
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: cargo build
         run: cargo build
@@ -125,7 +117,7 @@ jobs:
         run: cargo test
 
   build-and-test-simd:
-    name: CI with nightly on ${{ matrix.os }} [SIMD]
+    name: CI on ${{ matrix.os }} [SIMD]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -134,7 +126,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: cargo build
         run: cargo build --features simd

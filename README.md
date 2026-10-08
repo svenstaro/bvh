@@ -84,7 +84,7 @@ The currently optimized intersections for ray-aabb are:
 Type: f32, Dimension: 2,3,4
 Type: f64, Dimension: 2,3,4
 
-To enable these optimziations, you must build with the `nightly` toolchain and enable the `simd` flag.
+To enable these optimziations, build with the `simd` feature enabled.
 
 ## Optimization
 

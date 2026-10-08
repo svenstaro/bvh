@@ -5,8 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## 0.12.0 - 2025-??-??
+## 0.12.0 - 2026-??-??
 - Replace hand-written x86_64 SIMD with safe and portable [`wide`](https://crates.io/crates/wide) SIMD. [#158](https://github.com/svenstaro/bvh/pull/158) (thanks @finnbear)
+- The `simd` feature no longer requires nightly Rust.
 - Add support for `no_std` targets and add `std` as a default feature. [#166](https://github.com/svenstaro/bvh/pull/166)
 - Update Rust edition to 2024
 - Bump MSRV to 1.90
