@@ -25,6 +25,8 @@ jobs:
       # Not `--all-features`: `bench` requires nightly.
       - name: Run clippy
         run: cargo clippy --all-targets --features serde,simd -- -D warnings
+      - name: Run clippy (no SIMD)
+        run: cargo clippy --all-targets --no-default-features --features std,rayon -- -D warnings
       - name: Run clippy (fuzzer)
         run: cargo clippy --manifest-path fuzz/Cargo.toml --all-targets --all-features -- -D warnings
 

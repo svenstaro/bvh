@@ -13,12 +13,14 @@ fmt:
 # to a different feature than the code that relies on it.
 check:
     cargo check
+    cargo check --no-default-features --features std,rayon
     cargo check --all-features
     cargo check --manifest-path fuzz/Cargo.toml
 
 # run clippy on src and fuzzer
 clippy:
     cargo clippy
+    cargo clippy --no-default-features --features std,rayon
     cargo clippy --manifest-path fuzz/Cargo.toml
 
 # test default features
