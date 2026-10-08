@@ -72,8 +72,9 @@
 //! ## Features
 //!
 //! - `serde` (default **disabled**) - adds `Serialize` and `Deserialize` implementations for some types
-//! - `rayon` (default **enabled**) - parallelize building of the BVH
-//! - `simd` (default **enabled**) - adds explicitly written SIMD instructions for certain architectures
+//! - `rayon` (default **enabled**) - parallelize building of the BVH (via [`rayon`](https://crates.io/crates/rayon))
+//! - `simd` (default **enabled**) - enables explicit SIMD kernels (via [`wide`](https://crates.io/crates/wide)) for ray-AABB intersection
+//! - `bench` (default **disabled**) - enables the benchmark suite; requires a nightly toolchain
 //!
 
 #![no_std]

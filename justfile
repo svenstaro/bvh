@@ -27,13 +27,13 @@ clippy:
 test:
     cargo test
 
-# run benchmarks (without SIMD)
+# run benchmarks
 bench:
     cargo bench --features bench
 
-# run benchmarks (with SIMD)
-bench_simd:
-    cargo bench --features bench,simd
+# run benchmarks (without SIMD)
+bench_no_simd:
+    cargo bench --no-default-features --features std,rayon,bench
 
 # fuzz the library
 fuzz:
@@ -56,4 +56,4 @@ find-msrv:
 
 # verify the rust-version in Cargo.toml is compatible
 verify-msrv:
-    cargo msrv verify --ignore-lockfile 
+    cargo msrv verify --ignore-lockfile
