@@ -126,7 +126,6 @@ pub fn build_some_bh<BH: BoundingHierarchy<f32, 3>>() -> (Vec<UnitBox>, BH) {
 }
 
 /// Creates a [`BoundingHierarchy`] for a fixed scene structure in parallel.
-#[cfg(feature = "rayon")]
 pub fn build_some_bh_rayon<BH: BoundingHierarchy<f32, 3>>() -> (Vec<UnitBox>, BH) {
     let mut boxes = generate_aligned_boxes();
     let bh = BH::build_par(&mut boxes);
@@ -167,7 +166,6 @@ pub fn traverse_some_bh<BH: BoundingHierarchy<f32, 3>>() {
 }
 
 /// Perform some fixed intersection tests on [`BoundingHierarchy`] structures.
-#[cfg(feature = "rayon")]
 pub fn traverse_some_bh_rayon<BH: BoundingHierarchy<f32, 3>>() {
     let (all_shapes, bh) = build_some_bh_rayon::<BH>();
     traverse_some_built_bh(&all_shapes, bh);
