@@ -4,7 +4,7 @@
 //! [`BvhNode`]: struct.BvhNode.html
 //!
 use alloc::vec::Vec;
-use core::{fmt, marker};
+use core::fmt;
 use core::{mem::MaybeUninit, slice};
 
 use super::{
@@ -222,10 +222,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
         &self,
         origin: nalgebra::Point<T, D>,
         shapes: &'a [Shape],
-    ) -> Option<(&'a Shape, T)>
-    where
-        Self: marker::Sized,
-    {
+    ) -> Option<(&'a Shape, T)> {
         if self.nodes.is_empty() {
             return None;
         }

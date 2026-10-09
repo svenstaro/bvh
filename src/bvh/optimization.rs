@@ -67,10 +67,11 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Adds a shape with the given index to the `BVH`
     /// Significantly slower at building a `BVH` than the full build or rebuild option
     /// Useful for moving a small subset of nodes around in a large `BVH`
-    pub fn add_shape<Shape: BHShape<T, D>>(&mut self, shapes: &mut [Shape], new_shape_index: usize)
-    where
-        T: core::ops::Div<Output = T>,
-    {
+    pub fn add_shape<Shape: BHShape<T, D>>(
+        &mut self,
+        shapes: &mut [Shape],
+        new_shape_index: usize,
+    ) {
         let mut node_index = 0;
         let new_shape = &shapes[new_shape_index];
         let shape_aabb = new_shape.aabb();
