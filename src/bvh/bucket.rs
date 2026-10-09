@@ -26,13 +26,10 @@ mod inner {
 
 #[cfg(not(feature = "std"))]
 mod inner {
-    use alloc::vec::Vec;
-
-    use crate::bvh::{ShapeIndex, bucket::BucketArray};
+    use super::BucketArray;
 
     pub fn with_buckets<R>(closure: impl FnOnce(&mut BucketArray) -> R) -> R {
-        const EMPTY: Vec<ShapeIndex> = Vec::new();
-        closure(&mut [EMPTY; 6])
+        closure(&mut Default::default())
     }
 }
 
