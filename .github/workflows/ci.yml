@@ -29,6 +29,16 @@ jobs:
       - name: Run clippy (fuzzer)
         run: cargo clippy --manifest-path fuzz/Cargo.toml --all-targets --all-features -- -D warnings
 
+  docs:
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: --deny warnings
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build documentation
+        run: cargo doc --no-deps --all-features
+
   msrv:
     runs-on: ubuntu-latest
     steps:
