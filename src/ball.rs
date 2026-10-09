@@ -38,7 +38,7 @@ impl<T: BHValue, const D: usize> Ball<T, D> {
     /// assert_eq!(ball.radius, 1.0)
     /// ```
     ///
-    /// [`Ball`]: struct.Ball.html
+    /// [`Ball`]: crate::ball::Ball
     pub fn new(center: Point<T, D>, radius: T) -> Self {
         debug_assert!(radius >= T::from_f32(0.0).unwrap());
         Self { center, radius }
@@ -57,7 +57,7 @@ impl<T: BHValue, const D: usize> Ball<T, D> {
     /// assert!(ball.contains(&point));
     /// ```
     ///
-    /// [`Ball`]: struct.Ball.html
+    /// [`Ball`]: crate::ball::Ball
     pub fn contains(&self, point: &Point<T, D>) -> bool {
         let mut distance_squared = T::zero();
         for i in 0..D {
@@ -80,8 +80,8 @@ impl<T: BHValue, const D: usize> Ball<T, D> {
     /// assert!(ball.intersects_aabb(&aabb));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
-    /// [`Ball`]: struct.Ball.html
+    /// [`Aabb`]: crate::aabb::Aabb
+    /// [`Ball`]: crate::ball::Ball
     pub fn intersects_aabb(&self, aabb: &Aabb<T, D>) -> bool {
         // https://gamemath.com/book/geomtests.html#intersection_sphere_aabb
         // Finding the point in/on the AABB that is closest to the ball's center or,

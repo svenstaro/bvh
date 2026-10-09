@@ -12,15 +12,15 @@ use crate::point_query::PointDistance;
 /// A structure of a node of a flat [`Bvh`]. The structure of the nodes allows for an
 /// iterative traversal approach without the necessity to maintain a stack or queue.
 ///
-/// [`Bvh`]: ../bvh/struct.Bvh.html
+/// [`Bvh`]: crate::bvh::Bvh
 ///
 pub struct FlatNode<T: BHValue, const D: usize> {
     /// The [`Aabb`] of the [`Bvh`] node. Prior to testing the [`Aabb`] bounds,
     /// the `entry_index` must be checked. In case the entry_index is [`u32::MAX`],
     /// the [`Aabb`] is undefined.
     ///
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
-    /// [`Bvh`]: ../bvh/struct.Bvh.html
+    /// [`Aabb`]: crate::aabb::Aabb
+    /// [`Bvh`]: crate::bvh::Bvh
     /// [`u32::MAX`]: https://doc.rust-lang.org/std/u32/constant.MAX.html
     ///
     pub aabb: Aabb<T, D>,
@@ -30,14 +30,14 @@ pub struct FlatNode<T: BHValue, const D: usize> {
     /// Leaf nodes contain a shape index and an exit index. In leaf nodes the
     /// [`Aabb`] is undefined.
     ///
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     /// [`u32::MAX`]: https://doc.rust-lang.org/std/u32/constant.MAX.html
     ///
     pub entry_index: u32,
 
     /// The index of the [`FlatNode`] to jump to, if the [`Aabb`] test is negative.
     ///
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub exit_index: u32,
 
@@ -91,7 +91,7 @@ impl<T: BHValue + Float, const D: usize> BvhNode<T, D> {
     /// Flattens the [`Bvh`], so that it can be traversed in an iterative manner.
     /// This method constructs custom flat nodes using the `constructor`.
     ///
-    /// [`Bvh`]: ../bvh/struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     pub fn flatten_custom<F, FNodeType>(
         &self,
@@ -146,9 +146,9 @@ impl<T: BHValue + Float, const D: usize> BvhNode<T, D> {
 /// A flat [`Bvh`]. Represented by a vector of [`FlatNode`]s. The [`FlatBvh`] is designed for use
 /// where a recursive traversal of a data structure is not possible, for example shader programs.
 ///
-/// [`Bvh`]: ../bvh/struct.Bvh.html
-/// [`FlatNode`]: struct.FlatNode.html
-/// [`FlatBvh`]: struct.FlatBvh.html
+/// [`Bvh`]: crate::bvh::Bvh
+/// [`FlatNode`]: crate::flat_bvh::FlatNode
+/// [`FlatBvh`]: crate::flat_bvh::FlatBvh
 ///
 pub type FlatBvh<T, const D: usize> = Vec<FlatNode<T, D>>;
 
@@ -164,7 +164,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// 3 - u32: The exit index
     /// 4 - u32: The shape index
     ///
-    /// [`Bvh`]: ../bvh/struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     /// # Example
     ///
@@ -252,7 +252,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
 
     /// Flattens the [`Bvh`] so that it can be traversed iteratively.
     ///
-    /// [`Bvh`]: ../bvh/struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     /// # Example
     ///
@@ -322,8 +322,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
 impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for FlatBvh<T, D> {
     /// A [`FlatBvh`] is built from a regular [`Bvh`] using the [`Bvh::flatten`] method.
     ///
-    /// [`FlatBvh`]: struct.FlatBvh.html
-    /// [`Bvh`]: ../bvh/struct.Bvh.html
+    /// [`FlatBvh`]: crate::flat_bvh::FlatBvh
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     fn build<Shape: BHShape<T, D>>(shapes: &mut [Shape]) -> FlatBvh<T, D> {
         let bvh = Bvh::build(shapes);
@@ -332,7 +332,7 @@ impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for Flat
 
     /// Traverses a [`FlatBvh`] structure iteratively.
     ///
-    /// [`FlatBvh`]: struct.FlatBvh.html
+    /// [`FlatBvh`]: crate::flat_bvh::FlatBvh
     ///
     /// # Examples
     ///
@@ -437,7 +437,7 @@ impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for Flat
     /// a [`Bvh`] for nearest queries when possible.
     /// The flat bvh will still be much faster than a linear search.
     ///
-    /// [`FlatBvh`]: struct.FlatBvh.html
+    /// [`FlatBvh`]: crate::flat_bvh::FlatBvh
     ///
     /// # Examples
     ///
@@ -507,8 +507,8 @@ impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for Flat
     /// # assert_eq!(nearest_shape.unwrap().0.id, 5);
     /// ```
     ///
-    /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`BoundingHierarchy`]: crate::bounding_hierarchy::BoundingHierarchy
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     fn nearest_to<'a, Shape: BHShape<T, D> + PointDistance<T, D>>(
         &'a self,
@@ -559,7 +559,7 @@ impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for Flat
 
     /// Prints a textual representation of a [`FlatBvh`].
     ///
-    /// [`FlatBvh`]: struct.FlatBvh.html
+    /// [`FlatBvh`]: crate::flat_bvh::FlatBvh
     ///
     #[cfg(feature = "std")]
     fn pretty_print(&self) {

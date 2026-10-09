@@ -48,18 +48,18 @@ impl<T> BHValue for T where
 /// Describes a shape as referenced by a [`BoundingHierarchy`] leaf node.
 /// Knows the index of the node in the [`BoundingHierarchy`] it is in.
 ///
-/// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
+/// [`BoundingHierarchy`]: crate::bounding_hierarchy::BoundingHierarchy
 ///
 pub trait BHShape<T: BHValue, const D: usize>: Bounded<T, D> {
     /// Sets the index of the referenced [`BoundingHierarchy`] node.
     ///
-    /// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
+    /// [`BoundingHierarchy`]: crate::bounding_hierarchy::BoundingHierarchy
     ///
     fn set_bh_node_index(&mut self, _: usize);
 
     /// Gets the index of the referenced [`BoundingHierarchy`] node.
     ///
-    /// [`BoundingHierarchy`]: struct.BoundingHierarchy.html
+    /// [`BoundingHierarchy`]: crate::bounding_hierarchy::BoundingHierarchy
     ///
     fn bh_node_index(&self) -> usize;
 }
@@ -153,7 +153,7 @@ pub trait BoundingHierarchy<T: BHValue, const D: usize> {
     /// }
     /// ```
     ///
-    /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
+    /// [`BoundingHierarchy`]: crate::bounding_hierarchy::BoundingHierarchy
     ///
     fn build<Shape: BHShape<T, D>>(shapes: &mut [Shape]) -> Self;
 
@@ -240,8 +240,8 @@ pub trait BoundingHierarchy<T: BHValue, const D: usize> {
     /// let hit_shapes = bvh.traverse(&ray, &shapes);
     /// ```
     ///
-    /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`BoundingHierarchy`]: crate::bounding_hierarchy::BoundingHierarchy
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     fn traverse<'a, Query: IntersectsAabb<T, D>, Shape: BHShape<T, D>>(
         &'a self,
@@ -319,8 +319,8 @@ pub trait BoundingHierarchy<T: BHValue, const D: usize> {
     /// # assert_eq!(nearest_shape.unwrap().0.id, 5);
     /// ```
     ///
-    /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`BoundingHierarchy`]: crate::bounding_hierarchy::BoundingHierarchy
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     fn nearest_to<'a, Shape: BHShape<T, D> + PointDistance<T, D>>(
         &'a self,
@@ -330,7 +330,7 @@ pub trait BoundingHierarchy<T: BHValue, const D: usize> {
 
     /// Prints the [`BoundingHierarchy`] in a tree-like visualization.
     ///
-    /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
+    /// [`BoundingHierarchy`]: crate::bounding_hierarchy::BoundingHierarchy
     ///
     fn pretty_print(&self) {}
 }

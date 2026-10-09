@@ -27,7 +27,7 @@ pub trait IntersectsAabb<T: BHValue, const D: usize> {
     /// assert!(xy_plane.intersects_aabb(&aabb));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     fn intersects_aabb(&self, aabb: &Aabb<T, D>) -> bool;
 }

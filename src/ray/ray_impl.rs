@@ -23,7 +23,7 @@ pub struct Ray<T: BHValue, const D: usize> {
 
     /// Inverse (1/x) ray direction. Cached for use in [`Aabb`] intersections.
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub inv_direction: SVector<T, D>,
 }
@@ -65,7 +65,7 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
     /// assert_eq!(ray.direction, direction);
     /// ```
     ///
-    /// [`Ray`]: struct.Ray.html
+    /// [`Ray`]: crate::ray::Ray
     ///
     pub fn new(origin: Point<T, D>, direction: SVector<T, D>) -> Ray<T, D>
     where
@@ -99,8 +99,8 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
     /// assert!(ray.intersects_aabb(&aabb));
     /// ```
     ///
-    /// [`Ray`]: struct.Ray.html
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Ray`]: crate::ray::Ray
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn intersects_aabb(&self, aabb: &Aabb<T, D>) -> bool
     where

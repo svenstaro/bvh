@@ -3,7 +3,7 @@
 //! tree rotations and optimizes the Bvh using a SAH.
 //! Based on [`https://www.sci.utah.edu/~thiago/papers/rotations.pdf`]
 //!
-//! [`Bvh`]: struct.Bvh.html
+//! [`Bvh`]: crate::bvh::Bvh
 //!
 
 use crate::bounding_hierarchy::{BHShape, BHValue};
