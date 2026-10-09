@@ -14,8 +14,6 @@ use rand::rngs::SmallRng;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use std::collections::HashSet;
-use std::vec;
-use std::vec::Vec;
 
 use bvh::aabb::{Aabb, Bounded, IntersectsAabb};
 use bvh::ball::Sphere;
