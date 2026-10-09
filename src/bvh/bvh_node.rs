@@ -194,7 +194,6 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
         // Use fixed size arrays of `Bucket`s, and thread local index assignment vectors.
         with_buckets(move |bucket_assignments| {
             let mut buckets = [Bucket::empty(); NUM_BUCKETS];
-            buckets.fill(Bucket::empty());
             for b in bucket_assignments.iter_mut() {
                 b.clear();
             }
@@ -256,18 +255,10 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
 
             let (child_l_indices, child_r_indices) = indices.split_at_mut(l_count);
 
-            for (l_i, shape_index) in l_assignments
-                .iter()
-                .flat_map(|group| group.iter())
-                .enumerate()
-            {
+            for (l_i, shape_index) in l_assignments.iter().flatten().enumerate() {
                 child_l_indices[l_i] = *shape_index;
             }
-            for (r_i, shape_index) in r_assignments
-                .iter()
-                .flat_map(|group| group.iter())
-                .enumerate()
-            {
+            for (r_i, shape_index) in r_assignments.iter().flatten().enumerate() {
                 child_r_indices[r_i] = *shape_index;
             }
 
