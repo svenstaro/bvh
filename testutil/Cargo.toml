@@ -9,7 +9,6 @@ publish = false
 [dependencies]
 bvh = { path = "..", features = ["std"] }
 nalgebra = { workspace = true }
-num = "0.4.3"
 proptest = { workspace = true }
 obj-rs = "0.7"
 rand = { workspace = true }
