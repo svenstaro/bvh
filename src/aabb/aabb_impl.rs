@@ -640,8 +640,8 @@ impl<T: BHValue, const D: usize> Default for Aabb<T, D> {
     }
 }
 
-/// Make [`Aabb`]s indexable. `aabb[0]` gives a reference to the minimum bound.
-/// All other indices return a reference to the maximum bound.
+/// Make [`Aabb`]s indexable by bound: `aabb[0]` returns the minimum bound and
+/// `aabb[1]` the maximum bound.
 ///
 /// # Examples
 /// ```
@@ -655,6 +655,10 @@ impl<T: BHValue, const D: usize> Default for Aabb<T, D> {
 /// assert_eq!(aabb[0], min);
 /// assert_eq!(aabb[1], max);
 /// ```
+///
+/// # Panics
+///
+/// Panics if `index` is greater than `1`.
 ///
 /// [`Aabb`]: crate::aabb::Aabb
 ///
