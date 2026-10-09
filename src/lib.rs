@@ -71,6 +71,7 @@
 //!
 //! ## Features
 //!
+//! - `std` (default **enabled**) - enables the standard library; disable for `no_std` targets
 //! - `serde` (default **disabled**) - adds `Serialize` and `Deserialize` implementations for some types
 //! - `rayon` (default **enabled**) - parallelize building of the BVH (via [`rayon`](https://crates.io/crates/rayon))
 //! - `simd` (default **enabled**) - enables explicit SIMD kernels (via [`wide`](https://crates.io/crates/wide)) for ray-AABB intersection
