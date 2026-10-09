@@ -5,7 +5,6 @@
 //! builders and shape types. It intentionally depends only on `bvh`'s public
 //! API, so nothing here needs nightly or crate-internal access.
 
-use num::{FromPrimitive, Integer};
 use obj::raw::object::Polygon;
 use obj::*;
 use proptest::prelude::*;
@@ -446,7 +445,7 @@ impl PointDistance<f32, 3> for Triangle {
     }
 }
 
-impl<I: FromPrimitive + Integer> FromRawVertex<I> for Triangle {
+impl<I> FromRawVertex<I> for Triangle {
     fn process(
         vertices: Vec<(f32, f32, f32, f32)>,
         _: Vec<(f32, f32, f32)>,
