@@ -2,7 +2,7 @@
 //! rebuild, over random cube scenes and Sponza.
 
 use bvh_testutil::{
-    TAabb3, TBvh3, Triangle, create_n_cubes, default_bounds, load_sponza_scene,
+    TAabb3, TBvh3, Triangle, create_n_cubes, create_ray, default_bounds, load_sponza_scene,
     randomly_transform_scene,
 };
 
@@ -58,7 +58,7 @@ fn intersect_after_update_shapes(
         let updated = randomly_transform_scene(triangles, num_move, bounds, max_offset, &mut seed);
         bvh.update_shapes(&updated, triangles);
     }
-    intersect_traversed(&bvh, bencher, triangles, bounds, &mut seed);
+    intersect_traversed(&bvh, bencher, triangles, bounds);
 }
 
 /// Move `percent` of the triangles `iterations` times, then rebuild from
@@ -77,7 +77,7 @@ fn intersect_with_rebuild(
         randomly_transform_scene(triangles, num_move, bounds, max_offset, &mut seed);
     }
     let bvh = TBvh3::build(triangles);
-    intersect_traversed(&bvh, bencher, triangles, bounds, &mut seed);
+    intersect_traversed(&bvh, bencher, triangles, bounds);
 }
 
 /// Time random-ray traversal of `bvh` (setup happens before this call).
@@ -86,10 +86,12 @@ fn intersect_traversed(
     bencher: divan::Bencher,
     triangles: &[Triangle],
     bounds: &TAabb3,
-    seed: &mut u64,
 ) {
+    // Ray generation owns its own seed so traversal timing is identical across
+    // every `percent` argument, independent of the transform phase above.
+    let mut seed = 0;
     bencher.bench_local(|| {
-        let ray = bvh_testutil::create_ray(seed, bounds);
+        let ray = create_ray(&mut seed, bounds);
         for triangle in bvh.traverse(&ray, triangles) {
             divan::black_box(triangle);
         }
