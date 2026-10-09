@@ -23,7 +23,7 @@ impl<T: BHValue + fmt::Display, const D: usize> fmt::Display for Aabb<T, D> {
 
 /// A trait implemented by things which can be bounded by an [`Aabb`].
 ///
-/// [`Aabb`]: struct.Aabb.html
+/// [`Aabb`]: crate::aabb::Aabb
 ///
 pub trait Bounded<T: BHValue, const D: usize> {
     /// Returns the geometric bounds of this object in the form of an [`Aabb`].
@@ -50,7 +50,7 @@ pub trait Bounded<T: BHValue, const D: usize> {
     /// assert!(aabb.contains(&Point3::new(1.0,1.0,1.0)));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     fn aabb(&self) -> Aabb<T, D>;
 }
@@ -86,7 +86,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert_eq!(aabb.max.z, 1.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn with_bounds(min: Point<T, D>, max: Point<T, D>) -> Self {
         Aabb { min, max }
@@ -114,7 +114,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// # }
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn empty() -> Self {
         Self {
@@ -145,7 +145,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// # }
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn infinite() -> Self {
         Self {
@@ -169,7 +169,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(!aabb.contains(&point_outside));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     /// [`Point`]: nalgebra::Point
     ///
     pub fn contains(&self, p: &Point<T, D>) -> bool {
@@ -192,7 +192,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(!aabb.approx_contains_eps(&point_outside, 0.00001));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     /// [`Point3`]: nalgebra::Point3
     ///
     pub fn approx_contains_eps(&self, p: &Point<T, D>, epsilon: T) -> bool {
@@ -217,7 +217,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(aabb.approx_contains_aabb_eps(&inner_aabb, 0.00001));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     pub fn approx_contains_aabb_eps(&self, other: &Aabb<T, D>, epsilon: T) -> bool {
         self.approx_contains_eps(&other.min, epsilon)
             && self.approx_contains_eps(&other.max, epsilon)
@@ -236,7 +236,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(aabb1.intersects_aabb(&aabb2));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     pub fn intersects_aabb(&self, aabb: &Aabb<T, D>) -> bool {
         // TODO: Try adding a SIMD specialization.
         for i in 0..D {
@@ -263,7 +263,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(aabb.relative_eq(&other, 0.00001));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     pub fn relative_eq(&self, other: &Aabb<T, D>, epsilon: T) -> bool {
         let ep_vec = SVector::from_element(epsilon);
         (self.min - other.min).abs() < ep_vec && (self.max - other.max).abs() < ep_vec
@@ -298,7 +298,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(joint.contains(&point_inside_joint));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn join(&self, other: &Aabb<T, D>) -> Aabb<T, D> {
         Aabb::with_bounds(
@@ -340,7 +340,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(aabb.contains(&point_inside_joint));
     /// ```
     ///
-    /// [`Aabb::join`]: struct.Aabb.html
+    /// [`Aabb::join`]: crate::aabb::Aabb
     ///
     pub fn join_mut(&mut self, other: &Aabb<T, D>) {
         *self = self.join(other);
@@ -369,7 +369,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(!aabb2.contains(&point3));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     /// [`Point3`]: nalgebra::Point3
     ///
     pub fn grow(&self, other: &Point<T, D>) -> Aabb<T, D> {
@@ -402,7 +402,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(!aabb.contains(&point3));
     /// ```
     ///
-    /// [`Aabb::grow`]: struct.Aabb.html
+    /// [`Aabb::grow`]: crate::aabb::Aabb
     /// [`Point3`]: nalgebra::Point3
     ///
     pub fn grow_mut(&mut self, other: &Point<T, D>) {
@@ -435,8 +435,8 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(aabb1.contains(&center));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
-    /// [`Bounded`]: trait.Bounded.html
+    /// [`Aabb`]: crate::aabb::Aabb
+    /// [`Bounded`]: crate::aabb::Bounded
     ///
     pub fn join_bounded<B: Bounded<T, D>>(&self, other: &B) -> Aabb<T, D> {
         self.join(&other.aabb())
@@ -454,7 +454,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(size.x == 2.0 && size.y == 2.0 && size.z == 2.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn size(&self) -> SVector<T, D> {
         self.max - self.min
@@ -473,7 +473,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(half_size.x == 1.0 && half_size.y == 1.0 && half_size.z == 1.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     #[inline]
     pub fn half_size(&self) -> SVector<T, D> {
@@ -495,7 +495,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(center.x == 42.0 && center.y == 42.0 && center.z == 42.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     /// [`Point3`]: nalgebra::Point3
     ///
     pub fn center(&self) -> Point<T, D> {
@@ -521,7 +521,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(!aabb.is_empty());
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn is_empty(&self) -> bool {
         // Special trick here, we use a join/supremum to pick the highest values, and if the highest
@@ -546,7 +546,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(surface_area == 24.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn surface_area(&self) -> T {
         let size = self.size();
@@ -568,7 +568,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(volume == 8.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn volume(&self) -> T {
         self.size().product()
@@ -589,7 +589,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(axis == 0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn largest_axis(&self) -> usize {
         self.size().imax()
@@ -613,7 +613,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert_eq!((min_dist as f32).sqrt(), 10.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn min_distance_squared(&self, point: Point<T, D>) -> T {
         let half_size = self.half_size();
@@ -631,7 +631,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
 
 /// Default instance for [`Aabb`]s. Returns an [`Aabb`] which is [`empty()`].
 ///
-/// [`Aabb`]: struct.Aabb.html
+/// [`Aabb`]: crate::aabb::Aabb
 /// [`empty()`]: #method.empty
 ///
 impl<T: BHValue, const D: usize> Default for Aabb<T, D> {
@@ -656,7 +656,7 @@ impl<T: BHValue, const D: usize> Default for Aabb<T, D> {
 /// assert_eq!(aabb[1], max);
 /// ```
 ///
-/// [`Aabb`]: struct.Aabb.html
+/// [`Aabb`]: crate::aabb::Aabb
 ///
 impl<T: BHValue, const D: usize> Index<usize> for Aabb<T, D> {
     type Output = Point<T, D>;
@@ -683,8 +683,8 @@ impl<T: BHValue, const D: usize> Index<usize> for Aabb<T, D> {
 /// assert_eq!(aabb_aabb.max, aabb.max);
 /// ```
 ///
-/// [`Aabb`]: struct.Aabb.html
-/// [`Bounded`]: trait.Bounded.html
+/// [`Aabb`]: crate::aabb::Aabb
+/// [`Bounded`]: crate::aabb::Bounded
 ///
 impl<T: BHValue, const D: usize> Bounded<T, D> for Aabb<T, D> {
     fn aabb(&self) -> Aabb<T, D> {
@@ -705,7 +705,7 @@ impl<T: BHValue, const D: usize> Bounded<T, D> for Aabb<T, D> {
 /// assert!(aabb.contains(&point));
 /// ```
 ///
-/// [`Bounded`]: trait.Bounded.html
+/// [`Bounded`]: crate::aabb::Bounded
 /// [`Point3`]: nalgebra::Point3
 ///
 impl<T: BHValue, const D: usize> Bounded<T, D> for Point<T, D> {

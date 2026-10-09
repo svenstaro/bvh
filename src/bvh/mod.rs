@@ -1,6 +1,6 @@
 //! This module defines a [`Bvh`].
 //!
-//! [`Bvh`]: struct.Bvh.html
+//! [`Bvh`]: crate::bvh::Bvh
 //!
 
 mod bucket;

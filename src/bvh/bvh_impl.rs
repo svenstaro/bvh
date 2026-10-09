@@ -1,7 +1,7 @@
 //! This module defines [`Bvh`] and [`BvhNode`] and functions for building and traversing it.
 //!
-//! [`Bvh`]: struct.Bvh.html
-//! [`BvhNode`]: struct.BvhNode.html
+//! [`Bvh`]: crate::bvh::Bvh
+//! [`BvhNode`]: crate::bvh::BvhNode
 //!
 use alloc::vec::Vec;
 use core::fmt;
@@ -20,14 +20,14 @@ use crate::utils::joint_aabb_of_shapes;
 
 /// The [`Bvh`] data structure. Contains the list of [`BvhNode`]s.
 ///
-/// [`Bvh`]: struct.Bvh.html
+/// [`Bvh`]: crate::bvh::Bvh
 ///
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bvh<T: BHValue, const D: usize> {
     /// The list of nodes of the [`Bvh`].
     ///
-    /// [`Bvh`]: struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     pub nodes: Vec<BvhNode<T, D>>,
 }
@@ -35,7 +35,7 @@ pub struct Bvh<T: BHValue, const D: usize> {
 impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Creates a new [`Bvh`] from the `shapes` slice.
     ///
-    /// [`Bvh`]: struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     pub fn build<Shape: BHShape<T, D>>(shapes: &mut [Shape]) -> Bvh<T, D> {
         Self::build_with_executor(shapes, |left, right| {
@@ -48,7 +48,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// The executor parameter allows you to parallelize the build of the [`Bvh`]. Using something like rayon::join.
     /// You must call either build or build_with_executor on both arguments in order to succesfully complete the build.
     ///
-    /// [`Bvh`]: struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     pub fn build_with_executor<Shape: BHShape<T, D>>(
         shapes: &mut [Shape],
@@ -98,8 +98,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Traverses the [`Bvh`].
     /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn traverse<'a, Query: IntersectsAabb<T, D>, Shape: Bounded<T, D>>(
         &'a self,
@@ -122,8 +122,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements for which
     /// [`IntersectsAabb::intersects_aabb`] returns `true`.
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn traverse_iterator<'bvh, 'shape, Query: IntersectsAabb<T, D>, Shape: Bounded<T, D>>(
         &'bvh self,
@@ -139,8 +139,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     ///
     /// Time complexity: for first `O(log(n))`, for all `O(n*log(n))`
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn nearest_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
         &'bvh self,
@@ -156,8 +156,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     ///
     /// Time complexity: for first `O(log(n))`, for all `O(n*log(n))`.
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn farthest_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
         &'bvh self,
@@ -178,8 +178,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     ///
     /// Time complexity: for first `O(log(n))`, for all `O(n)`.
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn nearest_child_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
         &'bvh self,
@@ -200,8 +200,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     ///
     /// Time complexity: for first `O(log(n))`, for all `O(n)`.
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn farthest_child_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
         &'bvh self,
@@ -215,8 +215,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Returns the nearest shape to the query point and the distance to it.
     ///
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn nearest_to<'a, Shape: Bounded<T, D> + PointDistance<T, D>>(
         &self,
@@ -236,7 +236,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
 
     /// Prints the [`Bvh`] in a tree-like visualization.
     ///
-    /// [`Bvh`]: struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     #[cfg(feature = "std")]
     pub fn pretty_print(&self) {
