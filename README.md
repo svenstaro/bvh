@@ -117,6 +117,8 @@ All benchmarks were taken on a Ryzen 3900x.
 
 All benchmarks unless otherwise noted were captured with the `simd` feature off. Note that `cargo bench` now enables `simd` by default.
 
+> Note: the numbers below predate the migration to [`divan`](https://crates.io/crates/divan) and were captured with the previous nightly-only `#[bench]` harness, so the benchmark names no longer match the current `benches/` targets. They are kept as an approximate baseline and will be refreshed.
+
 ### Intersection via traversal of the list of triangles
 
 ```C
@@ -251,8 +253,12 @@ BVH requiring a check, thus leading to a higher intersection duration.
 
 ### Running the benchmark suite
 
-The benchmark suite uses features from the [test crate](https://doc.rust-lang.org/unstable-book/library-features/test.html) and therefore cannot be run on stable rust.
-Using a nightly toolchain, run `cargo bench --features bench`.
+The benchmarks use [`divan`](https://crates.io/crates/divan) and run on stable Rust:
+
+```sh
+cargo bench                    # default features (includes SIMD)
+cargo bench --no-default-features --features std,rayon   # without SIMD
+```
 
 ## Testing
 

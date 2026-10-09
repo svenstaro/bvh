@@ -12,15 +12,15 @@ use crate::point_query::PointDistance;
 /// A structure of a node of a flat [`Bvh`]. The structure of the nodes allows for an
 /// iterative traversal approach without the necessity to maintain a stack or queue.
 ///
-/// [`Bvh`]: ../bvh/struct.Bvh.html
+/// [`Bvh`]: crate::bvh::Bvh
 ///
 pub struct FlatNode<T: BHValue, const D: usize> {
     /// The [`Aabb`] of the [`Bvh`] node. Prior to testing the [`Aabb`] bounds,
     /// the `entry_index` must be checked. In case the entry_index is [`u32::MAX`],
     /// the [`Aabb`] is undefined.
     ///
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
-    /// [`Bvh`]: ../bvh/struct.Bvh.html
+    /// [`Aabb`]: crate::aabb::Aabb
+    /// [`Bvh`]: crate::bvh::Bvh
     /// [`u32::MAX`]: https://doc.rust-lang.org/std/u32/constant.MAX.html
     ///
     pub aabb: Aabb<T, D>,
@@ -30,14 +30,14 @@ pub struct FlatNode<T: BHValue, const D: usize> {
     /// Leaf nodes contain a shape index and an exit index. In leaf nodes the
     /// [`Aabb`] is undefined.
     ///
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     /// [`u32::MAX`]: https://doc.rust-lang.org/std/u32/constant.MAX.html
     ///
     pub entry_index: u32,
 
     /// The index of the [`FlatNode`] to jump to, if the [`Aabb`] test is negative.
     ///
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub exit_index: u32,
 
@@ -91,7 +91,7 @@ impl<T: BHValue + Float, const D: usize> BvhNode<T, D> {
     /// Flattens the [`Bvh`], so that it can be traversed in an iterative manner.
     /// This method constructs custom flat nodes using the `constructor`.
     ///
-    /// [`Bvh`]: ../bvh/struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     pub fn flatten_custom<F, FNodeType>(
         &self,
@@ -146,9 +146,9 @@ impl<T: BHValue + Float, const D: usize> BvhNode<T, D> {
 /// A flat [`Bvh`]. Represented by a vector of [`FlatNode`]s. The [`FlatBvh`] is designed for use
 /// where a recursive traversal of a data structure is not possible, for example shader programs.
 ///
-/// [`Bvh`]: ../bvh/struct.Bvh.html
-/// [`FlatNode`]: struct.FlatNode.html
-/// [`FlatBvh`]: struct.FlatBvh.html
+/// [`Bvh`]: crate::bvh::Bvh
+/// [`FlatNode`]: crate::flat_bvh::FlatNode
+/// [`FlatBvh`]: crate::flat_bvh::FlatBvh
 ///
 pub type FlatBvh<T, const D: usize> = Vec<FlatNode<T, D>>;
 
@@ -164,7 +164,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// 3 - u32: The exit index
     /// 4 - u32: The shape index
     ///
-    /// [`Bvh`]: ../bvh/struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     /// # Example
     ///
@@ -252,7 +252,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
 
     /// Flattens the [`Bvh`] so that it can be traversed iteratively.
     ///
-    /// [`Bvh`]: ../bvh/struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     /// # Example
     ///
@@ -322,8 +322,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
 impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for FlatBvh<T, D> {
     /// A [`FlatBvh`] is built from a regular [`Bvh`] using the [`Bvh::flatten`] method.
     ///
-    /// [`FlatBvh`]: struct.FlatBvh.html
-    /// [`Bvh`]: ../bvh/struct.Bvh.html
+    /// [`FlatBvh`]: crate::flat_bvh::FlatBvh
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     fn build<Shape: BHShape<T, D>>(shapes: &mut [Shape]) -> FlatBvh<T, D> {
         let bvh = Bvh::build(shapes);
@@ -332,7 +332,7 @@ impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for Flat
 
     /// Traverses a [`FlatBvh`] structure iteratively.
     ///
-    /// [`FlatBvh`]: struct.FlatBvh.html
+    /// [`FlatBvh`]: crate::flat_bvh::FlatBvh
     ///
     /// # Examples
     ///
@@ -437,7 +437,7 @@ impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for Flat
     /// a [`Bvh`] for nearest queries when possible.
     /// The flat bvh will still be much faster than a linear search.
     ///
-    /// [`FlatBvh`]: struct.FlatBvh.html
+    /// [`FlatBvh`]: crate::flat_bvh::FlatBvh
     ///
     /// # Examples
     ///
@@ -507,8 +507,8 @@ impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for Flat
     /// # assert_eq!(nearest_shape.unwrap().0.id, 5);
     /// ```
     ///
-    /// [`BoundingHierarchy`]: trait.BoundingHierarchy.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`BoundingHierarchy`]: crate::bounding_hierarchy::BoundingHierarchy
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     fn nearest_to<'a, Shape: BHShape<T, D> + PointDistance<T, D>>(
         &'a self,
@@ -559,7 +559,7 @@ impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for Flat
 
     /// Prints a textual representation of a [`FlatBvh`].
     ///
-    /// [`FlatBvh`]: struct.FlatBvh.html
+    /// [`FlatBvh`]: crate::flat_bvh::FlatBvh
     ///
     #[cfg(feature = "std")]
     fn pretty_print(&self) {
@@ -586,112 +586,5 @@ impl<T: BHValue + fmt::Display, const D: usize> BoundingHierarchy<T, D> for Flat
     ) -> Self {
         let bvh = Bvh::build_with_executor(shapes, executor);
         bvh.flatten()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::testbase::{
-        TBvh3, TFlatBvh3, build_empty_bh, build_some_bh, nearest_to_some_bh, traverse_some_bh,
-    };
-
-    #[test]
-    /// Tests whether the building procedure succeeds in not failing.
-    fn test_build_flat_bvh() {
-        build_some_bh::<TFlatBvh3>();
-    }
-
-    #[test]
-    /// Runs some primitive tests for intersections of a ray with a fixed scene given
-    /// as a `FlatBvh`.
-    fn test_traverse_flat_bvh() {
-        traverse_some_bh::<TFlatBvh3>();
-    }
-
-    #[test]
-    /// Runs some primitive tests for distance query of a point with a fixed scene given as a [`Bvh`].
-    fn test_nearest_to_flat_bvh() {
-        nearest_to_some_bh::<TFlatBvh3>();
-    }
-    #[test]
-    fn test_flatten_empty_bvh() {
-        let (_, bvh) = build_empty_bh::<TBvh3>();
-        let flat = bvh.flatten();
-        assert!(flat.is_empty());
-    }
-}
-
-#[cfg(all(feature = "bench", test))]
-mod bench {
-    use crate::testbase::{
-        TBvh3, TFlatBvh3, build_12k_triangles_bh, build_120k_triangles_bh, build_1200_triangles_bh,
-        create_n_cubes, default_bounds, intersect_12k_triangles_bh, intersect_120k_triangles_bh,
-        intersect_1200_triangles_bh, nearest_to_12k_triangles_bh, nearest_to_120k_triangles_bh,
-        nearest_to_1200_triangles_bh,
-    };
-
-    #[bench]
-    /// Benchmark the flattening of a [`Bvh`] with 120,000 triangles.
-    fn bench_flatten_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        let bounds = default_bounds();
-        let mut triangles = create_n_cubes(10_000, &bounds);
-        let bvh = TBvh3::build(&mut triangles);
-
-        b.iter(|| {
-            bvh.flatten();
-        });
-    }
-    #[bench]
-    /// Benchmark the construction of a [`FlatBvh`] with 1,200 triangles.
-    fn bench_build_1200_triangles_flat_bvh(b: &mut ::test::Bencher) {
-        build_1200_triangles_bh::<TFlatBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark the construction of a [`FlatBvh`] with 12,000 triangles.
-    fn bench_build_12k_triangles_flat_bvh(b: &mut ::test::Bencher) {
-        build_12k_triangles_bh::<TFlatBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark the construction of a [`FlatBvh`] with 120,000 triangles.
-    fn bench_build_120k_triangles_flat_bvh(b: &mut ::test::Bencher) {
-        build_120k_triangles_bh::<TFlatBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark intersecting 1,200 triangles using the recursive [`FlatBvh`].
-    fn bench_intersect_1200_triangles_flat_bvh(b: &mut ::test::Bencher) {
-        intersect_1200_triangles_bh::<TFlatBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark intersecting 12,000 triangles using the recursive [`FlatBvh`].
-    fn bench_intersect_12k_triangles_flat_bvh(b: &mut ::test::Bencher) {
-        intersect_12k_triangles_bh::<TFlatBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark intersecting 120,000 triangles using the recursive [`FlatBvh`].
-    fn bench_intersect_120k_triangles_flat_bvh(b: &mut ::test::Bencher) {
-        intersect_120k_triangles_bh::<TFlatBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark nearest_to on 1,200 triangles using the recursive [`FlatBvh`].
-    fn bench_nearest_to_1200_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_to_1200_triangles_bh::<TFlatBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark nearest_to on 12,000 triangles using the recursive [`FlatBvh`].
-    fn bench_nearest_to_12k_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_to_12k_triangles_bh::<TFlatBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark nearest_to on 120,000 triangles using the recursive [`FlatBvh`].
-    fn bench_nearest_to_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_to_120k_triangles_bh::<TFlatBvh3>(b);
     }
 }

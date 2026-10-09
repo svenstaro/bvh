@@ -23,7 +23,7 @@ impl<T: BHValue + fmt::Display, const D: usize> fmt::Display for Aabb<T, D> {
 
 /// A trait implemented by things which can be bounded by an [`Aabb`].
 ///
-/// [`Aabb`]: struct.Aabb.html
+/// [`Aabb`]: crate::aabb::Aabb
 ///
 pub trait Bounded<T: BHValue, const D: usize> {
     /// Returns the geometric bounds of this object in the form of an [`Aabb`].
@@ -50,7 +50,7 @@ pub trait Bounded<T: BHValue, const D: usize> {
     /// assert!(aabb.contains(&Point3::new(1.0,1.0,1.0)));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     fn aabb(&self) -> Aabb<T, D>;
 }
@@ -86,7 +86,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert_eq!(aabb.max.z, 1.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn with_bounds(min: Point<T, D>, max: Point<T, D>) -> Self {
         Aabb { min, max }
@@ -114,7 +114,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// # }
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn empty() -> Self {
         Self {
@@ -145,7 +145,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// # }
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn infinite() -> Self {
         Self {
@@ -169,7 +169,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(!aabb.contains(&point_outside));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     /// [`Point`]: nalgebra::Point
     ///
     pub fn contains(&self, p: &Point<T, D>) -> bool {
@@ -192,7 +192,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(!aabb.approx_contains_eps(&point_outside, 0.00001));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     /// [`Point3`]: nalgebra::Point3
     ///
     pub fn approx_contains_eps(&self, p: &Point<T, D>, epsilon: T) -> bool {
@@ -217,7 +217,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(aabb.approx_contains_aabb_eps(&inner_aabb, 0.00001));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     pub fn approx_contains_aabb_eps(&self, other: &Aabb<T, D>, epsilon: T) -> bool {
         self.approx_contains_eps(&other.min, epsilon)
             && self.approx_contains_eps(&other.max, epsilon)
@@ -236,7 +236,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(aabb1.intersects_aabb(&aabb2));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     pub fn intersects_aabb(&self, aabb: &Aabb<T, D>) -> bool {
         // TODO: Try adding a SIMD specialization.
         for i in 0..D {
@@ -263,7 +263,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(aabb.relative_eq(&other, 0.00001));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     pub fn relative_eq(&self, other: &Aabb<T, D>, epsilon: T) -> bool {
         let ep_vec = SVector::from_element(epsilon);
         (self.min - other.min).abs() < ep_vec && (self.max - other.max).abs() < ep_vec
@@ -298,7 +298,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(joint.contains(&point_inside_joint));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn join(&self, other: &Aabb<T, D>) -> Aabb<T, D> {
         Aabb::with_bounds(
@@ -340,7 +340,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(aabb.contains(&point_inside_joint));
     /// ```
     ///
-    /// [`Aabb::join`]: struct.Aabb.html
+    /// [`Aabb::join`]: crate::aabb::Aabb
     ///
     pub fn join_mut(&mut self, other: &Aabb<T, D>) {
         *self = self.join(other);
@@ -369,7 +369,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(!aabb2.contains(&point3));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     /// [`Point3`]: nalgebra::Point3
     ///
     pub fn grow(&self, other: &Point<T, D>) -> Aabb<T, D> {
@@ -402,7 +402,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(!aabb.contains(&point3));
     /// ```
     ///
-    /// [`Aabb::grow`]: struct.Aabb.html
+    /// [`Aabb::grow`]: crate::aabb::Aabb
     /// [`Point3`]: nalgebra::Point3
     ///
     pub fn grow_mut(&mut self, other: &Point<T, D>) {
@@ -435,8 +435,8 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(aabb1.contains(&center));
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
-    /// [`Bounded`]: trait.Bounded.html
+    /// [`Aabb`]: crate::aabb::Aabb
+    /// [`Bounded`]: crate::aabb::Bounded
     ///
     pub fn join_bounded<B: Bounded<T, D>>(&self, other: &B) -> Aabb<T, D> {
         self.join(&other.aabb())
@@ -454,7 +454,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(size.x == 2.0 && size.y == 2.0 && size.z == 2.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn size(&self) -> SVector<T, D> {
         self.max - self.min
@@ -473,7 +473,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(half_size.x == 1.0 && half_size.y == 1.0 && half_size.z == 1.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     #[inline]
     pub fn half_size(&self) -> SVector<T, D> {
@@ -495,7 +495,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(center.x == 42.0 && center.y == 42.0 && center.z == 42.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     /// [`Point3`]: nalgebra::Point3
     ///
     pub fn center(&self) -> Point<T, D> {
@@ -521,7 +521,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(!aabb.is_empty());
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn is_empty(&self) -> bool {
         // Special trick here, we use a join/supremum to pick the highest values, and if the highest
@@ -546,7 +546,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(surface_area == 24.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn surface_area(&self) -> T {
         let size = self.size();
@@ -568,7 +568,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(volume == 8.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn volume(&self) -> T {
         self.size().product()
@@ -589,7 +589,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert!(axis == 0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn largest_axis(&self) -> usize {
         self.size().imax()
@@ -613,7 +613,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
     /// assert_eq!((min_dist as f32).sqrt(), 10.0);
     /// ```
     ///
-    /// [`Aabb`]: struct.Aabb.html
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn min_distance_squared(&self, point: Point<T, D>) -> T {
         let half_size = self.half_size();
@@ -631,7 +631,7 @@ impl<T: BHValue, const D: usize> Aabb<T, D> {
 
 /// Default instance for [`Aabb`]s. Returns an [`Aabb`] which is [`empty()`].
 ///
-/// [`Aabb`]: struct.Aabb.html
+/// [`Aabb`]: crate::aabb::Aabb
 /// [`empty()`]: #method.empty
 ///
 impl<T: BHValue, const D: usize> Default for Aabb<T, D> {
@@ -640,8 +640,8 @@ impl<T: BHValue, const D: usize> Default for Aabb<T, D> {
     }
 }
 
-/// Make [`Aabb`]s indexable. `aabb[0]` gives a reference to the minimum bound.
-/// All other indices return a reference to the maximum bound.
+/// Make [`Aabb`]s indexable by bound: `aabb[0]` returns the minimum bound and
+/// `aabb[1]` the maximum bound.
 ///
 /// # Examples
 /// ```
@@ -656,7 +656,11 @@ impl<T: BHValue, const D: usize> Default for Aabb<T, D> {
 /// assert_eq!(aabb[1], max);
 /// ```
 ///
-/// [`Aabb`]: struct.Aabb.html
+/// # Panics
+///
+/// Panics if `index` is greater than `1`.
+///
+/// [`Aabb`]: crate::aabb::Aabb
 ///
 impl<T: BHValue, const D: usize> Index<usize> for Aabb<T, D> {
     type Output = Point<T, D>;
@@ -683,8 +687,8 @@ impl<T: BHValue, const D: usize> Index<usize> for Aabb<T, D> {
 /// assert_eq!(aabb_aabb.max, aabb.max);
 /// ```
 ///
-/// [`Aabb`]: struct.Aabb.html
-/// [`Bounded`]: trait.Bounded.html
+/// [`Aabb`]: crate::aabb::Aabb
+/// [`Bounded`]: crate::aabb::Bounded
 ///
 impl<T: BHValue, const D: usize> Bounded<T, D> for Aabb<T, D> {
     fn aabb(&self) -> Aabb<T, D> {
@@ -705,238 +709,11 @@ impl<T: BHValue, const D: usize> Bounded<T, D> for Aabb<T, D> {
 /// assert!(aabb.contains(&point));
 /// ```
 ///
-/// [`Bounded`]: trait.Bounded.html
+/// [`Bounded`]: crate::aabb::Bounded
 /// [`Point3`]: nalgebra::Point3
 ///
 impl<T: BHValue, const D: usize> Bounded<T, D> for Point<T, D> {
     fn aabb(&self) -> Aabb<T, D> {
         Aabb::with_bounds(*self, *self)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::aabb::Bounded;
-    use crate::testbase::{
-        TAabb3, TPoint3, TVector3, TupleVec, tuple_to_point, tuple_to_vector,
-        tuplevec_large_strategy,
-    };
-
-    use alloc::vec::Vec;
-    use float_eq::assert_float_eq;
-    use proptest::prelude::*;
-
-    #[test]
-    fn test_overflowing_aabb_center() {
-        // Define two points which will be the corners of the overflowing `Aabb`
-        let p1 = tuple_to_point(&(-3.288583e38, 0.0, 0.0));
-        let p2 = tuple_to_point(&(5.4196525e37, 0.0, 0.0));
-
-        // Span the `Aabb`
-        let aabb = TAabb3::empty().grow(&p1).join_bounded(&p2);
-
-        // Make sure the size actually overflows.
-        assert!(aabb.size()[0].is_infinite());
-
-        // Make sure the center does not overflow.
-        assert!(aabb.center()[0].is_finite());
-
-        // Its center should inside the `Aabb`
-        assert!(aabb.contains(&aabb.center()));
-    }
-
-    proptest! {
-        // Test properties of `Aabb` intersection.
-        #[test]
-        fn test_intersecting_aabbs(a: TupleVec, b: TupleVec, c: TupleVec, d: TupleVec, p: TupleVec) {
-            let a = tuple_to_point(&a);
-            let b = tuple_to_point(&b);
-            let c = tuple_to_point(&c);
-            let d = tuple_to_point(&d);
-            let aabb1 = TAabb3::empty().grow(&a).join_bounded(&b);
-            let aabb2 = TAabb3::empty().grow(&c).join_bounded(&d);
-            if aabb1.intersects_aabb(&aabb2) {
-                // For intersecting Aabb's, at least one point is shared.
-                let mut closest = aabb1.center();
-                for i in 0..3 {
-                    closest[i] = closest[i].clamp(aabb2.min[i], aabb2.max[i]);
-                }
-                assert!(aabb1.contains(&closest), "closest={closest:?}");
-                assert!(aabb2.contains(&closest), "closest={closest:?}");
-            } else {
-                // For non-intersecting Aabb's, no point can't be in both Aabb's.
-                let p = tuple_to_point(&p);
-                for point in [a, b, c, d, p] {
-                    assert!(!aabb1.contains(&point) || !aabb2.contains(&point));
-                }
-            }
-        }
-
-        // Test whether an empty `Aabb` does not contains anything.
-        #[test]
-        fn test_empty_contains_nothing(tpl: TupleVec) {
-            // Define a random Point
-            let p = tuple_to_point(&tpl);
-
-            // Create an empty Aabb
-            let aabb = TAabb3::empty();
-
-            // It should not contain anything
-            assert!(!aabb.contains(&p));
-        }
-
-        // Test whether a default `Aabb` is empty.
-        #[test]
-        fn test_default_is_empty(tpl: TupleVec) {
-            // Define a random Point
-            let p = tuple_to_point(&tpl);
-
-            // Create a default Aabb
-            let aabb: TAabb3 = Default::default();
-
-            // It should not contain anything
-            assert!(!aabb.contains(&p));
-        }
-
-        // Test whether an `Aabb` always contains its center.
-        #[test]
-        fn test_aabb_contains_center(a: TupleVec, b: TupleVec) {
-            // Define two points which will be the corners of the `Aabb`
-            let p1 = tuple_to_point(&a);
-            let p2 = tuple_to_point(&b);
-
-            // Span the `Aabb`
-            let aabb = TAabb3::empty().grow(&p1).join_bounded(&p2);
-
-            // Its center should be inside the `Aabb`
-            assert!(aabb.contains(&aabb.center()));
-        }
-
-        // Test whether the joint of two point-sets contains all the points.
-        #[test]
-        fn test_join_two_aabbs(a: (TupleVec, TupleVec, TupleVec, TupleVec, TupleVec),
-                               b: (TupleVec, TupleVec, TupleVec, TupleVec, TupleVec))
-                               {
-            // Define an array of ten points
-            let points = [a.0, a.1, a.2, a.3, a.4, b.0, b.1, b.2, b.3, b.4];
-
-            // Convert these points to `Point3`
-            let points = points.iter().map(tuple_to_point).collect::<Vec<TPoint3>>();
-
-            // Create two `Aabb`s. One spanned the first five points,
-            // the other by the last five points
-            let aabb1 = points.iter().take(5).fold(TAabb3::empty(), |aabb, point| aabb.grow(point));
-            let aabb2 = points.iter().skip(5).fold(TAabb3::empty(), |aabb, point| aabb.grow(point));
-
-            // The `Aabb`s should contain the points by which they are spanned
-            let aabb1_contains_init_five = points.iter()
-                .take(5)
-                .all(|point| aabb1.contains(point));
-            let aabb2_contains_last_five = points.iter()
-                .skip(5)
-                .all(|point| aabb2.contains(point));
-
-            // Build the joint of the two `Aabb`s
-            let aabbu = aabb1.join(&aabb2);
-
-            // The joint should contain all points
-            let aabbu_contains_all = points.iter()
-                .all(|point| aabbu.contains(point));
-
-            // Return the three properties
-            assert!(aabb1_contains_init_five && aabb2_contains_last_five && aabbu_contains_all);
-        }
-
-        // Test whether some points relative to the center of an `Aabb` are classified correctly.
-        // Currently doesn't test `approx_contains_eps` or `contains` very well due to scaling by 0.9 and 1.1.
-        #[test]
-        fn test_points_relative_to_center_and_size(a in tuplevec_large_strategy(), b in tuplevec_large_strategy()) {
-            // Generate some nonempty Aabb
-            let aabb = TAabb3::empty()
-                .grow(&tuple_to_point(&a))
-                .grow(&tuple_to_point(&b));
-
-            // Get its size and center
-            let size = aabb.size();
-            let size_half = size / 2.0;
-            let center = aabb.center();
-
-            // Compute the min and the max corners of the `Aabb` by hand
-            let inside_ppp = center + size_half * 0.9;
-            let inside_mmm = center - size_half * 0.9;
-
-            // Generate two points which are outside the `Aabb`
-            let outside_ppp = inside_ppp + size_half * 1.1;
-            let outside_mmm = inside_mmm - size_half * 1.1;
-
-            assert!(aabb.approx_contains_eps(&inside_ppp, f32::EPSILON));
-            assert!(aabb.approx_contains_eps(&inside_mmm, f32::EPSILON));
-            assert!(!aabb.contains(&outside_ppp));
-            assert!(!aabb.contains(&outside_mmm));
-        }
-
-        // Test whether the surface of a nonempty `Aabb is always positive.
-        #[test]
-        fn test_surface_always_positive(a: TupleVec, b: TupleVec) {
-            let aabb = TAabb3::empty()
-                .grow(&tuple_to_point(&a))
-                .grow(&tuple_to_point(&b));
-            assert!(aabb.surface_area() >= 0.0);
-        }
-
-        // Compute and compare the surface area of an `Aabb` by hand.
-        #[test]
-        fn test_surface_area_cube(pos: TupleVec, size in f32::EPSILON..10e30_f32) {
-            // Generate some non-empty Aabb
-            let pos = tuple_to_point(&pos);
-            let size_vec = TVector3::new(size, size, size);
-            let aabb = TAabb3::with_bounds(pos, pos + size_vec);
-
-            // Check its surface area
-            let area_a = aabb.surface_area();
-            let area_b = 6.0 * size * size;
-            assert_float_eq!(area_a, area_b, rmax <= f32::EPSILON);
-        }
-
-        // Test whether the volume of a nonempty `Aabb` is always positive.
-        #[test]
-        fn test_volume_always_positive(a in tuplevec_large_strategy(), b in tuplevec_large_strategy()) {
-            let aabb = TAabb3::empty()
-                .grow(&tuple_to_point(&a))
-                .grow(&tuple_to_point(&b));
-            assert!(aabb.volume() >= 0.0);
-        }
-
-        // Compute and compare the volume of an `Aabb` by hand.
-        #[test]
-        fn test_volume_by_hand(pos in tuplevec_large_strategy(), size in tuplevec_large_strategy()) {
-            // Generate some non-empty Aabb
-            let pos = tuple_to_point(&pos);
-            let size = tuple_to_vector(&size);
-            let aabb = pos.aabb().grow(&(pos + size));
-
-            // Check its volume
-            let volume_a = aabb.volume();
-            let volume_b = (size.x * size.y * size.z).abs();
-            assert_float_eq!(volume_a, volume_b, rmax <= f32::EPSILON);
-        }
-
-        // Test whether generating an `Aabb` from the min and max bounds yields the same `Aabb`.
-        #[test]
-        fn test_create_aabb_from_indexable(a: TupleVec, b: TupleVec, p: TupleVec) {
-            // Create a random point
-            let point = tuple_to_point(&p);
-
-            // Create a random `Aabb`
-            let aabb = TAabb3::empty()
-                .grow(&tuple_to_point(&a))
-                .grow(&tuple_to_point(&b));
-
-            // Create an `Aabb` by using the index-access method
-            let aabb_by_index = TAabb3::with_bounds(aabb[0], aabb[1]);
-
-            // The `Aabb`s should be the same
-            assert!(aabb.contains(&point) == aabb_by_index.contains(&point));
-        }
     }
 }

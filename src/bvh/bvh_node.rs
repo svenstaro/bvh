@@ -12,9 +12,9 @@ use crate::utils::{Bucket, joint_aabb_of_shapes};
 /// or a regular node that has two child nodes.
 /// The non-leaf node stores the [`Aabb`]s of its children.
 ///
-/// [`Aabb`]: ../aabb/struct.Aabb.html
-/// [`Bvh`]: struct.Bvh.html
-/// [`Bvh`]: struct.BvhNode.html
+/// [`Aabb`]: crate::aabb::Aabb
+/// [`Bvh`]: crate::bvh::Bvh
+/// [`BvhNode`]: crate::bvh::BvhNode
 ///
 #[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -49,7 +49,7 @@ pub enum BvhNode<T: BHValue, const D: usize> {
 impl<T: BHValue, const D: usize> BvhNode<T, D> {
     /// Builds a [`BvhNode`] recursively using SAH partitioning.
     ///
-    /// [`BvhNode`]: enum.BvhNode.html
+    /// [`BvhNode`]: crate::bvh::BvhNode
     ///
     pub fn build<S: BHShape<T, D>>(args: BvhNodeBuildArgs<S, T, D>) {
         if let Some((left, right)) = Self::prep_build(args) {
@@ -60,7 +60,7 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
 
     /// Builds a [`BvhNode`] with a custom executor function using SAH partitioning.
     ///
-    /// [`BvhNode`]: enum.BvhNode.html
+    /// [`BvhNode`]: crate::bvh::BvhNode
     ///
     pub fn build_with_executor<S: BHShape<T, D>>(
         args: BvhNodeBuildArgs<S, T, D>,
@@ -76,7 +76,7 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
     /// children of this node. If you do not call this function using the arguments
     /// returned then the Bvh will not be completely built.
     ///
-    /// [`BvhNode`]: enum.BvhNode.html
+    /// [`BvhNode`]: crate::bvh::BvhNode
     ///
     fn prep_build<S: BHShape<T, D>>(
         args: BvhNodeBuildArgs<S, T, D>,
@@ -194,7 +194,6 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
         // Use fixed size arrays of `Bucket`s, and thread local index assignment vectors.
         with_buckets(move |bucket_assignments| {
             let mut buckets = [Bucket::empty(); NUM_BUCKETS];
-            buckets.fill(Bucket::empty());
             for b in bucket_assignments.iter_mut() {
                 b.clear();
             }
@@ -256,18 +255,10 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
 
             let (child_l_indices, child_r_indices) = indices.split_at_mut(l_count);
 
-            for (l_i, shape_index) in l_assignments
-                .iter()
-                .flat_map(|group| group.iter())
-                .enumerate()
-            {
+            for (l_i, shape_index) in l_assignments.iter().flatten().enumerate() {
                 child_l_indices[l_i] = *shape_index;
             }
-            for (r_i, shape_index) in r_assignments
-                .iter()
-                .flat_map(|group| group.iter())
-                .enumerate()
-            {
+            for (r_i, shape_index) in r_assignments.iter().flatten().enumerate() {
                 child_r_indices[r_i] = *shape_index;
             }
 
@@ -281,9 +272,9 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
     /// Traverses the [`Bvh`] recursively and returns all shapes whose [`Aabb`] is
     /// intersected by the given [`Ray`].
     ///
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Ray`]: ../ray/struct.Ray.html
+    /// [`Aabb`]: crate::aabb::Aabb
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Ray`]: crate::ray::Ray
     ///
     pub(crate) fn traverse_recursive<Query: IntersectsAabb<T, D>, Shape: Bounded<T, D>>(
         nodes: &[BvhNode<T, D>],
@@ -321,8 +312,8 @@ impl<T: BHValue, const D: usize> BvhNode<T, D> {
     /// Traverses the [`Bvh`] recursively and updates the given `best_candidate` with
     /// the nearest shape found so far.
     ///
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
-    /// [`Bvh`]: struct.Bvh.html
+    /// [`Aabb`]: crate::aabb::Aabb
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     pub(crate) fn nearest_to_recursive<'a, Shape: Bounded<T, D> + PointDistance<T, D>>(
         nodes: &[BvhNode<T, D>],

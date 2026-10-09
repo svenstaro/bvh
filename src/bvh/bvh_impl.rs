@@ -1,10 +1,10 @@
 //! This module defines [`Bvh`] and [`BvhNode`] and functions for building and traversing it.
 //!
-//! [`Bvh`]: struct.Bvh.html
-//! [`BvhNode`]: struct.BvhNode.html
+//! [`Bvh`]: crate::bvh::Bvh
+//! [`BvhNode`]: crate::bvh::BvhNode
 //!
 use alloc::vec::Vec;
-use core::{fmt, marker};
+use core::fmt;
 use core::{mem::MaybeUninit, slice};
 
 use super::{
@@ -20,14 +20,14 @@ use crate::utils::joint_aabb_of_shapes;
 
 /// The [`Bvh`] data structure. Contains the list of [`BvhNode`]s.
 ///
-/// [`Bvh`]: struct.Bvh.html
+/// [`Bvh`]: crate::bvh::Bvh
 ///
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bvh<T: BHValue, const D: usize> {
     /// The list of nodes of the [`Bvh`].
     ///
-    /// [`Bvh`]: struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     pub nodes: Vec<BvhNode<T, D>>,
 }
@@ -35,7 +35,7 @@ pub struct Bvh<T: BHValue, const D: usize> {
 impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Creates a new [`Bvh`] from the `shapes` slice.
     ///
-    /// [`Bvh`]: struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     pub fn build<Shape: BHShape<T, D>>(shapes: &mut [Shape]) -> Bvh<T, D> {
         Self::build_with_executor(shapes, |left, right| {
@@ -48,7 +48,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// The executor parameter allows you to parallelize the build of the [`Bvh`]. Using something like rayon::join.
     /// You must call either build or build_with_executor on both arguments in order to succesfully complete the build.
     ///
-    /// [`Bvh`]: struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     pub fn build_with_executor<Shape: BHShape<T, D>>(
         shapes: &mut [Shape],
@@ -98,8 +98,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Traverses the [`Bvh`].
     /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn traverse<'a, Query: IntersectsAabb<T, D>, Shape: Bounded<T, D>>(
         &'a self,
@@ -122,8 +122,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Returns a subset of `shapes`, in which the [`Aabb`]s of the elements for which
     /// [`IntersectsAabb::intersects_aabb`] returns `true`.
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn traverse_iterator<'bvh, 'shape, Query: IntersectsAabb<T, D>, Shape: Bounded<T, D>>(
         &'bvh self,
@@ -134,13 +134,13 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 
     /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
-    /// Returns a subset of [`shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Returns a subset of `Shape`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     /// Return in order from nearest to farthest for ray.
     ///
     /// Time complexity: for first `O(log(n))`, for all `O(n*log(n))`
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.AABB.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn nearest_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
         &'bvh self,
@@ -151,13 +151,13 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 
     /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
-    /// Returns a subset of [`Shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Returns a subset of `Shape`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     /// Return in order from farthest to nearest for ray.
     ///
     /// Time complexity: for first `O(log(n))`, for all `O(n*log(n))`.
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.AABB.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn farthest_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
         &'bvh self,
@@ -168,7 +168,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 
     /// Creates a [`ChildDistanceTraverseIterator`] to traverse the [`Bvh`].
-    /// Returns a subset of [`shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Returns a subset of `Shape`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     /// Return in order from nearest to farthest for ray.
     ///
     /// This is a best-effort function that orders interior parent nodes before ordering child
@@ -178,8 +178,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     ///
     /// Time complexity: for first `O(log(n))`, for all `O(n)`.
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.AABB.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn nearest_child_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
         &'bvh self,
@@ -190,7 +190,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 
     /// Creates a [`ChildDistanceTraverseIterator`] to traverse the [`Bvh`].
-    /// Returns a subset of [`Shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Returns a subset of `Shape`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     /// Return in order from farthest to nearest for ray.
     ///
     /// This is a best-effort function that orders interior parent nodes before ordering child
@@ -200,8 +200,8 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     ///
     /// Time complexity: for first `O(log(n))`, for all `O(n)`.
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.AABB.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn farthest_child_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
         &'bvh self,
@@ -215,17 +215,14 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Returns the nearest shape to the query point and the distance to it.
     ///
     ///
-    /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.Aabb.html
+    /// [`Bvh`]: crate::bvh::Bvh
+    /// [`Aabb`]: crate::aabb::Aabb
     ///
     pub fn nearest_to<'a, Shape: Bounded<T, D> + PointDistance<T, D>>(
         &self,
         origin: nalgebra::Point<T, D>,
         shapes: &'a [Shape],
-    ) -> Option<(&'a Shape, T)>
-    where
-        Self: marker::Sized,
-    {
+    ) -> Option<(&'a Shape, T)> {
         if self.nodes.is_empty() {
             return None;
         }
@@ -239,7 +236,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
 
     /// Prints the [`Bvh`] in a tree-like visualization.
     ///
-    /// [`Bvh`]: struct.Bvh.html
+    /// [`Bvh`]: crate::bvh::Bvh
     ///
     #[cfg(feature = "std")]
     pub fn pretty_print(&self) {
@@ -539,278 +536,5 @@ pub fn rayon_executor<S, T: Send + BHValue, const D: usize>(
             || left.build_with_executor(rayon_executor),
             || right.build_with_executor(rayon_executor),
         );
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use alloc::vec;
-
-    use crate::{
-        bounding_hierarchy::BoundingHierarchy,
-        testbase::{
-            TBvh3, TBvhNode3, TPoint3, TRay3, TVector3, UnitBox, build_empty_bh, build_some_bh,
-            nearest_to_some_bh, traverse_some_bh,
-        },
-    };
-
-    #[test]
-    /// Tests whether the building procedure succeeds in not failing.
-    fn test_build_bvh() {
-        build_some_bh::<TBvh3>();
-    }
-
-    #[test]
-    fn test_empty_bvh_is_consistent() {
-        let (shapes, bvh) = build_empty_bh::<TBvh3>();
-        bvh.assert_consistent(&shapes);
-        assert!(bvh.is_consistent(&shapes));
-    }
-
-    #[test]
-    fn test_empty_bvh_is_tight() {
-        let (_, bvh) = build_empty_bh::<TBvh3>();
-        bvh.assert_tight();
-    }
-
-    #[test]
-    /// Runs some primitive tests for intersections of a ray with a fixed scene given as a [`Bvh`].
-    fn test_traverse_bvh() {
-        traverse_some_bh::<TBvh3>();
-    }
-
-    #[test]
-    /// Runs some primitive tests for distance query of a point with a fixed scene given as a [`Bvh`].
-    fn test_nearest_to_bvh() {
-        nearest_to_some_bh::<TBvh3>();
-    }
-
-    #[test]
-    /// Verify contents of the bounding hierarchy for a fixed scene structure
-    fn test_bvh_shape_indices() {
-        use std::collections::HashSet;
-
-        let (all_shapes, bh) = build_some_bh::<TBvh3>();
-
-        // It should find all shape indices.
-        let expected_shapes: HashSet<_> = (0..all_shapes.len()).collect();
-        let mut found_shapes = HashSet::new();
-
-        for node in bh.nodes.iter() {
-            match *node {
-                TBvhNode3::Node { .. } => {
-                    assert_eq!(node.shape_index(), None);
-                }
-                TBvhNode3::Leaf { .. } => {
-                    found_shapes.insert(
-                        node.shape_index()
-                            .expect("getting a shape index from a leaf node"),
-                    );
-                }
-            }
-        }
-
-        assert_eq!(expected_shapes, found_shapes);
-    }
-
-    #[test]
-    #[cfg(feature = "rayon")]
-    /// Tests whether the building procedure succeeds in not failing.
-    fn test_build_bvh_rayon() {
-        use crate::testbase::build_some_bh_rayon;
-
-        build_some_bh_rayon::<TBvh3>();
-    }
-
-    #[test]
-    #[cfg(feature = "rayon")]
-    /// Runs some primitive tests for intersections of a ray with a fixed scene given as a [`Bvh`].
-    fn test_traverse_bvh_rayon() {
-        use crate::testbase::traverse_some_bh_rayon;
-
-        traverse_some_bh_rayon::<TBvh3>();
-    }
-
-    #[test]
-    #[cfg(feature = "rayon")]
-    /// Verify contents of the bounding hierarchy for a fixed scene structure
-    fn test_bvh_shape_indices_rayon() {
-        use std::collections::HashSet;
-
-        use crate::testbase::build_some_bh_rayon;
-
-        let (all_shapes, bh) = build_some_bh_rayon::<TBvh3>();
-
-        // It should find all shape indices.
-        let expected_shapes: HashSet<_> = (0..all_shapes.len()).collect();
-        let mut found_shapes = HashSet::new();
-
-        for node in bh.nodes.iter() {
-            match *node {
-                TBvhNode3::Node { .. } => {
-                    assert_eq!(node.shape_index(), None);
-                }
-                TBvhNode3::Leaf { .. } => {
-                    found_shapes.insert(
-                        node.shape_index()
-                            .expect("getting a shape index from a leaf node"),
-                    );
-                }
-            }
-        }
-
-        assert_eq!(expected_shapes, found_shapes);
-    }
-
-    /// A single-node BVH is special, since the root node is a leaf node. Make sure
-    /// the root node isn't unconditionally returned when it isn't intersected.
-    #[test]
-    fn test_traverse_one_node_bvh_no_intersection() {
-        let mut boxes = vec![UnitBox::new(0, TPoint3::new(0.0, 1.0, 2.0))];
-        let ray = TRay3::new(TPoint3::new(0.0, 0.0, 0.0), TVector3::new(1.0, 0.0, 0.0));
-        let bvh = TBvh3::build(&mut boxes);
-
-        assert!(bvh.traverse(&ray, &boxes).is_empty());
-        assert!(bvh.traverse_iterator(&ray, &boxes).next().is_none());
-        assert!(bvh.nearest_traverse_iterator(&ray, &boxes).next().is_none());
-        assert!(bvh.flatten().traverse(&ray, &boxes).is_empty())
-    }
-
-    /// Make sure the root node can be returned when it is intersected.
-    #[test]
-    fn test_traverse_one_node_bvh_intersection() {
-        let mut boxes = vec![UnitBox::new(0, TPoint3::new(10.0, 0.0, 0.0))];
-        let ray = TRay3::new(TPoint3::new(0.0, 0.0, 0.0), TVector3::new(1.0, 0.0, 0.0));
-        let bvh = TBvh3::build(&mut boxes);
-
-        assert_eq!(bvh.traverse(&ray, &boxes).len(), 1);
-        assert_eq!(bvh.traverse_iterator(&ray, &boxes).count(), 1);
-        assert_eq!(bvh.nearest_traverse_iterator(&ray, &boxes).count(), 1);
-        assert_eq!(bvh.flatten().traverse(&ray, &boxes).len(), 1)
-    }
-}
-
-#[cfg(all(feature = "bench", test))]
-mod bench {
-    #[cfg(feature = "rayon")]
-    use crate::bounding_hierarchy::BoundingHierarchy;
-    use crate::testbase::{
-        TBvh3, build_12k_triangles_bh, build_120k_triangles_bh, build_1200_triangles_bh,
-        intersect_12k_triangles_bh, intersect_120k_triangles_bh, intersect_1200_triangles_bh,
-        intersect_bh, load_sponza_scene, nearest_to_12k_triangles_bh, nearest_to_120k_triangles_bh,
-        nearest_to_1200_triangles_bh, nearest_to_bh,
-    };
-    #[cfg(feature = "rayon")]
-    use crate::testbase::{
-        build_12k_triangles_bh_rayon, build_120k_triangles_bh_rayon, build_1200_triangles_bh_rayon,
-    };
-
-    #[bench]
-    /// Benchmark the construction of a [`Bvh`] with 1,200 triangles.
-    fn bench_build_1200_triangles_bvh(b: &mut ::test::Bencher) {
-        build_1200_triangles_bh::<TBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark the construction of a [`Bvh`] with 12,000 triangles.
-    fn bench_build_12k_triangles_bvh(b: &mut ::test::Bencher) {
-        build_12k_triangles_bh::<TBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark the construction of a [`Bvh`] with 120,000 triangles.
-    fn bench_build_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        build_120k_triangles_bh::<TBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark the construction of a [`Bvh`] for the Sponza scene.
-    fn bench_build_sponza_bvh(b: &mut ::test::Bencher) {
-        let (mut triangles, _) = load_sponza_scene();
-        b.iter(|| {
-            TBvh3::build(&mut triangles);
-        });
-    }
-
-    #[cfg(feature = "rayon")]
-    #[bench]
-    /// Benchmark the construction of a `BVH` with 1,200 triangles.
-    fn bench_build_1200_triangles_bvh_rayon(b: &mut ::test::Bencher) {
-        build_1200_triangles_bh_rayon::<TBvh3>(b);
-    }
-
-    #[bench]
-    #[cfg(feature = "rayon")]
-    /// Benchmark the construction of a `BVH` with 12,000 triangles.
-    fn bench_build_12k_triangles_bvh_rayon(b: &mut ::test::Bencher) {
-        build_12k_triangles_bh_rayon::<TBvh3>(b);
-    }
-
-    #[bench]
-    #[cfg(feature = "rayon")]
-    /// Benchmark the construction of a `BVH` with 120,000 triangles.
-    fn bench_build_120k_triangles_bvh_rayon(b: &mut ::test::Bencher) {
-        build_120k_triangles_bh_rayon::<TBvh3>(b);
-    }
-
-    #[bench]
-    #[cfg(feature = "rayon")]
-    /// Benchmark the construction of a `BVH` for the Sponza scene.
-    fn bench_build_sponza_bvh_rayon(b: &mut ::test::Bencher) {
-        let (mut triangles, _) = load_sponza_scene();
-        b.iter(|| {
-            TBvh3::build_par(&mut triangles);
-        });
-    }
-    #[bench]
-    /// Benchmark intersecting 1,200 triangles using the recursive [`Bvh`].
-    fn bench_intersect_1200_triangles_bvh(b: &mut ::test::Bencher) {
-        intersect_1200_triangles_bh::<TBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark intersecting 12,000 triangles using the recursive [`Bvh`].
-    fn bench_intersect_12k_triangles_bvh(b: &mut ::test::Bencher) {
-        intersect_12k_triangles_bh::<TBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark intersecting 120,000 triangles using the recursive [`Bvh`].
-    fn bench_intersect_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        intersect_120k_triangles_bh::<TBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark the traversal of a [`Bvh`] with the Sponza scene.
-    fn bench_intersect_sponza_bvh(b: &mut ::test::Bencher) {
-        let (mut triangles, bounds) = load_sponza_scene();
-        let bvh = TBvh3::build(&mut triangles);
-        intersect_bh(&bvh, &triangles, &bounds, b)
-    }
-
-    #[bench]
-    /// Benchmark nearest_to on 1,200 triangles using the recursive [`Bvh`].
-    fn bench_nearest_to_1200_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_to_1200_triangles_bh::<TBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark nearest_to on 12,000 triangles using the recursive [`Bvh`].
-    fn bench_nearest_to_12k_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_to_12k_triangles_bh::<TBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark nearest_to on 120,000 triangles using the recursive [`Bvh`].
-    fn bench_nearest_to_120k_triangles_bvh(b: &mut ::test::Bencher) {
-        nearest_to_120k_triangles_bh::<TBvh3>(b);
-    }
-
-    #[bench]
-    /// Benchmark nearest_to on a [`Bvh`] with the Sponza scene.
-    fn bench_nearest_to_sponza_bvh(b: &mut ::test::Bencher) {
-        let (mut triangles, bounds) = load_sponza_scene();
-        let bvh = TBvh3::build(&mut triangles);
-        nearest_to_bh(&bvh, &triangles, &bounds, b)
     }
 }
