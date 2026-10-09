@@ -134,13 +134,13 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 
     /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
-    /// Returns a subset of [`shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Returns a subset of `Shape`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     /// Return in order from nearest to farthest for ray.
     ///
     /// Time complexity: for first `O(log(n))`, for all `O(n*log(n))`
     ///
     /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.AABB.html
+    /// [`Aabb`]: ../aabb/struct.Aabb.html
     ///
     pub fn nearest_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
         &'bvh self,
@@ -151,13 +151,13 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 
     /// Creates a [`DistanceTraverseIterator`] to traverse the [`Bvh`].
-    /// Returns a subset of [`Shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Returns a subset of `Shape`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     /// Return in order from farthest to nearest for ray.
     ///
     /// Time complexity: for first `O(log(n))`, for all `O(n*log(n))`.
     ///
     /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.AABB.html
+    /// [`Aabb`]: ../aabb/struct.Aabb.html
     ///
     pub fn farthest_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
         &'bvh self,
@@ -168,7 +168,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 
     /// Creates a [`ChildDistanceTraverseIterator`] to traverse the [`Bvh`].
-    /// Returns a subset of [`shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Returns a subset of `Shape`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     /// Return in order from nearest to farthest for ray.
     ///
     /// This is a best-effort function that orders interior parent nodes before ordering child
@@ -179,7 +179,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Time complexity: for first `O(log(n))`, for all `O(n)`.
     ///
     /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.AABB.html
+    /// [`Aabb`]: ../aabb/struct.Aabb.html
     ///
     pub fn nearest_child_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
         &'bvh self,
@@ -190,7 +190,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     }
 
     /// Creates a [`ChildDistanceTraverseIterator`] to traverse the [`Bvh`].
-    /// Returns a subset of [`Shape`], in which the [`Aabb`]s of the elements were hit by [`Ray`].
+    /// Returns a subset of `Shape`, in which the [`Aabb`]s of the elements were hit by [`Ray`].
     /// Return in order from farthest to nearest for ray.
     ///
     /// This is a best-effort function that orders interior parent nodes before ordering child
@@ -201,7 +201,7 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
     /// Time complexity: for first `O(log(n))`, for all `O(n)`.
     ///
     /// [`Bvh`]: struct.Bvh.html
-    /// [`Aabb`]: ../aabb/struct.AABB.html
+    /// [`Aabb`]: ../aabb/struct.Aabb.html
     ///
     pub fn farthest_child_traverse_iterator<'bvh, 'shape, Shape: Bounded<T, D>>(
         &'bvh self,

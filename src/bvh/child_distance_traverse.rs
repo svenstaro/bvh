@@ -15,6 +15,8 @@ enum RestChild {
 ///
 /// This is a best-effort iterator that orders interior parent nodes before ordering child
 /// nodes, so the output is not necessarily perfectly sorted.
+///
+/// [`Aabb`]: crate::aabb::Aabb
 pub struct ChildDistanceTraverseIterator<
     'bvh,
     'shape,
@@ -44,7 +46,7 @@ impl<'bvh, 'shape, T, const D: usize, Shape: Bounded<T, D>, const ASCENDING: boo
 where
     T: BHValue,
 {
-    /// Creates a new [`DistanceTraverseIterator`]
+    /// Creates a new [`ChildDistanceTraverseIterator`]
     pub fn new(bvh: &'bvh Bvh<T, D>, ray: &'bvh Ray<T, D>, shapes: &'shape [Shape]) -> Self {
         ChildDistanceTraverseIterator {
             bvh,
