@@ -8,7 +8,9 @@
 use obj::raw::object::Polygon;
 use obj::*;
 use proptest::prelude::*;
+use rand::RngExt;
 use rand::SeedableRng;
+use rand::rngs::SmallRng;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use std::collections::HashSet;
@@ -277,39 +279,44 @@ pub fn nearest_to_some_bh<BH: BoundingHierarchy<f32, 3>>() {
     let mut triangles = create_n_cubes(1000, &default_bounds());
     let bvh = BH::build(&mut triangles);
 
+    let mut seed = 0;
     let mut query_points = vec![];
     for _ in 0..100 {
-        query_points.push(next_point3(&mut 0, &bounds));
+        query_points.push(next_point3(&mut seed, &bounds));
     }
     for point in query_points {
         nearest_to_and_verify(point, &bvh, &triangles);
     }
 }
 
-/// Given a query point, a bounding hierarchy, the complete list of shapes in the scene and a list of
-/// expected hits, verifies that nearest_to returns the correct answer.
+/// Given a query point, a bounding hierarchy and the complete list of shapes in the scene,
+/// verifies that `nearest_to` returns a shape at the minimal distance.
 fn nearest_to_and_verify<BH: BoundingHierarchy<f32, 3>>(
     query_point: TPoint3,
     bvh: &BH,
     triangles: &[Triangle],
 ) {
-    let result = bvh.nearest_to(query_point, triangles);
+    let (_found, found_dist) = bvh
+        .nearest_to(query_point, triangles)
+        .expect("nearest_to found no shape");
 
-    // Bruteforce the nearest triangle.
-    let mut best = (&triangles[0], f32::MAX);
+    // Bruteforce the minimal distance.
+    let mut best = f32::MAX;
     for triangle in triangles {
-        // Check if the AABB distance is less than the current best distance
-        // for better performance.
-        let aabb_min_dist = triangle.aabb().min_distance_squared(query_point);
-        if aabb_min_dist.sqrt() < best.1 {
-            // Compute the actual distance.
-            let distance = triangle.distance_squared(query_point).sqrt();
-            if distance < best.1 {
-                best = (triangle, distance);
-            }
+        // Skip triangles whose AABB is already farther than the current best; the
+        // true distance is never below the AABB's minimal distance, so this is safe.
+        if triangle.aabb().min_distance_squared(query_point).sqrt() < best {
+            best = best.min(triangle.distance_squared(query_point).sqrt());
         }
     }
-    assert_eq!(result.unwrap(), best);
+
+    // `nearest_to` may return any triangle at the minimal distance, so compare
+    // distances rather than the triangle identity (exact ties are possible).
+    let rel_err = (found_dist - best).abs() / best.max(f32::EPSILON);
+    assert!(
+        rel_err <= 1e-5,
+        "nearest_to distance {found_dist} != bruteforce minimum {best}"
+    );
 }
 
 /// A triangle struct. Instance of a more complex [`Bounded`] primitive.
@@ -556,45 +563,20 @@ fn push_cube(pos: TPoint3, shapes: &mut Vec<Triangle>) {
     ));
 }
 
-/// Implementation of splitmix64.
-/// For reference see: http://xoroshiro.di.unimi.it/splitmix64.c
-fn splitmix64(x: &mut u64) -> u64 {
-    *x = x.wrapping_add(0x9E3779B97F4A7C15u64);
-    let mut z = *x;
-    z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9u64);
-    z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EBu64);
-    z ^ (z >> 31)
-}
-
-/// Generates a new [`i32`] triple. Mutates the seed.
-pub fn next_point3_raw(seed: &mut u64) -> (i32, i32, i32) {
-    let u = splitmix64(seed);
-    let a = ((u >> 32) & 0xFFFFFFFF) as i64 - 0x80000000;
-    let b = (u & 0xFFFFFFFF) as i64 - 0x80000000;
-    let c = a ^ b.rotate_left(6);
-    (a as i32, b as i32, c as i32)
-}
-
-/// Generates a new [`Point3`], which will lie inside the given [`Aabb`]. Mutates the seed.
+/// Generates a new [`Point3`] which lies inside the given [`Aabb`]. Mutates the seed.
 pub fn next_point3(seed: &mut u64, aabb: &TAabb3) -> TPoint3 {
-    let (a, b, c) = next_point3_raw(seed);
-    let float_vector = TVector3::new(
-        (a as f32 / i32::MAX as f32) + 1.0,
-        (b as f32 / i32::MAX as f32) + 1.0,
-        (c as f32 / i32::MAX as f32) + 1.0,
-    ) * 0.5;
-
-    assert!(float_vector.x >= 0.0 && float_vector.x <= 1.0);
-    assert!(float_vector.y >= 0.0 && float_vector.y <= 1.0);
-    assert!(float_vector.z >= 0.0 && float_vector.z <= 1.0);
+    let mut rng = SmallRng::seed_from_u64(*seed);
+    // `f32` samples are in `[0, 1)`, so the result stays inside `aabb`.
+    let t = TVector3::new(
+        rng.random::<f32>(),
+        rng.random::<f32>(),
+        rng.random::<f32>(),
+    );
+    // Advance the seed so the next call yields a different point.
+    *seed = rng.random::<u64>();
 
     let size = aabb.size();
-    let offset = TVector3::new(
-        float_vector.x * size.x,
-        float_vector.y * size.y,
-        float_vector.z * size.z,
-    );
-    aabb.min + offset
+    aabb.min + TVector3::new(t.x * size.x, t.y * size.y, t.z * size.z)
 }
 
 /// Returns an [`Aabb`] which defines the default testing space bounds.
