@@ -60,7 +60,7 @@ impl<'bvh, 'shape, T, const D: usize, Shape: Bounded<T, D>, const ASCENDING: boo
 where
     T: BHValue,
 {
-    /// Creates a new [`DistanceTraverseIterator `]
+    /// Creates a new [`DistanceTraverseIterator`]
     pub fn new(bvh: &'bvh Bvh<T, D>, ray: &'bvh Ray<T, D>, shapes: &'shape [Shape]) -> Self {
         let mut iterator = DistanceTraverseIterator {
             bvh,
