@@ -150,7 +150,7 @@ impl<T: BHValue, const D: usize> Ray<T, D> {
     /// the u and v coordinates of the intersection.
     /// The distance is set to +INFINITY if the ray does not intersect the triangle, or hits
     /// it from behind.
-    #[allow(clippy::many_single_char_names)]
+    #[expect(clippy::many_single_char_names)]
     pub fn intersects_triangle(
         &self,
         a: &Point<T, D>,
