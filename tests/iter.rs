@@ -1,9 +1,9 @@
-//! Tests extracted from `iter.rs`.
+//! Tests for `traverse_iterator`, the non-allocating counterpart of `traverse`.
+use std::collections::HashSet;
+
 use bvh::ray::Ray;
 use bvh_testutil::{TBvh3, TPoint3, TVector3, UnitBox, build_empty_bh, build_some_bh};
-
 use nalgebra::{OPoint, OVector};
-use std::collections::HashSet;
 
 /// Given a ray, a bounding hierarchy, the complete list of shapes in the scene and a list of
 /// expected hits, verifies, whether the ray hits only the expected shapes.
@@ -52,8 +52,9 @@ fn traverse_and_verify_base(
     traverse_and_verify_iterator(ray_origin, ray_direction, all_shapes, bvh, expected_shapes);
 }
 
-/// Perform some fixed intersection tests on an empty BH structure.
-pub fn traverse_empty_bvh() {
+/// Runs some primitive tests for intersections of a ray with an empty `Bvh`.
+#[test]
+fn test_traverse_empty_bvh() {
     let (all_shapes, bvh) = build_empty_bh::<TBvh3>();
     traverse_and_verify_base(
         OPoint::origin(),
@@ -64,8 +65,9 @@ pub fn traverse_empty_bvh() {
     );
 }
 
-/// Perform some fixed intersection tests on BH structures.
-pub fn traverse_some_bvh() {
+/// Runs some primitive tests for intersections of a ray with a fixed scene given as a Bvh.
+#[test]
+fn test_traverse_bvh() {
     let (all_shapes, bvh) = build_some_bh::<TBvh3>();
 
     {
@@ -104,11 +106,4 @@ pub fn traverse_some_bvh() {
         expected_shapes.insert(6);
         traverse_and_verify_base(origin, direction, &all_shapes, &bvh, &expected_shapes);
     }
-}
-
-#[test]
-/// Runs some primitive tests for intersections of a ray with a fixed scene given as a Bvh.
-fn test_traverse_bvh() {
-    traverse_empty_bvh();
-    traverse_some_bvh();
 }

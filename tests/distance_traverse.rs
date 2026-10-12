@@ -1,8 +1,9 @@
-//! Tests extracted from `distance_traverse.rs`.
+//! Tests for `nearest_traverse_iterator` and `farthest_traverse_iterator`.
+use std::collections::HashSet;
+
 use bvh::aabb::Bounded;
 use bvh::ray::Ray;
 use bvh_testutil::{TBvh3, TPoint3, TVector3, UnitBox, build_empty_bh, build_some_bh};
-use std::collections::HashSet;
 
 fn traverse_distance_and_verify_order(
     ray_origin: TPoint3,
@@ -35,8 +36,9 @@ fn traverse_distance_and_verify_order(
     assert_eq!(expected_shapes.len(), count);
 }
 
-/// Perform some fixed intersection tests on BH structures.
-pub fn traverse_some_bvh() {
+#[test]
+/// Runs some primitive tests for intersections of a ray with a fixed scene given as a Bvh.
+fn test_traverse_bvh() {
     let (all_shapes, bvh) = build_some_bh::<TBvh3>();
 
     {
@@ -64,12 +66,6 @@ pub fn traverse_some_bvh() {
         expected_shapes.insert(6);
         traverse_distance_and_verify_order(origin, direction, &all_shapes, &bvh, &expected_shapes);
     }
-}
-
-#[test]
-/// Runs some primitive tests for intersections of a ray with a fixed scene given as a Bvh.
-fn test_traverse_bvh() {
-    traverse_some_bvh();
 }
 
 #[test]
