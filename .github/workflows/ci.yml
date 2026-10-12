@@ -76,9 +76,9 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          # cargo-fuzz requires nightly. Use a known good version
-          # (e.g. on Jan 14 2025, a faulty `rustc` nightly panicked).
-          toolchain: nightly-2025-11-12
+          # cargo-fuzz requires nightly. We might sometimes have to change to a known good version
+          # in case there are problems with nightly (e.g. on Jan 14 2025, a faulty `rustc` nightly panicked).
+          toolchain: nightly
           components: rust-src
 
       - name: Install cargo-fuzz
