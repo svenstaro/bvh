@@ -5,14 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## 0.12.0 - 2026-??-??
-- Replace hand-written x86_64 SIMD with safe and portable [`wide`](https://crates.io/crates/wide) SIMD. [#158](https://github.com/svenstaro/bvh/pull/158) (thanks @finnbear)
+## 0.13.0 - 2026-10-12
 - The `simd` feature no longer requires nightly Rust and is now enabled by default.
 - Port benchmarks from the unstable `#[bench]` harness to [`divan`](https://crates.io/crates/divan). Benches now live in `benches/` and run on stable via `cargo bench`; the nightly-only `bench` feature is removed. [#7](https://github.com/svenstaro/bvh/issues/7)
 - Move the public-API unit tests from inline `mod tests` into `tests/`. Shared scene builders live in a new (unpublished) `bvh-testutil` crate used by both `tests/` and `benches/`; the small number of white-box tests that need crate internals stay inline.
 - Add support for `no_std` targets and add `std` as a default feature. [#166](https://github.com/svenstaro/bvh/pull/166)
 - Update Rust edition to 2024
 - Bump MSRV to 1.90
+
+## 0.12.0 - 2025-11-16
+- Replace hand-written x86_64 SIMD with safe and portable [`wide`](https://crates.io/crates/wide) SIMD. [#158](https://github.com/svenstaro/bvh/pull/158) (thanks @finnbear)
 
 ## 0.11.0 - 2025-02-18
 - **Breaking change:** BVH traversal now accepts a `Query: IntersectsAabb` rather than a `Ray`,
