@@ -1,11 +1,11 @@
 //! Utilities module.
 
+use nalgebra::Scalar;
+use num_traits::Float;
+
 use crate::bounding_hierarchy::{BHShape, BHValue};
 use crate::bvh::ShapeIndex;
 use crate::{aabb::Aabb, bvh::Shapes};
-
-use nalgebra::Scalar;
-use num_traits::Float;
 
 /// Fast floating point minimum.  This function matches the semantics of
 ///

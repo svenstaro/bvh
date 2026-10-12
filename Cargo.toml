@@ -1,9 +1,24 @@
+[workspace]
+members = ["testutil"]
+# `fuzz/` is its own cargo-fuzz workspace.
+exclude = ["fuzz"]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.90" # may raise to versions that are at least 1y old.
+license = "MIT"
+
+[workspace.dependencies]
+nalgebra = { version = "0.35.0", features = ["default", "serde-serialize"] }
+proptest = "1.0"
+rand = "0.10"
+
 [package]
 name = "bvh"
 description = "A fast BVH using SAH"
 version = "0.12.0"
-edition = "2024"
-rust-version = "1.90" # may raise to versions that are at least 1y old.
+edition.workspace = true
+rust-version.workspace = true
 authors = [
     "Sven-Hendrik Haase <svenstaro@gmail.com>",
     "Alexander Dmitriev <alexander.dmitriev2580@gmail.com>",
@@ -13,27 +28,42 @@ readme = "README.md"
 repository = "https://github.com/svenstaro/bvh"
 documentation = "https://docs.rs/crate/bvh"
 keywords = ["bvh", "bounding", "volume", "sah", "aabb"]
-license = "MIT"
+license.workspace = true
 
 [dependencies]
 serde = { optional = true, version = "1", features = ["derive"] }
 num-traits = "0.2.19"
-nalgebra = { version = "0.35.0", features = ["default", "serde-serialize"] }
+nalgebra = { workspace = true }
 rayon = { optional = true, version = "1.8.1" }
 wide = { optional = true, version = "1.7" }
 
 [dev-dependencies]
-num = "0.4.3"
-proptest = "1.0"
-obj-rs = "0.7"
-rand = "0.10"
+proptest = { workspace = true }
+rand = { workspace = true }
 float_eq = "1"
 doc-comment = "0.3"
+divan = "0.1"
+bvh-testutil = { path = "testutil" }
+
+[[bench]]
+name = "build"
+harness = false
+
+[[bench]]
+name = "traverse"
+harness = false
+
+[[bench]]
+name = "optimize"
+harness = false
+
+[[bench]]
+name = "ray"
+harness = false
 
 [features]
 default = ["std", "rayon", "simd"]
 std = []
-bench = []
 simd = ["wide"]
 
 [profile.release]

@@ -1,5 +1,5 @@
 # quick sanity check, useful to run before committing
-lint: fmt check clippy
+lint: fmt check clippy docs
 
 # format src and fuzzer
 fmt:
@@ -23,17 +23,21 @@ clippy:
     cargo clippy --no-default-features --features std,rayon
     cargo clippy --manifest-path fuzz/Cargo.toml
 
+# build docs in strict mode
+docs:
+    RUSTDOCFLAGS="--deny warnings" cargo doc --no-deps --all-features
+
 # test default features
 test:
     cargo test
 
-# run benchmarks
+# run benchmarks (with default features, incl. SIMD)
 bench:
-    cargo bench --features bench
+    cargo bench
 
 # run benchmarks (without SIMD)
 bench_no_simd:
-    cargo bench --no-default-features --features std,rayon,bench
+    cargo bench --no-default-features --features std,rayon
 
 # fuzz the library
 fuzz:

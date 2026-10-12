@@ -7,13 +7,12 @@ use core::any::Any;
 use nalgebra::SVector;
 use wide::*;
 
+use super::Ray;
 use crate::{
     aabb::Aabb,
     bounding_hierarchy::BHValue,
     utils::{fast_max, fast_min, has_nan},
 };
-
-use super::Ray;
 
 /// Copy `D` coordinates into `N` lanes, duplicating the last one to fill the
 /// register. This is sound because the slab test reduces all lanes with

@@ -113,146 +113,154 @@ The following benchmarks are run with two different datasets:
 * A randomly generated scene with unit sized cubes containing a total of (1200, 12000, and 120000 triangles).
 * Sponza, a popular scene for benchmarking graphics engines.
 
-All benchmarks were taken on a Ryzen 3900x.
+All benchmarks were captured with [`divan`](https://crates.io/crates/divan) via `cargo bench` on an **AMD Ryzen 9 9950X3D**, built with `RUSTFLAGS="-C target-cpu=native"`. Numbers are machine-specific snapshots; see "Running the benchmark suite" below to reproduce them.
 
-All benchmarks unless otherwise noted were captured with the `simd` feature off. Note that `cargo bench` now enables `simd` by default.
+### Build
 
-### Intersection via traversal of the list of triangles
+Benchmarks for building a BVH from scratch and flattening it.
 
-```C
-test testbase::bench_intersect_120k_triangles_list                            ... bench:     570,717 ns/iter (+/- 21,689)
-test testbase::bench_intersect_sponza_list                                    ... bench:     510,683 ns/iter (+/- 9,525)
-
-// simd enabled
-test testbase::bench_intersect_120k_triangles_list                            ... bench:     566,916 ns/iter (+/- 22,024)
-test testbase::bench_intersect_sponza_list                                    ... bench:     518,821 ns/iter (+/- 12,191)
+```text
+build                                       fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ build_sponza                             11.42 ms      │ 15.54 ms      │ 11.53 ms      │ 11.84 ms      │ 85      │ 85
+├─ build_sponza_par                         1.555 ms      │ 2.879 ms      │ 1.644 ms      │ 1.677 ms      │ 100     │ 100
+├─ flatten_120k                             955.5 µs      │ 2.388 ms      │ 1 ms          │ 1.02 ms       │ 100     │ 100
+├─ build_triangles                                        │               │               │               │         │
+│  ├─ Bvh<f32, 3>                                         │               │               │               │         │
+│  │  ├─ 100                                124.5 µs      │ 155.9 µs      │ 125.7 µs      │ 127.4 µs      │ 100     │ 100
+│  │  ├─ 1000                               1.514 ms      │ 1.664 ms      │ 1.531 ms      │ 1.532 ms      │ 100     │ 100
+│  │  ╰─ 10000                              18.61 ms      │ 19.73 ms      │ 18.72 ms      │ 18.76 ms      │ 54      │ 54
+│  ╰─ Vec<bvh::flat_bvh::FlatNode<f32, 3>>                │               │               │               │         │
+│     ├─ 100                                132.7 µs      │ 145.5 µs      │ 134.3 µs      │ 134.8 µs      │ 100     │ 100
+│     ├─ 1000                               1.602 ms      │ 1.662 ms      │ 1.614 ms      │ 1.617 ms      │ 100     │ 100
+│     ╰─ 10000                              21.28 ms      │ 22.22 ms      │ 21.5 ms       │ 21.52 ms      │ 46      │ 46
+╰─ build_triangles_par                                    │               │               │               │         │
+   ├─ Bvh<f32, 3>                                         │               │               │               │         │
+   │  ├─ 100                                42.35 µs      │ 208.8 µs      │ 68.38 µs      │ 78.83 µs      │ 100     │ 100
+   │  ├─ 1000                               304.7 µs      │ 729.9 µs      │ 343.5 µs      │ 350.7 µs      │ 100     │ 100
+   │  ╰─ 10000                              2.73 ms       │ 3.821 ms      │ 2.916 ms      │ 2.97 ms       │ 100     │ 100
+   ╰─ Vec<bvh::flat_bvh::FlatNode<f32, 3>>                │               │               │               │         │
+      ├─ 100                                79.82 µs      │ 198.9 µs      │ 123.4 µs      │ 127.9 µs      │ 100     │ 100
+      ├─ 1000                               446.3 µs      │ 845.2 µs      │ 478.2 µs      │ 523.6 µs      │ 100     │ 100
+      ╰─ 10000                              4.995 ms      │ 6.602 ms      │ 5.457 ms      │ 5.512 ms      │ 100     │ 100
 ```
 
-This is the most naive approach to intersecting a scene with a ray. It defines the baseline.
+As you can see, building a BVH takes a long time. Building a BVH is only useful
+if the number of intersections performed on the scene exceeds the build duration.
+This is the case in applications such as ray tracing and path tracing.
 
-### Intersection via traversal of the list of triangles with AABB checks
+### Traverse
 
-```C
-test testbase::bench_intersect_120k_triangles_list_aabb                       ... bench:     687,660 ns/iter (+/- 6,850)
-test testbase::bench_intersect_sponza_list_aabb                               ... bench:     381,037 ns/iter (+/- 1,416)
+The `*_list` entries intersect a scene by traversing the raw list of triangles. This is
+the most naive approach and defines the baseline. The `*_list_aabb` entries precede the
+triangle test with AABB checks, which are cheap compared to the triangle-intersection
+algorithms and so they filter negative results a lot faster.
 
-// simd enabled
-test testbase::bench_intersect_120k_triangles_list_aabb                       ... bench:     295,810 ns/iter (+/- 3,309)
-test testbase::bench_intersect_sponza_list_aabb                               ... bench:     163,738 ns/iter (+/- 1,822)
-```
+The `nearest_to*` benchmarks find the closest shape to a point.
 
-AABB checks are cheap, compared to triangle-intersection algorithms. Therefore, preceeding AABB checks
-increase intersection speed by filtering negative results a lot faster.
-
-### Build of a BVH from scratch
-
-```C
-test flat_bvh::bench::bench_build_1200_triangles_flat_bvh                     ... bench:     242,357 ns/iter (+/- 1,882)
-test flat_bvh::bench::bench_build_12k_triangles_flat_bvh                      ... bench:   3,681,965 ns/iter (+/- 223,716)
-test flat_bvh::bench::bench_build_120k_triangles_flat_bvh                     ... bench:  46,415,590 ns/iter (+/- 3,226,404)
-test bvh::bvh_impl::bench::bench_build_1200_triangles_bvh                     ... bench:     239,473 ns/iter (+/- 2,456)
-test bvh::bvh_impl::bench::bench_build_1200_triangles_bvh_rayon               ... bench:     123,387 ns/iter (+/- 9,427)
-test bvh::bvh_impl::bench::bench_build_12k_triangles_bvh                      ... bench:   2,903,150 ns/iter (+/- 54,318)
-test bvh::bvh_impl::bench::bench_build_12k_triangles_bvh_rayon                ... bench:   1,073,300 ns/iter (+/- 89,530)
-test bvh::bvh_impl::bench::bench_build_120k_triangles_bvh                     ... bench:  37,390,480 ns/iter (+/- 2,789,280)
-test bvh::bvh_impl::bench::bench_build_120k_triangles_bvh_rayon               ... bench:   8,935,320 ns/iter (+/- 1,780,231)
-test bvh::bvh_impl::bench::bench_build_sponza_bvh                             ... bench:  23,828,070 ns/iter (+/- 1,307,461)
-test bvh::bvh_impl::bench::bench_build_sponza_bvh_rayon                       ... bench:   4,764,530 ns/iter (+/- 950,640)
-```
-
-### Flatten a BVH
-
-```C
-test flat_bvh::bench::bench_flatten_120k_triangles_bvh                        ... bench:   9,806,060 ns/iter (+/- 1,771,861)
-```
-
-As you can see, building a BVH takes a long time. Building a BVH is only useful if the number of intersections performed on the
-scene exceeds the build duration. This is the case in applications such as ray and path tracing, where the minimum
-number of intersections is `1280 * 720` for an HD image.
-
-### Intersection via BVH traversal
-
-```C
-test flat_bvh::bench::bench_intersect_1200_triangles_flat_bvh                 ... bench:         144 ns/iter (+/- 1)
-test flat_bvh::bench::bench_intersect_12k_triangles_flat_bvh                  ... bench:         370 ns/iter (+/- 4)
-test flat_bvh::bench::bench_intersect_120k_triangles_flat_bvh                 ... bench:         866 ns/iter (+/- 16)
-test bvh::bvh_impl::bench::bench_intersect_1200_triangles_bvh                 ... bench:         146 ns/iter (+/- 2)
-test bvh::bvh_impl::bench::bench_intersect_12k_triangles_bvh                  ... bench:         367 ns/iter (+/- 5)
-test bvh::bvh_impl::bench::bench_intersect_120k_triangles_bvh                 ... bench:         853 ns/iter (+/- 12)
-test bvh::bvh_impl::bench::bench_intersect_sponza_bvh                         ... bench:       1,381 ns/iter (+/- 20)
-test ray::ray_impl::bench::bench_intersects_aabb                              ... bench:       4,404 ns/iter (+/- 17)
-
-// simd enabled
-test bvh::bvh_impl::bench::bench_intersect_1200_triangles_bvh                 ... bench:         121 ns/iter (+/- 2)
-test bvh::bvh_impl::bench::bench_intersect_12k_triangles_bvh                  ... bench:         309 ns/iter (+/- 3)
-test bvh::bvh_impl::bench::bench_intersect_120k_triangles_bvh                 ... bench:         749 ns/iter (+/- 15)
-test bvh::bvh_impl::bench::bench_intersect_sponza_bvh                         ... bench:       1,216 ns/iter (+/- 16)
-test ray::ray_impl::bench::bench_intersects_aabb                              ... bench:       2,447 ns/iter (+/- 18)
+```text
+traverse                                    fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ intersect_120k_list                      204.9 µs      │ 397.4 µs      │ 309 µs        │ 307 µs        │ 100     │ 100
+├─ intersect_120k_list_aabb                 171.5 µs      │ 206.3 µs      │ 174.8 µs      │ 175.5 µs      │ 100     │ 100
+├─ intersect_sponza_bvh                     139.8 ns      │ 2.789 µs      │ 844.8 ns      │ 931.6 ns      │ 100     │ 100
+├─ intersect_sponza_iter                    92.91 µs      │ 129 µs        │ 106.4 µs      │ 107.8 µs      │ 100     │ 100
+├─ intersect_sponza_list                    251.7 µs      │ 331 µs        │ 305 µs        │ 301.2 µs      │ 100     │ 100
+├─ intersect_sponza_list_aabb               94.59 µs      │ 104.5 µs      │ 96.48 µs      │ 96.95 µs      │ 100     │ 100
+├─ intersect_sponza_vec                     94.74 µs      │ 133.5 µs      │ 107.7 µs      │ 108.6 µs      │ 100     │ 100
+├─ nearest_to_120k_list                     493.1 µs      │ 612.9 µs      │ 545.9 µs      │ 547.2 µs      │ 100     │ 100
+├─ nearest_to_120k_list_aabb                170.4 µs      │ 215.7 µs      │ 176.6 µs      │ 177.3 µs      │ 100     │ 100
+├─ nearest_to_sponza_bvh                    309.8 ns      │ 9.609 µs      │ 1.549 µs      │ 2.037 µs      │ 100     │ 100
+├─ nearest_to_sponza_list                   479.2 µs      │ 591.6 µs      │ 516.6 µs      │ 518.8 µs      │ 100     │ 100
+├─ nearest_to_sponza_list_aabb              94.39 µs      │ 110 µs        │ 99.25 µs      │ 99.32 µs      │ 100     │ 100
+├─ intersect_triangles                                    │               │               │               │         │
+│  ├─ Bvh<f32, 3>                                         │               │               │               │         │
+│  │  ├─ 100                                74.81 ns      │ 267.3 ns      │ 111 ns        │ 122.4 ns      │ 100     │ 400
+│  │  ├─ 1000                               197.3 ns      │ 514.8 ns      │ 346 ns        │ 345.1 ns      │ 100     │ 400
+│  │  ╰─ 10000                              229.8 ns      │ 2.269 µs      │ 734.8 ns      │ 827.2 ns      │ 100     │ 100
+│  ╰─ Vec<bvh::flat_bvh::FlatNode<f32, 3>>                │               │               │               │         │
+│     ├─ 100                                72.31 ns      │ 292.3 ns      │ 109.8 ns      │ 123.4 ns      │ 100     │ 400
+│     ├─ 1000                               242.3 ns      │ 1.344 µs      │ 363.5 ns      │ 378.2 ns      │ 100     │ 400
+│     ╰─ 10000                              339.8 ns      │ 6.069 µs      │ 1.059 µs      │ 1.454 µs      │ 100     │ 100
+╰─ nearest_to_triangles                                   │               │               │               │         │
+   ├─ Bvh<f32, 3>                                         │               │               │               │         │
+   │  ├─ 100                                169.8 ns      │ 382.3 ns      │ 249.8 ns      │ 253.7 ns      │ 100     │ 400
+   │  ├─ 1000                               272.3 ns      │ 712.3 ns      │ 388.5 ns      │ 416.2 ns      │ 100     │ 400
+   │  ╰─ 10000                              309.8 ns      │ 1.489 µs      │ 449.8 ns      │ 544.3 ns      │ 100     │ 100
+   ╰─ Vec<bvh::flat_bvh::FlatNode<f32, 3>>                │               │               │               │         │
+      ├─ 100                                79.81 ns      │ 1.789 µs      │ 734.8 ns      │ 737.7 ns      │ 100     │ 100
+      ├─ 1000                               139.8 ns      │ 9.559 µs      │ 2.559 µs      │ 2.545 µs      │ 100     │ 100
+      ╰─ 10000                              509.8 ns      │ 50.9 µs       │ 13.54 µs      │ 14.44 µs      │ 100     │ 100
 ```
 
 These performance measurements show that traversing a BVH is much faster than traversing a list.
 
-### Optimization
+### Ray
 
-The benchmarks for how long it takes to update the scene also contain a randomization process which takes some time.
+The single ray–AABB intersection test that traversal performs at every node, measured in
+isolation across 2/3/4 dimensions and `f32`/`f64`. Traversal runs this test many times
+per query.
 
-```C
-test bvh::optimization::bench::bench_update_shapes_bvh_120k_00p               ... bench:   1,057,965 ns/iter (+/- 76,098)
-test bvh::optimization::bench::bench_update_shapes_bvh_120k_01p               ... bench:   2,535,682 ns/iter (+/- 80,231)
-test bvh::optimization::bench::bench_update_shapes_bvh_120k_10p               ... bench:  18,840,970 ns/iter (+/- 3,432,867)
-test bvh::optimization::bench::bench_update_shapes_bvh_120k_50p               ... bench:  76,025,200 ns/iter (+/- 3,899,770)
-test bvh::optimization::bench::bench_randomize_120k_50p                       ... bench:   5,361,645 ns/iter (+/- 436,340)
+```text
+ray                     fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ intersects_aabb      1.549 µs      │ 1.649 µs      │ 1.584 µs      │ 1.586 µs      │ 100     │ 100
+╰─ intersects_aabb_f64                │               │               │               │         │
+   ├─ 2                 1.209 µs      │ 1.309 µs      │ 1.219 µs      │ 1.224 µs      │ 100     │ 100
+   ├─ 3                 2.089 µs      │ 2.279 µs      │ 2.099 µs      │ 2.107 µs      │ 100     │ 100
+   ╰─ 4                 1.779 µs      │ 9.139 µs      │ 1.839 µs      │ 1.911 µs      │ 100     │ 100
 ```
 
-This is the place where you have to differentiate between rebuilding the tree from scratch or trying to optimize the old one.
-These tests show the impact of moving around a particular percentage of shapes (`10p` => `10%`).
+### Optimize
+
+These benchmarks show how long it takes to update the scene after moving a percentage of
+the shapes (`10p` means `10%`).
+This is where you have to differentiate between rebuilding the tree from
+scratch or trying to optimize the old one (see [Optimization](#optimization)
+above).
 It is important to note that the randomization process here moves triangles around indiscriminately.
 This will also lead to cases where the BVH would have to be restructured completely.
 
-### Intersection after the optimization
+The `*_after_update_shapes` entries traverse a BVH kept up to date with calls to
+`update_shapes` while `*_with_rebuild` uses the same triangle data but constructs a BVH
+from scratch. This set of tests shows the impact of randomly moving triangles around and
+producing degenerated trees.
 
-These intersection tests are grouped by dataset and by the BVH generation method.
-* `_after_optimize` uses a BVH which was kept up to date with calls to `optimize`, while
-* `_with_rebuild` uses the same triangle data as `_after_optimize`, but constructs a BVH from scratch.
-
-*120K Triangles*
-```C
-test bvh::optimization::bench::bench_intersect_120k_after_update_shapes_00p   ... bench:         855 ns/iter (+/- 15)
-test bvh::optimization::bench::bench_intersect_120k_after_update_shapes_01p   ... bench:         921 ns/iter (+/- 13)
-test bvh::optimization::bench::bench_intersect_120k_after_update_shapes_10p   ... bench:       2,677 ns/iter (+/- 191)
-test bvh::optimization::bench::bench_intersect_120k_after_update_shapes_50p   ... bench:       2,992 ns/iter (+/- 103)
-
-test bvh::optimization::bench::bench_intersect_120k_with_rebuild_00p          ... bench:         852 ns/iter (+/- 13)
-test bvh::optimization::bench::bench_intersect_120k_with_rebuild_01p          ... bench:         918 ns/iter (+/- 13)
-test bvh::optimization::bench::bench_intersect_120k_with_rebuild_10p          ... bench:       1,920 ns/iter (+/- 266)
-test bvh::optimization::bench::bench_intersect_120k_with_rebuild_50p          ... bench:       2,075 ns/iter (+/- 318)
+```text
+optimize                                 fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ intersect_120k_after_update_shapes                  │               │               │               │         │
+│  ├─ 0                                  229.8 ns      │ 4.739 µs      │ 599.8 ns      │ 749.1 ns      │ 100     │ 100
+│  ├─ 0.01                               299.8 ns      │ 1.949 µs      │ 759.8 ns      │ 771.4 ns      │ 100     │ 100
+│  ├─ 0.1                                269.8 ns      │ 5.239 µs      │ 1.369 µs      │ 1.574 µs      │ 100     │ 100
+│  ╰─ 0.5                                189.8 ns      │ 5.619 µs      │ 1.564 µs      │ 1.67 µs       │ 100     │ 100
+├─ intersect_120k_with_rebuild                         │               │               │               │         │
+│  ├─ 0                                  219.8 ns      │ 2.109 µs      │ 754.8 ns      │ 872.6 ns      │ 100     │ 100
+│  ├─ 0.01                               279.8 ns      │ 4.879 µs      │ 1.559 µs      │ 1.751 µs      │ 100     │ 100
+│  ├─ 0.1                                259.8 ns      │ 10.85 µs      │ 2.859 µs      │ 3.517 µs      │ 100     │ 100
+│  ╰─ 0.5                                169.8 ns      │ 11.14 µs      │ 2.649 µs      │ 3.48 µs       │ 100     │ 100
+├─ intersect_sponza_after_update_shapes                │               │               │               │         │
+│  ├─ 0                                  129.8 ns      │ 4.989 µs      │ 924.8 ns      │ 1.2 µs        │ 100     │ 100
+│  ├─ 0.01                               209.8 ns      │ 4.749 µs      │ 1.484 µs      │ 1.613 µs      │ 100     │ 100
+│  ├─ 0.1                                119.8 ns      │ 26.09 µs      │ 4.849 µs      │ 6.345 µs      │ 100     │ 100
+│  ╰─ 0.5                                69.81 ns      │ 20.73 µs      │ 3.714 µs      │ 4.456 µs      │ 100     │ 100
+├─ intersect_sponza_with_rebuild                       │               │               │               │         │
+│  ├─ 0                                  129.8 ns      │ 2.389 µs      │ 764.8 ns      │ 826.5 ns      │ 100     │ 100
+│  ├─ 0.01                               189.8 ns      │ 3.039 µs      │ 804.8 ns      │ 943 ns        │ 100     │ 100
+│  ├─ 0.1                                129.8 ns      │ 3.969 µs      │ 939.8 ns      │ 1.12 µs       │ 100     │ 100
+│  ╰─ 0.5                                59.81 ns      │ 5.289 µs      │ 1.254 µs      │ 1.477 µs      │ 100     │ 100
+├─ randomize_120k_50p                    1.317 ms      │ 1.442 ms      │ 1.326 ms      │ 1.33 ms       │ 100     │ 100
+╰─ update_shapes_bvh_120k                              │               │               │               │         │
+   ├─ 0                                  235.5 µs      │ 262.5 µs      │ 238.3 µs      │ 239.2 µs      │ 100     │ 100
+   ├─ 0.01                               677 µs        │ 810 µs        │ 734.5 µs      │ 728.8 µs      │ 100     │ 100
+   ├─ 0.1                                4.349 ms      │ 6.84 ms       │ 5.61 ms       │ 5.639 ms      │ 100     │ 100
+   ╰─ 0.5                                24.8 ms       │ 34.03 ms      │ 28.79 ms      │ 28.87 ms      │ 35      │ 35
 ```
-
-*Sponza*
-```C
-test bvh::optimization::bench::bench_intersect_sponza_after_update_shapes_00p ... bench:       2,023 ns/iter (+/- 52)
-test bvh::optimization::bench::bench_intersect_sponza_after_update_shapes_01p ... bench:       3,444 ns/iter (+/- 120)
-test bvh::optimization::bench::bench_intersect_sponza_after_update_shapes_10p ... bench:      16,873 ns/iter (+/- 2,123)
-test bvh::optimization::bench::bench_intersect_sponza_after_update_shapes_50p ... bench:       9,075 ns/iter (+/- 486)
-
-test bvh::optimization::bench::bench_intersect_sponza_with_rebuild_00p        ... bench:       1,388 ns/iter (+/- 46)
-test bvh::optimization::bench::bench_intersect_sponza_with_rebuild_01p        ... bench:       1,529 ns/iter (+/- 102)
-test bvh::optimization::bench::bench_intersect_sponza_with_rebuild_10p        ... bench:       1,920 ns/iter (+/- 120)
-test bvh::optimization::bench::bench_intersect_sponza_with_rebuild_50p        ... bench:       2,505 ns/iter (+/- 88)
-```
-
-This set of tests shows the impact of randomly moving triangles around and producing degenerated trees.
-The *120K Triangles* dataset has been updated randomly. The *Sponza* scene was updated using a method
-which has a maximum offset distance for shapes. This simulates a more realistic scenario.
-
-We also see that the *Sponza* scene by itself contains some structures which can be tightly wrapped in a BVH.
-By mowing those structures around we destroy the locality of the triangle groups which leads to more branches in the
-BVH requiring a check, thus leading to a higher intersection duration.
 
 ### Running the benchmark suite
 
-The benchmark suite uses features from the [test crate](https://doc.rust-lang.org/unstable-book/library-features/test.html) and therefore cannot be run on stable rust.
-Using a nightly toolchain, run `cargo bench --features bench`.
+The benchmarks use [`divan`](https://crates.io/crates/divan) and run on stable Rust:
+
+```sh
+cargo bench                    # default features (includes SIMD)
+cargo bench --no-default-features --features std,rayon   # without SIMD
+```
 
 ## Testing
 
