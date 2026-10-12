@@ -5,8 +5,8 @@ use bvh::aabb::Bounded;
 use bvh::bounding_hierarchy::BoundingHierarchy;
 use bvh::point_query::PointDistance;
 use bvh_testutil::{
-    TAabb3, TBvh3, TFlatBvh3, Triangle, create_n_cubes, create_ray, default_bounds,
-    load_sponza_scene, next_point3,
+    TAabb3, TBvh3, TFlatBvh3, Triangle, create_n_cubes, default_bounds, load_sponza_scene,
+    random_point, random_ray, seeded_rng,
 };
 
 fn main() {
@@ -20,9 +20,9 @@ fn intersect_scene<T: BoundingHierarchy<f32, 3>>(
     triangles: &[Triangle],
     bounds: &TAabb3,
 ) {
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     bencher.bench_local(|| {
-        let ray = create_ray(&mut seed, bounds);
+        let ray = random_ray(&mut rng, bounds);
         for triangle in bh.traverse(&ray, triangles) {
             divan::black_box(ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c));
         }
@@ -36,18 +36,18 @@ fn nearest_to_scene<T: BoundingHierarchy<f32, 3>>(
     triangles: &[Triangle],
     bounds: &TAabb3,
 ) {
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     bencher.bench_local(|| {
-        let point = next_point3(&mut seed, bounds);
+        let point = random_point(&mut rng, bounds);
         divan::black_box(bh.nearest_to(divan::black_box(point), divan::black_box(triangles)));
     });
 }
 
 /// Linear scan with random rays (no acceleration structure).
 fn intersect_list(bencher: divan::Bencher, triangles: &[Triangle], bounds: &TAabb3) {
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     bencher.bench_local(|| {
-        let ray = create_ray(&mut seed, bounds);
+        let ray = random_ray(&mut rng, bounds);
         for triangle in triangles {
             divan::black_box(ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c));
         }
@@ -56,9 +56,9 @@ fn intersect_list(bencher: divan::Bencher, triangles: &[Triangle], bounds: &TAab
 
 /// As [`intersect_list`], but pre-filtering each triangle with its [`Aabb`].
 fn intersect_list_aabb(bencher: divan::Bencher, triangles: &[Triangle], bounds: &TAabb3) {
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     bencher.bench_local(|| {
-        let ray = create_ray(&mut seed, bounds);
+        let ray = random_ray(&mut rng, bounds);
         for triangle in triangles {
             if ray.intersects_aabb(&triangle.aabb()) {
                 divan::black_box(ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c));
@@ -69,9 +69,9 @@ fn intersect_list_aabb(bencher: divan::Bencher, triangles: &[Triangle], bounds: 
 
 /// Linear nearest-to scan (no acceleration structure).
 fn nearest_to_list(bencher: divan::Bencher, triangles: &[Triangle], bounds: &TAabb3) {
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     bencher.bench_local(|| {
-        let point = next_point3(&mut seed, bounds);
+        let point = random_point(&mut rng, bounds);
         let mut min_dist = f32::MAX;
         for triangle in triangles {
             let dist = divan::black_box(triangle.distance_squared(point));
@@ -85,9 +85,9 @@ fn nearest_to_list(bencher: divan::Bencher, triangles: &[Triangle], bounds: &TAa
 
 /// As [`nearest_to_list`], but pre-filtering via point-[`Aabb`] distance.
 fn nearest_to_list_aabb(bencher: divan::Bencher, triangles: &[Triangle], bounds: &TAabb3) {
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     bencher.bench_local(|| {
-        let point = next_point3(&mut seed, bounds);
+        let point = random_point(&mut rng, bounds);
         let mut min_dist = f32::MAX;
         for triangle in triangles {
             let aabb_min_dist = divan::black_box(triangle.aabb().min_distance_squared(point));
@@ -141,10 +141,10 @@ fn nearest_to_sponza_bvh(bencher: divan::Bencher) {
 fn intersect_sponza_vec(bencher: divan::Bencher) {
     let (mut triangles, bounds) = load_sponza_scene();
     let bvh = TBvh3::build(&mut triangles);
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     bencher.bench_local(|| {
         for _ in 0..128 {
-            let ray = create_ray(&mut seed, &bounds);
+            let ray = random_ray(&mut rng, &bounds);
             for triangle in bvh.traverse(&ray, &triangles) {
                 divan::black_box(ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c));
             }
@@ -157,10 +157,10 @@ fn intersect_sponza_vec(bencher: divan::Bencher) {
 fn intersect_sponza_iter(bencher: divan::Bencher) {
     let (mut triangles, bounds) = load_sponza_scene();
     let bvh = TBvh3::build(&mut triangles);
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     bencher.bench_local(|| {
         for _ in 0..128 {
-            let ray = create_ray(&mut seed, &bounds);
+            let ray = random_ray(&mut rng, &bounds);
             for triangle in bvh.traverse_iterator(&ray, &triangles) {
                 divan::black_box(ray.intersects_triangle(&triangle.a, &triangle.b, &triangle.c));
             }

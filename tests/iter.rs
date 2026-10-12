@@ -1,23 +1,9 @@
 //! Tests extracted from `iter.rs`.
 use bvh::ray::Ray;
-use bvh_testutil::{TBvh3, TPoint3, TVector3, UnitBox, generate_aligned_boxes};
+use bvh_testutil::{TBvh3, TPoint3, TVector3, UnitBox, build_empty_bh, build_some_bh};
 
 use nalgebra::{OPoint, OVector};
 use std::collections::HashSet;
-
-/// Creates an empty [`Bvh`].
-pub fn build_empty_bvh() -> ([UnitBox; 0], TBvh3) {
-    let mut empty_array = [];
-    let bvh = TBvh3::build(&mut empty_array);
-    (empty_array, bvh)
-}
-
-/// Creates a [`Bvh`] for a fixed scene structure.
-pub fn build_some_bvh() -> (Vec<UnitBox>, TBvh3) {
-    let mut boxes = generate_aligned_boxes();
-    let bvh = TBvh3::build(&mut boxes);
-    (boxes, bvh)
-}
 
 /// Given a ray, a bounding hierarchy, the complete list of shapes in the scene and a list of
 /// expected hits, verifies, whether the ray hits only the expected shapes.
@@ -68,11 +54,11 @@ fn traverse_and_verify_base(
 
 /// Perform some fixed intersection tests on an empty BH structure.
 pub fn traverse_empty_bvh() {
-    let (empty_array, bvh) = build_empty_bvh();
+    let (all_shapes, bvh) = build_empty_bh::<TBvh3>();
     traverse_and_verify_base(
         OPoint::origin(),
         OVector::x(),
-        &empty_array,
+        &all_shapes,
         &bvh,
         &HashSet::new(),
     );
@@ -80,7 +66,7 @@ pub fn traverse_empty_bvh() {
 
 /// Perform some fixed intersection tests on BH structures.
 pub fn traverse_some_bvh() {
-    let (all_shapes, bvh) = build_some_bvh();
+    let (all_shapes, bvh) = build_some_bh::<TBvh3>();
 
     {
         // Define a ray which traverses the x-axis from afar.

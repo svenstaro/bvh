@@ -2,7 +2,8 @@
 use bvh::aabb::Bounded;
 
 use bvh_testutil::{
-    TAabb3, TPoint3, TRay3, TVector3, TupleVec, UnitBox, tuple_to_point, tuplevec_small_strategy,
+    TAabb3, TPoint3, TRay3, TVector3, TupleVec, UnitBox, random_aabb, random_ray, seeded_rng,
+    tuple_to_point, tuplevec_small_strategy, uniform_bounds,
 };
 use core::cmp;
 use proptest::prelude::*;
@@ -30,17 +31,13 @@ fn gen_ray_to_aabb(data: (TupleVec, TupleVec, TupleVec)) -> (TRay3, TAabb3) {
 fn intersects_aabb_f64_matches_scalar_reference() {
     use bvh::{aabb::Aabb, ray::Ray};
     use nalgebra::{Point, SVector};
-    use rand::{RngExt, SeedableRng, rngs::StdRng};
-
-    fn random(rng: &mut StdRng) -> f64 {
-        rng.random::<f64>() * 4.0 - 2.0
-    }
+    use rand::RngExt;
 
     // A random ray/box pair in `D` dimensions.
-    fn check<const D: usize>(rng: &mut StdRng) {
-        let point = |rng: &mut StdRng| Point::from(SVector::from_fn(|_, _| random(rng)));
-        let ray: Ray<f64, D> = Ray::new(point(rng), SVector::from_fn(|_, _| random(rng)));
-        let aabb: Aabb<f64, D> = Aabb::empty().grow(&point(rng)).grow(&point(rng));
+    fn check<const D: usize>(rng: &mut impl RngExt) {
+        let bounds: Aabb<f64, D> = uniform_bounds(-2.0, 2.0);
+        let ray = random_ray(rng, &bounds);
+        let aabb = random_aabb(rng, &bounds);
         assert_eq!(
             ray.intersects_aabb(&aabb),
             ray.intersection_slice_for_aabb(&aabb).is_some(),
@@ -48,7 +45,7 @@ fn intersects_aabb_f64_matches_scalar_reference() {
         );
     }
 
-    let mut rng = StdRng::from_seed([0; 32]);
+    let mut rng = seeded_rng(0);
     for _ in 0..1000 {
         check::<2>(&mut rng);
         check::<3>(&mut rng);

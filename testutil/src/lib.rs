@@ -5,20 +5,23 @@
 //! builders and shape types. It intentionally depends only on `bvh`'s public
 //! API, so nothing here needs nightly or crate-internal access.
 
+use nalgebra::{ComplexField, Point, SVector};
 use obj::raw::object::Polygon;
 use obj::*;
 use proptest::prelude::*;
-use rand::RngExt;
-use rand::SeedableRng;
-use rand::rngs::SmallRng;
-use rand::rngs::StdRng;
-use rand::seq::SliceRandom;
+use rand::{
+    RngExt, SeedableRng,
+    distr::{Distribution, StandardUniform},
+    rngs::SmallRng,
+    seq::SliceRandom,
+};
 use std::collections::HashSet;
 
 use bvh::aabb::{Aabb, Bounded, IntersectsAabb};
 use bvh::ball::Sphere;
-use bvh::bounding_hierarchy::{BHShape, BoundingHierarchy};
+use bvh::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
 use bvh::point_query::PointDistance;
+use bvh::ray::Ray;
 
 // TODO These all need to be realtyped and bounded
 
@@ -277,10 +280,10 @@ pub fn nearest_to_some_bh<BH: BoundingHierarchy<f32, 3>>() {
     let mut triangles = create_n_cubes(1000, &default_bounds());
     let bvh = BH::build(&mut triangles);
 
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     let mut query_points = vec![];
     for _ in 0..100 {
-        query_points.push(next_point3(&mut seed, &bounds));
+        query_points.push(random_point(&mut rng, &bounds));
     }
     for point in query_points {
         nearest_to_and_verify(point, &bvh, &triangles);
@@ -561,36 +564,49 @@ fn push_cube(pos: TPoint3, shapes: &mut Vec<Triangle>) {
     ));
 }
 
-/// Generates a new [`Point3`] which lies inside the given [`Aabb`]. Mutates the seed.
-pub fn next_point3(seed: &mut u64, aabb: &TAabb3) -> TPoint3 {
-    let mut rng = SmallRng::seed_from_u64(*seed);
-    // `f32` samples are in `[0, 1)`, so the result stays inside `aabb`.
-    let t = TVector3::new(
-        rng.random::<f32>(),
-        rng.random::<f32>(),
-        rng.random::<f32>(),
-    );
-    // Advance the seed so the next call yields a different point.
-    *seed = rng.random::<u64>();
+/// Deterministic [`SmallRng`] for tests and benchmarks.
+pub fn seeded_rng(seed: u64) -> SmallRng {
+    SmallRng::seed_from_u64(seed)
+}
 
-    let size = aabb.size();
-    aabb.min + TVector3::new(t.x * size.x, t.y * size.y, t.z * size.z)
+/// Generates a random [`Point`] inside `bounds`, each coordinate uniform in
+/// `[min, max)`.
+pub fn random_point<T, const D: usize>(rng: &mut impl RngExt, bounds: &Aabb<T, D>) -> Point<T, D>
+where
+    T: BHValue + ComplexField,
+    StandardUniform: Distribution<T>,
+{
+    let fraction = SVector::from_fn(|_, _| rng.random());
+    bounds.min + bounds.size().zip_map(&fraction, |size, f| size * f)
+}
+
+/// Returns an [`Aabb`] cube `[min, max)^D` for every coordinate.
+pub fn uniform_bounds<T, const D: usize>(min: T, max: T) -> Aabb<T, D>
+where
+    T: BHValue,
+{
+    Aabb::with_bounds(
+        Point::from(SVector::from_fn(|_, _| min)),
+        Point::from(SVector::from_fn(|_, _| max)),
+    )
 }
 
 /// Returns an [`Aabb`] which defines the default testing space bounds.
 pub fn default_bounds() -> TAabb3 {
-    TAabb3::with_bounds(
-        TPoint3::new(-100_000.0, -100_000.0, -100_000.0),
-        TPoint3::new(100_000.0, 100_000.0, 100_000.0),
-    )
+    uniform_bounds(-100_000.0, 100_000.0)
+}
+
+/// Returns an [`Aabb`] for the unit cube `[0, 1)^3`.
+pub fn unit_bounds() -> TAabb3 {
+    uniform_bounds(0.0, 1.0)
 }
 
 /// Creates `n` deterministic random cubes. Returns the [`Vec`] of surface [`Triangle`]'s.
 pub fn create_n_cubes(n: usize, bounds: &TAabb3) -> Vec<Triangle> {
     let mut vec = Vec::new();
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     for _ in 0..n {
-        push_cube(next_point3(&mut seed, bounds), &mut vec);
+        push_cube(random_point(&mut rng, bounds), &mut vec);
     }
     vec
 }
@@ -622,16 +638,10 @@ pub fn randomly_transform_scene(
     amount: usize,
     bounds: &TAabb3,
     max_offset_option: Option<f32>,
-    seed: &mut u64,
+    rng: &mut impl RngExt,
 ) -> HashSet<usize> {
     let mut indices: Vec<usize> = (0..triangles.len()).collect();
-    let mut seed_array = [0u8; 32];
-    for i in 0..seed_array.len() {
-        let bytes: [u8; 8] = seed.to_be_bytes();
-        seed_array[i] = bytes[i % 8];
-    }
-    let mut rng: StdRng = SeedableRng::from_seed(seed_array);
-    indices.shuffle(&mut rng);
+    indices.shuffle(rng);
     indices.truncate(amount);
 
     let max_offset = max_offset_option.unwrap_or(f32::INFINITY);
@@ -642,7 +652,7 @@ pub fn randomly_transform_scene(
         let max_move_bound = bounds.max - aabb.max;
         let movement_bounds = TAabb3::with_bounds(min_move_bound.into(), max_move_bound.into());
 
-        let mut random_offset = next_point3(seed, &movement_bounds);
+        let mut random_offset = random_point(rng, &movement_bounds);
         random_offset.x = max_offset.min((-max_offset).max(random_offset.x));
         random_offset.y = max_offset.min((-max_offset).max(random_offset.y));
         random_offset.z = max_offset.min((-max_offset).max(random_offset.z));
@@ -660,11 +670,41 @@ pub fn randomly_transform_scene(
     indices.into_iter().collect()
 }
 
-/// Creates a [`Ray`] from the random `seed`. Mutates the seed.
-/// The [`Ray`] origin will be inside the `bounds` and point to some other point inside this
-/// `bounds`.
-pub fn create_ray(seed: &mut u64, bounds: &TAabb3) -> TRay3 {
-    let origin = next_point3(seed, bounds);
-    let direction = next_point3(seed, bounds);
-    TRay3::new(origin, direction.coords)
+/// Creates a random [`Ray`] whose origin lies inside `bounds`. The direction is
+/// the coordinates of another point in `bounds`, not a vector pointing at it.
+pub fn random_ray<T, const D: usize>(rng: &mut impl RngExt, bounds: &Aabb<T, D>) -> Ray<T, D>
+where
+    T: BHValue + ComplexField,
+    StandardUniform: Distribution<T>,
+{
+    let origin = random_point(rng, bounds);
+    let direction = random_point(rng, bounds);
+    Ray::new(origin, direction.coords)
+}
+
+/// Creates a random [`Aabb`] whose corners are drawn from `bounds`.
+pub fn random_aabb<T, const D: usize>(rng: &mut impl RngExt, bounds: &Aabb<T, D>) -> Aabb<T, D>
+where
+    T: BHValue + ComplexField,
+    StandardUniform: Distribution<T>,
+{
+    Aabb::empty()
+        .grow(&random_point(rng, bounds))
+        .grow(&random_point(rng, bounds))
+}
+
+/// One random [`Ray`] plus `n` random [`Aabb`]s drawn from `bounds`, for
+/// ray/[`Aabb`] kernel benchmarks.
+pub fn random_ray_and_aabbs<T, const D: usize>(
+    rng: &mut impl RngExt,
+    bounds: &Aabb<T, D>,
+    n: usize,
+) -> (Ray<T, D>, Vec<Aabb<T, D>>)
+where
+    T: BHValue + ComplexField,
+    StandardUniform: Distribution<T>,
+{
+    let ray = random_ray(rng, bounds);
+    let boxes = (0..n).map(|_| random_aabb(rng, bounds)).collect();
+    (ray, boxes)
 }

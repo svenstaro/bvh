@@ -1,24 +1,12 @@
 //! Tests extracted from `child_distance_traverse.rs`.
+//!
+//! TODO: These drive `nearest_traverse_iterator`/`farthest_traverse_iterator`, so they are a copy
+//! of `tests/distance_traverse.rs`. They should cover the child iterators instead.
 use bvh::aabb::Bounded;
-use bvh::bvh::Bvh;
 use bvh::ray::Ray;
-use bvh_testutil::{TBvh3, TPoint3, TVector3, UnitBox, generate_aligned_boxes};
+use bvh_testutil::{TBvh3, TPoint3, TVector3, UnitBox, build_empty_bh, build_some_bh};
 
 use std::collections::HashSet;
-
-/// Create a `Bvh` for a fixed scene structure.
-pub fn build_some_bvh() -> (Vec<UnitBox>, TBvh3) {
-    let mut boxes = generate_aligned_boxes();
-    let bvh = Bvh::build(&mut boxes);
-    (boxes, bvh)
-}
-
-/// Create a `Bvh` for an empty scene structure.
-pub fn build_empty_bvh() -> (Vec<UnitBox>, TBvh3) {
-    let mut boxes = Vec::new();
-    let bvh = Bvh::build(&mut boxes);
-    (boxes, bvh)
-}
 
 fn traverse_distance_and_verify_order(
     ray_origin: TPoint3,
@@ -53,7 +41,7 @@ fn traverse_distance_and_verify_order(
 
 /// Perform some fixed intersection tests on BH structures.
 pub fn traverse_some_bvh() {
-    let (all_shapes, bvh) = build_some_bvh();
+    let (all_shapes, bvh) = build_some_bh::<TBvh3>();
 
     {
         // Define a ray which traverses the x-axis from afar.
@@ -90,7 +78,7 @@ fn test_traverse_bvh() {
 
 #[test]
 fn test_traverse_empty_bvh() {
-    let (shapes, bvh) = build_empty_bvh();
+    let (shapes, bvh) = build_empty_bh::<TBvh3>();
 
     // Define an arbitrary ray.
     let origin = TPoint3::new(0.0, 0.0, 0.0);

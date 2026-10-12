@@ -1,10 +1,11 @@
 //! Tests extracted from `optimization.rs`.
+use std::collections::HashSet;
+
 use bvh::bounding_hierarchy::BHShape;
 use bvh_testutil::{
     TBvh3, TBvhNode3, TPoint3, UnitBox, build_some_bh, create_n_cubes, default_bounds,
-    randomly_transform_scene,
+    randomly_transform_scene, seeded_rng,
 };
-use std::collections::HashSet;
 
 #[test]
 /// Tests whether a Bvh is still consistent after a few optimization calls.
@@ -107,9 +108,9 @@ fn test_update_shapes_bvh_12k_75p() {
 
     // After moving triangles, the Bvh should be inconsistent, because the shape `Aabb`s do not
     // match the tree entries.
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
 
-    let updated = randomly_transform_scene(&mut triangles, 9_000, &bounds, None, &mut seed);
+    let updated = randomly_transform_scene(&mut triangles, 9_000, &bounds, None, &mut rng);
     assert!(!bvh.is_consistent(&triangles), "Bvh is consistent.");
 
     // After fixing the `Aabb` consistency should be restored.

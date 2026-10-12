@@ -2,8 +2,8 @@
 //! rebuild, over random cube scenes and Sponza.
 
 use bvh_testutil::{
-    TAabb3, TBvh3, Triangle, create_n_cubes, create_ray, default_bounds, load_sponza_scene,
-    randomly_transform_scene,
+    TAabb3, TBvh3, Triangle, create_n_cubes, default_bounds, load_sponza_scene, random_ray,
+    randomly_transform_scene, seeded_rng,
 };
 
 fn main() {
@@ -15,9 +15,9 @@ fn main() {
 fn randomize_120k_50p(bencher: divan::Bencher) {
     let bounds = default_bounds();
     let mut triangles = create_n_cubes(10_000, &bounds);
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     bencher.bench_local(|| {
-        randomly_transform_scene(&mut triangles, 60_000, &bounds, None, &mut seed);
+        randomly_transform_scene(&mut triangles, 60_000, &bounds, None, &mut rng);
     });
 }
 
@@ -28,10 +28,10 @@ fn update_shapes_120k(bencher: divan::Bencher, percent: f32) {
     let mut triangles = create_n_cubes(10_000, &bounds);
     let mut bvh = TBvh3::build(&mut triangles);
     let num_move = (triangles.len() as f32 * percent) as usize;
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     bencher.bench_local(|| {
         let updated =
-            randomly_transform_scene(&mut triangles, num_move, &bounds, Some(10.0), &mut seed);
+            randomly_transform_scene(&mut triangles, num_move, &bounds, Some(10.0), &mut rng);
         bvh.update_shapes(&updated, &mut triangles);
     });
 }
@@ -53,9 +53,9 @@ fn intersect_after_update_shapes(
 ) {
     let mut bvh = TBvh3::build(triangles);
     let num_move = (triangles.len() as f32 * percent) as usize;
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     for _ in 0..iterations {
-        let updated = randomly_transform_scene(triangles, num_move, bounds, max_offset, &mut seed);
+        let updated = randomly_transform_scene(triangles, num_move, bounds, max_offset, &mut rng);
         bvh.update_shapes(&updated, triangles);
     }
     intersect_traversed(&bvh, bencher, triangles, bounds);
@@ -72,9 +72,9 @@ fn intersect_with_rebuild(
     iterations: usize,
 ) {
     let num_move = (triangles.len() as f32 * percent) as usize;
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     for _ in 0..iterations {
-        randomly_transform_scene(triangles, num_move, bounds, max_offset, &mut seed);
+        randomly_transform_scene(triangles, num_move, bounds, max_offset, &mut rng);
     }
     let bvh = TBvh3::build(triangles);
     intersect_traversed(&bvh, bencher, triangles, bounds);
@@ -87,11 +87,11 @@ fn intersect_traversed(
     triangles: &[Triangle],
     bounds: &TAabb3,
 ) {
-    // Ray generation owns its own seed so traversal timing is identical across
+    // Ray generation owns its own rng so traversal timing is identical across
     // every `percent` argument, independent of the transform phase above.
-    let mut seed = 0;
+    let mut rng = seeded_rng(0);
     bencher.bench_local(|| {
-        let ray = create_ray(&mut seed, bounds);
+        let ray = random_ray(&mut rng, bounds);
         for triangle in bvh.traverse(&ray, triangles) {
             divan::black_box(triangle);
         }
