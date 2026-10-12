@@ -1,9 +1,4 @@
 //! Shared test and benchmark helpers for the [`bvh`] crate.
-//!
-//! This is a separate crate (not published) so that both the in-tree unit tests
-//! and the standalone `benches/` targets can share one copy of the scene
-//! builders and shape types. It intentionally depends only on `bvh`'s public
-//! API, so nothing here needs nightly or crate-internal access.
 
 use std::collections::HashSet;
 
