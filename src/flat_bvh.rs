@@ -1,6 +1,7 @@
 //! This module exports methods to flatten the [`Bvh`] into a [`FlatBvh`] and traverse it iteratively.
 use alloc::vec::Vec;
 use core::fmt;
+
 use nalgebra::Point;
 use num_traits::Float;
 

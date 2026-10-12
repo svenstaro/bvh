@@ -5,6 +5,13 @@
 //! builders and shape types. It intentionally depends only on `bvh`'s public
 //! API, so nothing here needs nightly or crate-internal access.
 
+use std::collections::HashSet;
+
+use bvh::aabb::{Aabb, Bounded, IntersectsAabb};
+use bvh::ball::Sphere;
+use bvh::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
+use bvh::point_query::PointDistance;
+use bvh::ray::Ray;
 use nalgebra::{ComplexField, Point, SVector};
 use obj::raw::object::Polygon;
 use obj::*;
@@ -15,13 +22,6 @@ use rand::{
     rngs::SmallRng,
     seq::SliceRandom,
 };
-use std::collections::HashSet;
-
-use bvh::aabb::{Aabb, Bounded, IntersectsAabb};
-use bvh::ball::Sphere;
-use bvh::bounding_hierarchy::{BHShape, BHValue, BoundingHierarchy};
-use bvh::point_query::PointDistance;
-use bvh::ray::Ray;
 
 // TODO These all need to be realtyped and bounded
 

@@ -7,8 +7,8 @@ use bvh_testutil::{
     randomly_transform_scene, seeded_rng,
 };
 
-#[test]
 /// Tests whether a Bvh is still consistent after a few optimization calls.
+#[test]
 fn test_consistent_after_update_shapes() {
     let (mut shapes, mut bvh) = build_some_bh::<TBvh3>();
     shapes[0].pos = TPoint3::new(10.0, 1.0, 2.0);
@@ -22,8 +22,8 @@ fn test_consistent_after_update_shapes() {
     bvh.assert_consistent(&shapes);
 }
 
-#[test]
 /// Test whether a simple update on a simple [`Bvh]` yields the expected optimization result.
+#[test]
 fn test_update_shapes_simple_update() {
     let mut shapes = vec![
         UnitBox::new(0, TPoint3::new(-50.0, 0.0, 0.0)),
@@ -94,8 +94,8 @@ fn test_update_shapes_simple_update() {
     }
 }
 
-#[test]
 /// Test optimizing [`Bvh`] after randomizing 50% of the shapes.
+#[test]
 fn test_update_shapes_bvh_12k_75p() {
     let bounds = default_bounds();
     let mut triangles = create_n_cubes(1_000, &bounds);

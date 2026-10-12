@@ -1,14 +1,13 @@
 //! Tests extracted from `bvh_impl.rs`.
 
 use bvh::bounding_hierarchy::BoundingHierarchy;
-
 use bvh_testutil::{
     TBvh3, TBvhNode3, TPoint3, TRay3, TVector3, UnitBox, build_empty_bh, build_some_bh,
     nearest_to_some_bh, traverse_some_bh,
 };
 
-#[test]
 /// Tests whether the building procedure succeeds in not failing.
+#[test]
 fn test_build_bvh() {
     build_some_bh::<TBvh3>();
 }
@@ -26,20 +25,20 @@ fn test_empty_bvh_is_tight() {
     bvh.assert_tight();
 }
 
-#[test]
 /// Runs some primitive tests for intersections of a ray with a fixed scene given as a [`Bvh`].
+#[test]
 fn test_traverse_bvh() {
     traverse_some_bh::<TBvh3>();
 }
 
-#[test]
 /// Runs some primitive tests for distance query of a point with a fixed scene given as a [`Bvh`].
+#[test]
 fn test_nearest_to_bvh() {
     nearest_to_some_bh::<TBvh3>();
 }
 
-#[test]
 /// Verify contents of the bounding hierarchy for a fixed scene structure
+#[test]
 fn test_bvh_shape_indices() {
     use std::collections::HashSet;
 

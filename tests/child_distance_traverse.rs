@@ -70,8 +70,8 @@ fn child_traverse_and_verify_order(
     }
 }
 
-#[test]
 /// Runs some fixed child distance traversal tests on disjoint shapes.
+#[test]
 fn test_traverse_bvh() {
     let (all_shapes, bvh) = build_some_bh::<TBvh3>();
 
@@ -118,10 +118,10 @@ fn build_overlapping_boxes() -> (Vec<UnitBox>, TBvh3) {
     (shapes, bvh)
 }
 
-#[test]
 /// Overlapping children must not cost shapes, only order. Should the iterators ever become
 /// sorted here, they are stricter than documented and the docs and complexity claims of
 /// `nearest_child_traverse_iterator` and `farthest_child_traverse_iterator` need updating.
+#[test]
 fn test_overlapping_children_are_unordered_but_complete() {
     let (all_shapes, bvh) = build_overlapping_boxes();
     let ray = Ray::new(TPoint3::new(-2.0, 0.4, 0.4), TVector3::new(1.0, 0.0, 0.0));
@@ -168,8 +168,8 @@ fn test_traverse_empty_bvh() {
     );
 }
 
-#[test]
 /// A single shape has no interior node to order, so it is the simplest complete traversal.
+#[test]
 fn test_traverse_single_shape_bvh() {
     let mut shapes = vec![UnitBox::new(0, TPoint3::new(3.0, 0.0, 0.0))];
     let bvh = Bvh::build(&mut shapes);

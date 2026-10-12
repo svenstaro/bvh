@@ -1,11 +1,11 @@
 //! Tests extracted from `ray_impl.rs`.
-use bvh::aabb::Bounded;
+use core::cmp;
 
+use bvh::aabb::Bounded;
 use bvh_testutil::{
     TAabb3, TPoint3, TRay3, TVector3, TupleVec, UnitBox, random_aabb, random_ray, seeded_rng,
     tuple_to_point, tuplevec_small_strategy, uniform_bounds,
 };
-use core::cmp;
 use proptest::prelude::*;
 
 /// Generates a random [`Ray`] which points at at a random [`Aabb`].

@@ -36,8 +36,8 @@ fn traverse_distance_and_verify_order(
     assert_eq!(expected_shapes.len(), count);
 }
 
-#[test]
 /// Runs some primitive tests for intersections of a ray with a fixed scene given as a Bvh.
+#[test]
 fn test_traverse_bvh() {
     let (all_shapes, bvh) = build_some_bh::<TBvh3>();
 

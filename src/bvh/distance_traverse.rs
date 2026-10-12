@@ -159,9 +159,10 @@ where
 
 #[cfg(test)]
 mod tests {
+    use nalgebra::{Point3, Vector3};
+
     use super::*;
     use crate::bounding_hierarchy::BHShape;
-    use nalgebra::{Point3, Vector3};
 
     // Test-only: treat an `Aabb` as a shape so we can build a BVH of plain boxes.
     impl<T: BHValue, const D: usize> BHShape<T, D> for Aabb<T, D> {

@@ -392,10 +392,11 @@ impl<T: BHValue, const D: usize> Bvh<T, D> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::aabb::{Aabb, Bounded};
     use alloc::vec;
     use alloc::vec::Vec;
+
+    use super::*;
+    use crate::aabb::{Aabb, Bounded};
 
     type TBvh3 = Bvh<f32, 3>;
     type TBvhNode3 = BvhNode<f32, 3>;

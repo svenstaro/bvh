@@ -3,7 +3,6 @@ use bvh::aabb::Bounded;
 use bvh_testutil::{
     TAabb3, TPoint3, TVector3, TupleVec, tuple_to_point, tuple_to_vector, tuplevec_large_strategy,
 };
-
 use float_eq::assert_float_eq;
 use proptest::prelude::*;
 

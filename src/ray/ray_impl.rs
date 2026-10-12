@@ -2,6 +2,7 @@
 //! for axis aligned bounding boxes and triangles.
 
 use core::cmp::Ordering;
+
 use nalgebra::{
     ClosedAddAssign, ClosedMulAssign, ClosedSubAssign, ComplexField, Point, SVector, SimdPartialOrd,
 };

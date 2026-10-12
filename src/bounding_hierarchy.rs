@@ -2,6 +2,7 @@
 
 use alloc::{boxed::Box, vec::Vec};
 use core::fmt;
+
 use nalgebra::{
     ClosedAddAssign, ClosedDivAssign, ClosedMulAssign, ClosedSubAssign, Point, Scalar,
     SimdPartialOrd,
